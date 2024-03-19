@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "cit-sci-traits"
+version = "0.1.0"
+description = ""
+authors = ["Daniel Lusk <daniel.lusk@posteo.net>"]
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+python-dotenv = "^1.0.1"
+ipykernel = "^6.29.3"
+pandas = "^2.2.1"
+rioxarray = "^0.15.1"
+rasterio = "^1.3.9"
+pyogrio = "^0.7.2"
+pyyaml = "^6.0.1"
+numpy = "^1.26.4"
+matplotlib = "^3.8.3"
+ipywidgets = "^8.1.2"
+
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.6.2"
+pytest = "^8.1.1"
+pylint = "^3.1.0"
+pylint-pytest = "^1.1.7"
+pytest-mock = "^3.12.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
