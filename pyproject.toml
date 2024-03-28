@@ -2,7 +2,7 @@
 name = "cit-sci-traits"
 version = "0.1.0"
 description = ""
-authors = ["Daniel Lusk <daniel.lusk@posteo.net>"]
+authors = ["Daniel Lusk <daniel.lusk@geosense.uni-freiburg.de>"]
 readme = "README.md"
 packages = [{include = "src"}]
 
