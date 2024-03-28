@@ -1,2 +1,4 @@
 [cache]
     type = "reflink,symlink,hardlink,copy"
+[core]
+    autostage = true
