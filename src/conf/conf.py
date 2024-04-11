@@ -3,6 +3,7 @@
 import os
 
 import yaml
+from box import ConfigBox
 from dotenv import find_dotenv, load_dotenv
 
 
@@ -17,7 +18,15 @@ def parse_params() -> dict:
         return yaml.safe_load(f.read())
 
 
-config = parse_params()
+def get_config(subset: str | None = None) -> ConfigBox:
+    """
+    Get a ConfigBox object from a dictionary.
+    """
+    if subset is not None:
+        return ConfigBox(parse_params())[subset]
+
+    return ConfigBox(parse_params())
+
 
 if __name__ == "__main__":
-    print(config)
+    print(get_config())

@@ -1,0 +1,12 @@
+mask: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
+
+datasets:
+  X:
+    - ETH_GlobalCanopyHeight_2020_v1_1km
+    - modis_sur_refl_monthly_avg_1km
+    - soilgrids_v2-0_1km
+    - vodca_mean-p5-p95_1km
+    - wc2-1_30s_bio
+  Y: ...
+
+  resolution: 001

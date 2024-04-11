@@ -1,0 +1,9 @@
+stages:
+  reproject_eo_data_to_df:
+    cmd: python src/data/reproject_eo_data_to_df.py
+    deps:
+      - src/data/reproject_eo_data_to_df.py
+    params:
+      - resolution
+    outs:
+      - data/interim/eo_data_${resolution}

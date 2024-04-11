@@ -82,3 +82,13 @@ def merge_rasters(
 
     del merged, rasters
     gc.collect()
+
+
+def open_raster(filename: str | os.PathLike, **kwargs) -> xr.DataArray | xr.Dataset:
+    """Open a raster dataset using rioxarray."""
+    ds = riox.open_rasterio(filename, **kwargs)
+
+    if isinstance(ds, list):
+        raise ValueError("Multiple files found.")
+
+    return ds
