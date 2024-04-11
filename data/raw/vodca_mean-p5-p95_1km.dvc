@@ -1,0 +1,13 @@
+md5: c8dbaedc426c8f2262d78edeeacd65e0
+frozen: true
+deps:
+- path: data/vodca/vodca_mean-p5-p95_1km
+  repo:
+    url: /mnt/FS_data/panops-data/registry
+    rev_lock: f8267907b0985858375ea82cebf0106e0c707524
+outs:
+- md5: ba45ecdbdf81992cef311ae550643bf1.dir
+  size: 11858431661
+  nfiles: 9
+  hash: md5
+  path: vodca_mean-p5-p95_1km

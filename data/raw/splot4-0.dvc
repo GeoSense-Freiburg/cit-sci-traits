@@ -1,0 +1,13 @@
+md5: 3751f6a49f9337fd296ebfb86052794f
+frozen: true
+deps:
+- path: data/splot/splot4-0
+  repo:
+    url: /mnt/FS_data/panops-data/registry
+    rev_lock: f8267907b0985858375ea82cebf0106e0c707524
+outs:
+- md5: 99990a51d13fe4485f72dd03590d44a6.dir
+  size: 521575464
+  nfiles: 3
+  hash: md5
+  path: splot4-0

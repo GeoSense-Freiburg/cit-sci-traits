@@ -1,0 +1,13 @@
+md5: ee472bca54ad17ea2994ad0da8eefdb4
+frozen: true
+deps:
+- path: data/worldclim
+  repo:
+    url: /mnt/FS_data/panops-data/registry
+    rev_lock: f8267907b0985858375ea82cebf0106e0c707524
+outs:
+- md5: 6a2037f2a07280cfdd96870be722e187.dir
+  size: 10773356949
+  nfiles: 20
+  hash: md5
+  path: worldclim

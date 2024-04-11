@@ -1,0 +1,13 @@
+md5: 42df287bab66e202890156bdff88f1ea
+frozen: true
+deps:
+- path: data/soilgrids/soilgrids_v2-0_1km
+  repo:
+    url: /mnt/FS_data/panops-data/registry
+    rev_lock: f8267907b0985858375ea82cebf0106e0c707524
+outs:
+- md5: c7c807d6306555672a2f93959f7b7bcc.dir
+  size: 15944244263
+  nfiles: 61
+  hash: md5
+  path: soilgrids_v2-0_1km

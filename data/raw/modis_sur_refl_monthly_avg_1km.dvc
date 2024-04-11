@@ -1,0 +1,13 @@
+md5: c1fcdfaaefd4fdb6ce57e35e23206819
+frozen: true
+deps:
+- path: data/modis/modis_sur_refl_monthly_avg_1km
+  repo:
+    url: /mnt/FS_data/panops-data/registry
+    rev_lock: f8267907b0985858375ea82cebf0106e0c707524
+outs:
+- md5: 5659a396fd8895b5d903eb74d628a4e0.dir
+  size: 58238905336
+  nfiles: 60
+  hash: md5
+  path: modis_sur_refl_monthly_avg_1km
