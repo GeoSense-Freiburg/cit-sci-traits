@@ -1,4 +1,16 @@
-mask: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
+model_res: "001"
+PFT: "Shrub_Tree_Grass"
+mask:
+  path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
+  keep_classes:
+    - 10 # Tree cover
+    - 20 # Shrubland
+    - 30 # Grassland
+    - 40 # Cropland
+    - 60 # Bare/sparse vegetation
+    - 90 # Herbaceous wetland
+    - 95 # Mangroves
+    - 100 # Moss and lichen
 
 datasets:
   X:
@@ -9,4 +21,12 @@ datasets:
     - wc2-1_30s_bio
   Y: ...
 
-  resolution: 001
+base_resolution: 0.01 # Shared best resolution of all datasets (used for masking)
+target_resolution: 0.01 # Target resolution for model training
+extent: [-180, -60, 180, 90] # Extent of the final dataset
+
+interim:
+  eo_data: data/interim/eo_data
+
+train:
+  path: data/processed/train

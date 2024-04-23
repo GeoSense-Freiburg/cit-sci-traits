@@ -19,9 +19,7 @@ def setup_logger(
 
 def subprocess_logger(name: str = "__main__") -> logging.Logger:
     """Setup a logger for a subprocess."""
-    setup_logger()
-    subp_log = logging.getLogger(name)
-    subp_log.setLevel(logging.INFO)
+    subp_log = setup_logger(name, "INFO")
     return subp_log
 
 

@@ -1,9 +1,52 @@
 stages:
   reproject_eo_data_to_df:
-    cmd: python src/data/reproject_eo_data_to_df.py
+    cmd: python src/data/reproject_eo_data_to_df.py -n 3 -r
     deps:
       - src/data/reproject_eo_data_to_df.py
     params:
-      - resolution
+      - model_res
+      - mask
+      - datasets
+      - base_resolution
+      - target_resolution
+      - extent
+      - interim.eo_data
     outs:
-      - data/interim/eo_data_${resolution}
+      - ${interim.eo_data}/${model_res}:
+          persist: true
+
+  # calculate_ndvi:
+  #   cmd: python src/data/calculate_ndvi.py
+  #   deps:
+  #     - src/data/calculate_ndvi.py
+  #     - ${interim.eo_data}/${model_res}
+  #   outs:
+  #     - ${interim.eo_data}/${model_res}:
+  #         persist: true
+
+  # prune_bio_vars:
+  #   cmd: python src/data/prune_bio_vars.py
+  #   deps:
+  #     - src/data/prune_bio_vars.py
+  #     - ${interim.eo_data}/${model_res}
+  #   outs:
+  #     - ${interim.eo_data}/${model_res}:
+  #         persist: true
+
+  # build_train:
+  #   cmd: python src/data/build_train.py
+  #   deps:
+  #     - src/data/build_train.py
+  #     - ${interim.eo_data}/${model_res}
+  #   outs:
+  #     - ${train.path}/${model_res}:
+  #         persist: true
+
+  # calculate_spatial_lag:
+  #   cmd: python src/features/calculate_spatial_lag.py
+  #   deps:
+  #     - src/features/calculate_spatial_lag.py
+  #     - ${train.path}/${model_res}
+  #   outs:
+  #     - ${train.path}/${model_res}/:
+  #         persist: true
