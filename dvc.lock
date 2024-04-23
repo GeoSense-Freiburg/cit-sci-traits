@@ -1,0 +1,45 @@
+schema: '2.0'
+stages:
+  reproject_eo_data_to_df:
+    cmd: python src/data/reproject_eo_data_to_df.py -n 3 -r
+    deps:
+    - path: src/data/reproject_eo_data_to_df.py
+      hash: md5
+      md5: a81057a8fdfa1dfb4965e1cda7c7f20b
+      size: 4534
+    params:
+      params.yaml:
+        base_resolution: 0.01
+        datasets:
+          X:
+          - ETH_GlobalCanopyHeight_2020_v1_1km
+          - modis_sur_refl_monthly_avg_1km
+          - soilgrids_v2-0_1km
+          - vodca_mean-p5-p95_1km
+          - wc2-1_30s_bio
+          Y: '...'
+        extent:
+        - -180
+        - -60
+        - 180
+        - 90
+        interim.eo_data: data/interim/eo_data
+        mask:
+          path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
+          keep_classes:
+          - 10
+          - 20
+          - 30
+          - 40
+          - 60
+          - 90
+          - 95
+          - 100
+        model_res: '001'
+        target_resolution: 0.01
+    outs:
+    - path: data/interim/eo_data/001
+      hash: md5
+      md5: 2e67746719fb740bca88efb709f7f702.dir
+      size: 45619827773
+      nfiles: 9664
