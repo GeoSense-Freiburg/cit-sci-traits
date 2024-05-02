@@ -1,10 +1,10 @@
-md5: 17ef8e48a7573819f370100bd4fad537
+md5: c321f0825032054023218f6c9cef7bd5
 frozen: true
 deps:
 - path: data/landcover/esa_worldcover_v100_1km
   repo:
     url: /mnt/FS_data/panops-data/registry
-    rev_lock: f8267907b0985858375ea82cebf0106e0c707524
+    rev_lock: 291495672b61227f8f21a6a9e98dee1000c0cb14
 outs:
 - md5: 3cc4d8f50aa3b1441f8843cf46381e42.dir
   size: 40502767

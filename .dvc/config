@@ -1,5 +1,7 @@
 [cache]
-    shared = group
-    type = "hardlink,symlink"
+    type = "reflink,hardlink,symlink"
+    dir = /mnt/data/dl1070/cit-sci-traits/dvc-cache
 [core]
     autostage = true
+['remote "panops-registry"']
+    url = /mnt/FS_data/panops-data/registry

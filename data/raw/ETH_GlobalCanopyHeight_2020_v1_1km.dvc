@@ -1,10 +1,10 @@
-md5: a493269ef6ef272579cb4cdc3ddee6b4
+md5: 6562b6238d2638d76b638f9d91639ab9
 frozen: true
 deps:
 - path: data/canopy_height/ETH_GlobalCanopyHeight_2020_v1_1km
   repo:
     url: /mnt/FS_data/panops-data/registry
-    rev_lock: f8267907b0985858375ea82cebf0106e0c707524
+    rev_lock: 291495672b61227f8f21a6a9e98dee1000c0cb14
 outs:
 - md5: 7f7cab159554265edd5e012518dbb8eb.dir
   size: 188155434

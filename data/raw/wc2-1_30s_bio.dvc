@@ -1,10 +1,10 @@
-md5: fcf21e08869f987d1fb10ddbb56fad34
+md5: 6039ce17998c0908837a8fb276e62645
 frozen: true
 deps:
 - path: data/worldclim/wc2-1_30s_bio
   repo:
     url: /mnt/FS_data/panops-data/registry
-    rev_lock: f8267907b0985858375ea82cebf0106e0c707524
+    rev_lock: 291495672b61227f8f21a6a9e98dee1000c0cb14
 outs:
 - md5: 53925e6b695fc9ad52b84dbb92471a22.dir
   size: 10773356934
