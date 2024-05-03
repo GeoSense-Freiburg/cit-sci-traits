@@ -8,6 +8,10 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 
+from src.utils.log_utils import setup_logger
+
+log = setup_logger(__name__, "INFO")
+
 
 def write_dgdf_parquet(dgdf: dgpd.GeoDataFrame, out_path: str | Path, **kwargs) -> None:
     """Write a Dask GeoDataFrame to a Parquet file."""
@@ -127,3 +131,59 @@ def optimize_columns(
             else:
                 df[column] = optimize_column(col, categorize=categorize)
     return df
+
+
+def outlier_mask(
+    col: pd.Series, lower: float = 0.05, upper: float = 0.95
+) -> np.ndarray:
+    """
+    Returns a boolean mask indicating whether each value in the input column is an outlier or not.
+
+    Parameters:
+        col (pd.Series): The input column.
+        lower (float): The lower quantile threshold for determining outliers.
+            Defaults to 0.05.
+        upper (float): The upper quantile threshold for determining outliers.
+            Defaults to 0.95.
+
+    Returns:
+        np.ndarray: A boolean mask indicating whether each value is an outlier or not.
+    """
+    col_values = col.values
+    lower_bound, upper_bound = np.quantile(
+        col_values, [lower, upper]  # pyright: ignore[reportArgumentType]
+    )
+    return (col_values >= lower_bound) & (col_values <= upper_bound)
+
+
+def filter_outliers(
+    df: pd.DataFrame,
+    cols: list[str],
+    quantiles: tuple[float, float] = (0.05, 0.95),
+    verbose: bool = False,
+) -> pd.DataFrame:
+    """
+    Filter outliers from the input DataFrame.
+
+    This function filters outliers from the input DataFrame by applying the `outlier_mask`
+    function on each column in the input DataFrame that is specified in the `cols` list.
+
+    Parameters:
+        df (pd.DataFrame): The input DataFrame.
+        cols (list[str]): The list of column names to filter outliers from.
+        quantiles (tuple[float]): A tuple of two floats representing the lower and upper
+            quantiles for outlier detection.
+
+    Returns:
+        pd.DataFrame: The DataFrame with outliers filtered out.
+    """
+    if not set(cols).issubset(df.columns):
+        raise ValueError("Columns not found in DataFrame.")
+    masks = [outlier_mask(df[col], *quantiles) for col in cols]
+    comb_mask = np.all(masks, axis=0)
+
+    if verbose:
+        num_dropped = len(df) - comb_mask.sum()
+        pct_dropped = (num_dropped / len(df)) * 100
+        log.info("Dropping %d rows (%.2f%%)", num_dropped, pct_dropped)
+    return df[comb_mask]
