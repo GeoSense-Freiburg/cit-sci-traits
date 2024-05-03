@@ -25,6 +25,8 @@ geopandas = "^0.14.3"
 pyarrow = "^16.0.0"
 dask-geopandas = "^0.3.1"
 dask = {extras = ["dataframe"], version = "^2024.4.2"}
+joblib = "^1.4.2"
+tqdm = "^4.66.4"
 
 
 [tool.poetry.group.dev.dependencies]

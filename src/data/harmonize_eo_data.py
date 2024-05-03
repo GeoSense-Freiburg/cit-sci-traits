@@ -3,18 +3,18 @@ a DataFrame."""
 
 import argparse
 import gc
-import multiprocessing
 import os
 from pathlib import Path
 
 import xarray as xr
+from joblib import Parallel, delayed
+from tqdm import tqdm
 
 from src.conf.conf import get_config
 from src.conf.environment import log
 from src.data.get_dataset_filenames import get_dataset_filenames
 from src.data.mask import get_mask, mask_raster
 from src.utils.df_utils import optimize_columns, write_df
-from src.utils.log_utils import setup_logger
 from src.utils.raster_utils import create_sample_raster, open_raster, raster_to_df
 
 
@@ -22,7 +22,11 @@ def cli() -> argparse.Namespace:
     """Command line interface."""
     parser = argparse.ArgumentParser(description="Reproject EO data to a DataFrame.")
     parser.add_argument(
-        "-n", "--n-workers", type=int, default=1, help="Number of workers."
+        "-n",
+        "--n-workers",
+        type=int,
+        default=1,
+        help="Number of workers. Use -1 for all CPUs.",
     )
     parser.add_argument(
         "-r", "--resume", action="store_true", help="Resume processing."
@@ -32,9 +36,6 @@ def cli() -> argparse.Namespace:
 
     if args.n_workers <= 0 and args.n_workers != -1:
         raise ValueError("Number of workers must be either -1 or greater than 0.")
-
-    if args.n_workers == -1:
-        args.n_workers = multiprocessing.cpu_count()
 
     return args
 
@@ -59,57 +60,39 @@ def process_file(
         dry_run (bool, optional): If True, the function will only perform a dry run
             without writing the output file. Defaults to False.
     """
-    if __name__ == "__main__":
-        proc_log = log
-    else:
-        proc_log = setup_logger(__name__, "INFO")
-
     filename = Path(filename)
-    proc_log.info("Processing %s...", filename)
-    try:
-        rast = open_raster(filename).sel(band=1).rio.reproject_match(mask)
-        masked = mask_raster(rast, mask)
+    rast = open_raster(filename).sel(band=1).rio.reproject_match(mask)
+    masked = mask_raster(rast, mask)
 
-        rast.close()
-        mask.close()
-        del rast, mask
+    rast.close()
+    mask.close()
+    del rast, mask
 
-        if masked.rio.resolution() != target_raster.rio.resolution():
-            proc_log.warning(
-                "Reproject masked raster: %s -> %s",
-                masked.rio.resolution(),
-                target_raster.rio.resolution(),
-            )
-            masked = masked.rio.reproject_match(target_raster)
+    if masked.rio.resolution() != target_raster.rio.resolution():
+        masked = masked.rio.reproject_match(target_raster)
 
-        if "long_name" not in masked.attrs:
-            masked.attrs["long_name"] = Path(filename).stem
+    if "long_name" not in masked.attrs:
+        masked.attrs["long_name"] = Path(filename).stem
 
-        proc_log.info("Converting %s to DataFrame...", filename.name)
-        df = raster_to_df(masked)
-        masked.close()
-        del masked
+    df = raster_to_df(masked)
+    masked.close()
+    del masked
 
-        proc_log.info("Optimizing dtype for %s...", filename.name)
-        df = optimize_columns(df, coords_as_categories=True)
+    df = optimize_columns(df, coords_as_categories=True)
 
-        dataset_dir = Path(filename).parent.name
-        dataset_dir = (
-            dataset_dir.replace("_1km", "") if "_1km" in dataset_dir else dataset_dir
-        )
+    dataset_dir = Path(filename).parent.name
+    dataset_dir = (
+        dataset_dir.replace("_1km", "") if "_1km" in dataset_dir else dataset_dir
+    )
 
-        out_path = Path(out_dir) / dataset_dir / f"{Path(filename).stem}.parquet"
-        out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path = Path(out_dir) / dataset_dir / f"{Path(filename).stem}.parquet"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
-        log.info("Writing %s...%s", out_path, " (dry run)" if dry_run else "")
-        if not dry_run:
-            write_df(df, out_path, writer="parquet", dask=False)
+    if not dry_run:
+        write_df(df, out_path, writer="parquet", dask=False)
 
-        del df
-        gc.collect()
-
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        proc_log.error("Error processing %s: %s", filename, e)
+    del df
+    gc.collect()
 
 
 def main(args: argparse.Namespace) -> None:
@@ -134,24 +117,22 @@ def main(args: argparse.Namespace) -> None:
     base_sample_raster = create_sample_raster(conf.extent, conf.base_resolution)
     target_sample_raster = create_sample_raster(conf.extent, conf.target_resolution)
 
-    log.info("Generating landcover mask...")
+    log.info("Building landcover mask...")
     mask = get_mask(conf.mask.path, conf.mask.keep_classes, base_sample_raster)
 
     if not args.dry_run:
         out_dir.mkdir(parents=True, exist_ok=True)
 
-    if args.n_workers > 1:
-        with multiprocessing.Pool(args.n_workers) as pool:
-            pool.starmap(
-                process_file,
-                [
-                    (filename, mask, out_dir, target_sample_raster, args.dry_run)
-                    for filename in filenames
-                ],
-            )
-    else:
-        for filename in filenames:
-            process_file(filename, mask, out_dir, target_sample_raster, args.dry_run)
+    log.info("Harmonizing rasters and saving as dataframes...")
+    tasks = [
+        delayed(process_file)(
+            filename, mask, out_dir, target_sample_raster, args.dry_run
+        )
+        for filename in filenames
+    ]
+    Parallel(n_jobs=args.n_workers)(tqdm(tasks, total=len(tasks)))
+
+    log.info("Done. ✅")
 
 
 if __name__ == "__main__":
