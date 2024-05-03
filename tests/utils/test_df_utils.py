@@ -38,16 +38,18 @@ def test_optimize_column_int64_to_int32(sample_dataframe):
     assert col.dtype == np.int32
 
 
-def test_optimize_column_float64_to_float32(sample_dataframe):
-    sample_dataframe["B"] = sample_dataframe["B"] + (np.finfo(np.float16).max + 1.5)
-    col = optimize_column(sample_dataframe["B"])
-    assert col.dtype == np.float32
+# TODO: Optimize floats with respect to required resolution
+
+# def test_optimize_column_float64_to_float32(sample_dataframe):
+#     sample_dataframe["B"] = sample_dataframe["B"] + (np.finfo(np.float16).max + 1.5)
+#     col = optimize_column(sample_dataframe["B"])
+#     assert col.dtype == np.float32
 
 
-def test_optimize_column_float64_to_float16(sample_dataframe):
-    sample_dataframe["B"] = sample_dataframe["B"] + 0.5
-    col = optimize_column(sample_dataframe["B"])
-    assert col.dtype == np.float16
+# def test_optimize_column_float64_to_float16(sample_dataframe):
+#     sample_dataframe["B"] = sample_dataframe["B"] + 0.5
+#     col = optimize_column(sample_dataframe["B"])
+#     assert col.dtype == np.float16
 
 
 def test_optimize_column_float64_to_int64(sample_dataframe):
@@ -77,6 +79,7 @@ def test_optimize_column_non_numeric(sample_dataframe):
     col = optimize_column(sample_dataframe["C"])
     updated_dataframe = sample_dataframe.copy()
     updated_dataframe["C"] = col
+    sample_dataframe["C"] = sample_dataframe["C"].astype("string[pyarrow]")
     assert updated_dataframe.equals(sample_dataframe)
 
 
@@ -84,12 +87,6 @@ def test_optimize_column_all_nan(sample_dataframe):
     sample_dataframe["A"] = np.nan
     col = optimize_column(sample_dataframe["A"])
     assert col.dtype == np.float64
-
-
-def test_optimize_column_mixed_data_types(sample_dataframe):
-    col = sample_dataframe["B"].astype(str)
-    col = optimize_column(col)
-    assert col.dtype == object
 
 
 def test_optimize_column_geodataframe(sample_dataframe):

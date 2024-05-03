@@ -55,7 +55,7 @@ def write_df(
         raise ValueError("Invalid writer.")
 
 
-def optimize_column(col: pd.Series) -> pd.Series:
+def optimize_column(col: pd.Series, categorize: bool = False) -> pd.Series:
     """
     Optimize the data type of a column in a DataFrame or GeoDataFrame.
 
@@ -75,26 +75,34 @@ def optimize_column(col: pd.Series) -> pd.Series:
         elif min_val > np.iinfo(np.int32).min and max_val < np.iinfo(np.int32).max:
             col = col.astype(np.int32)
     elif col.dtype in [np.float64, np.float32]:
-        if min_val > np.finfo(np.float16).min and max_val < np.finfo(np.float16).max:
-            col_temp = col.astype(np.float16)
-            if not ((col - col_temp).abs() > 0.001).any():
-                col = col_temp
-        elif min_val > np.finfo(np.float32).min and max_val < np.finfo(np.float32).max:
-            col_temp = col.astype(np.float32)
-            if not ((col - col_temp).abs() > 1e-6).any():
-                col = col_temp
+        # TODO: Implement float optimization that considers the precision loss
+
+        # if min_val > np.finfo(np.float32).min and max_val < np.finfo(np.float32).max:
+        #     col_temp = col.astype(np.float32)
+        #     if not ((col - col_temp).abs() > 1e-6).any():
+        #         col = col_temp
+        # elif min_val > np.finfo(np.float16).min and max_val < np.finfo(np.float16).max:
+        #     col_temp = col.astype(np.float16)
+        #     if not ((col - col_temp).abs() > 0.001).any():
+        #         col = col_temp
 
         # Check if all float values are actually integers
         if (col % 1 == 0).all():
             col = col.astype(np.int64)
             # Recursively call optimize_column to further optimize the integer column
             col = optimize_column(col)
+    elif col.dtype == "object":
+        col = col.astype("string[pyarrow]")
+
+    if categorize and len(col.unique()) < 0.5 * len(col):
+        col = col.astype("category")
     return col
 
 
 def optimize_columns(
     df: pd.DataFrame | gpd.GeoDataFrame,
     coords_as_categories: bool = False,
+    categorize: bool = False,
 ) -> pd.DataFrame | gpd.GeoDataFrame:
     """
     Optimize the columns of a DataFrame or GeoDataFrame.
@@ -117,5 +125,5 @@ def optimize_columns(
             if column in ["x", "y"] and coords_as_categories:
                 df[column] = col.astype("category")
             else:
-                df[column] = optimize_column(col)
+                df[column] = optimize_column(col, categorize=categorize)
     return df
