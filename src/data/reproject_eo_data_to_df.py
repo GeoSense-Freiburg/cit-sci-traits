@@ -71,7 +71,8 @@ def process_file(
         masked = mask_raster(rast, mask)
 
         rast.close()
-        del rast
+        mask.close()
+        del rast, mask
 
         if masked.rio.resolution() != target_raster.rio.resolution():
             proc_log.warning(
