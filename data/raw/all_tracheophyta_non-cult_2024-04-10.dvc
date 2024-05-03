@@ -1,0 +1,13 @@
+md5: 94184991d2db9f7bcd6afa4016adf70d
+frozen: true
+deps:
+- path: data/gbif/all_tracheophyta_non-cult_2024-04-10
+  repo:
+    url: /mnt/FS_data/panops-data/registry
+    rev_lock: 291495672b61227f8f21a6a9e98dee1000c0cb14
+outs:
+- md5: ada860692d425bd047bd09fd4531fdbf.dir
+  size: 30005038638
+  nfiles: 1584
+  hash: md5
+  path: all_tracheophyta_non-cult_2024-04-10
