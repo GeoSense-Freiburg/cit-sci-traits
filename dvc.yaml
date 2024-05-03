@@ -1,5 +1,5 @@
 stages:
-  reproject_eo_data_to_df:
+  harmonize_eo_data:
     cmd: python src/data/reproject_eo_data_to_df.py -n 3 -r
     deps:
       - src/data/reproject_eo_data_to_df.py

@@ -101,9 +101,9 @@ def process_file(
         out_path = Path(out_dir) / dataset_dir / f"{Path(filename).stem}.parquet"
         out_path.parent.mkdir(parents=True, exist_ok=True)
 
+        log.info("Writing %s...%s", out_path, " (dry run)" if dry_run else "")
         if not dry_run:
-            log.info("Writing %s...%s", out_path, " (dry run)" if dry_run else "")
-            write_df(df, out_path, writer="parquet", dask=True)
+            write_df(df, out_path, writer="parquet", dask=False)
 
         del df
         gc.collect()
