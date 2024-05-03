@@ -17,10 +17,28 @@ def setup_logger(
     return log
 
 
-def subprocess_logger(name: str = "__main__") -> logging.Logger:
-    """Setup a logger for a subprocess."""
-    subp_log = setup_logger(name, "INFO")
-    return subp_log
+def subprocess_logger(name, level: str | int = "INFO"):
+    """
+    Creates and configures a logger for subprocesses.
+
+    Args:
+        name (str): The name of the logger.
+        level (str | int, optional): The logging level. Defaults to "INFO".
+
+    Returns:
+        logging.Logger: The configured logger instance.
+    """
+    formatter = logging.Formatter(
+        fmt="%(asctime)s - %(levelname)s - %(module)s - %(message)s"
+    )
+
+    handler = logging.StreamHandler()  # Use a stream handler to write logs to stdout
+    handler.setFormatter(formatter)
+
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    logger.addHandler(handler)
+    return logger
 
 
 def setup_file_logger(
