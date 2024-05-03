@@ -76,7 +76,7 @@ def process_file(
 
         if masked.rio.resolution() != target_raster.rio.resolution():
             proc_log.warning(
-                "Resolution mismatch. %s -> %s",
+                "Reproject masked raster: %s -> %s",
                 masked.rio.resolution(),
                 target_raster.rio.resolution(),
             )
@@ -85,7 +85,7 @@ def process_file(
         if "long_name" not in masked.attrs:
             masked.attrs["long_name"] = Path(filename).stem
 
-        proc_log.info("Converting %s to GeoDataFrame...", filename.name)
+        proc_log.info("Converting %s to DataFrame...", filename.name)
         df = raster_to_df(masked)
         masked.close()
         del masked
