@@ -1,0 +1,41 @@
+schema: '2.0'
+stages:
+  harmonize_eo_data:
+    cmd: python src/data/harmonize_eo_data.py -n 8 -r
+    deps:
+    - path: src/data/harmonize_eo_data.py
+      hash: md5
+      md5: 99dfc579b261c977dc9b75e55f688801
+      size: 4415
+    params:
+      params.yaml:
+        base_resolution: 0.01
+        datasets.X:
+        - modis_sur_refl_monthly_avg_1km
+        - wc2-1_30s_bio
+        extent:
+        - -180
+        - -60
+        - 180
+        - 90
+        interim.eo_data: data/interim/eo_data
+        mask:
+          path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
+          keep_classes:
+          - 10
+          - 20
+          - 30
+          - 40
+          - 60
+          - 70
+          - 90
+          - 95
+          - 100
+        model_res: '001'
+        target_resolution: 0.01
+    outs:
+    - path: data/interim/eo_data/001
+      hash: md5
+      md5: 4e9a7d78d9bcb7b3139a34536a597691.dir
+      size: 27006697782
+      nfiles: 79

@@ -8,16 +8,17 @@ mask:
     - 30 # Grassland
     - 40 # Cropland
     - 60 # Bare/sparse vegetation
+    - 70 # Snow and ice
     - 90 # Herbaceous wetland
     - 95 # Mangroves
     - 100 # Moss and lichen
 
 datasets:
   X:
-    - ETH_GlobalCanopyHeight_2020_v1_1km
+    # - ETH_GlobalCanopyHeight_2020_v1_1km
     - modis_sur_refl_monthly_avg_1km
-    - soilgrids_v2-0_1km
-    - vodca_mean-p5-p95_1km
+    # - soilgrids_v2-0_1km
+    # - vodca_mean-p5-p95_1km
     - wc2-1_30s_bio
   Y: ...
 
