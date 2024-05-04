@@ -1,0 +1,12 @@
+md5: e3c63523fddcbd4262d4241782fc4922
+frozen: true
+deps:
+- path: data/try/try_pft_v1.csv
+  repo:
+    url: /mnt/FS_data/panops-data/registry
+    rev_lock: 291495672b61227f8f21a6a9e98dee1000c0cb14
+outs:
+- md5: c8c8c94250a247ce30b76ce150bedf90
+  size: 3964944
+  hash: md5
+  path: try_pft_v1.csv
