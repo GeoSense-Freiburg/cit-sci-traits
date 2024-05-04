@@ -15,6 +15,18 @@ stages:
       - ${interim.eo_data}/${model_res}:
           persist: true
 
+  extract_splot:
+    cmd: python src/data/extract_splot.py
+    deps:
+      - src/data/extract_splot.py
+      - data/raw/${datasets.Y.splot}
+    params:
+      - datasets.Y.splot
+      - interim.splot
+    outs:
+      - ${interim.splot.dir}:
+          persist: true
+
   # harmonize_trait_data:
   #   cmd: python src/data/harmonize_trait_data.py
   #   deps:

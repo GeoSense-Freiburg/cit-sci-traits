@@ -20,7 +20,8 @@ datasets:
     # - soilgrids_v2-0_1km
     # - vodca_mean-p5-p95_1km
     - wc2-1_30s_bio
-  Y: ...
+  Y:
+    splot: splot4-0
 
 base_resolution: 0.01 # Shared best resolution of all datasets (used for masking)
 target_resolution: 0.01 # Target resolution for model training
@@ -28,6 +29,8 @@ extent: [-180, -60, 180, 90] # Extent of the final dataset
 
 interim:
   eo_data: data/interim/eo_data
+  splot:
+    dir: data/interim/splot
 
 train:
   path: data/processed/train
