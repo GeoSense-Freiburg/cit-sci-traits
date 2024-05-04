@@ -22,6 +22,15 @@ datasets:
     - wc2-1_30s_bio
   Y:
     splot: splot4-0
+    gbif: all_tracheophyta_non-cult_2024-04-10
+
+gbif:
+  raw:
+    dir: data/raw/all_tracheophyta_non-cult_2024-04-10
+
+trydb:
+  raw:
+    pfts: data/raw/try_pft_v1.csv
 
 base_resolution: 0.01 # Shared best resolution of all datasets (used for masking)
 target_resolution: 0.01 # Target resolution for model training
@@ -31,6 +40,8 @@ interim:
   eo_data: data/interim/eo_data
   splot:
     dir: data/interim/splot
+  gbif:
+    dir: data/interim/gbif
 
 train:
   path: data/processed/train
