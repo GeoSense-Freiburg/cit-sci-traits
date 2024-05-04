@@ -27,6 +27,21 @@ stages:
       - ${interim.splot.dir}:
           persist: true
 
+  match_gbif_pfts:
+    cmd: python src/data/match_gbif_pfts.py
+    deps:
+      - src/data/match_gbif_pfts.py
+      - ${gbif.raw.dir}
+      - ${trydb.raw.pfts}
+    params:
+      - datasets.Y.gbif
+      - gbif.raw.dir
+      - interim.gbif.dir
+      - interim.gbif.matched
+    outs:
+      - ${interim.gbif.dir}/${interim.gbif.matched}:
+          persist: true
+
   # harmonize_trait_data:
   #   cmd: python src/data/harmonize_trait_data.py
   #   deps:

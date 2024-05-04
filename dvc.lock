@@ -62,3 +62,31 @@ stages:
       md5: cd41e7ce8ca0b67b8dcef9f5d5e3c5ed.dir
       size: 508142149
       nfiles: 3
+  match_gbif_pfts:
+    cmd: python src/data/match_gbif_pfts.py
+    deps:
+    - path: data/raw/all_tracheophyta_non-cult_2024-04-10
+      hash: md5
+      md5: ada860692d425bd047bd09fd4531fdbf.dir
+      size: 30005038638
+      nfiles: 1584
+    - path: data/raw/try_pft_v1.csv
+      hash: md5
+      md5: c8c8c94250a247ce30b76ce150bedf90
+      size: 3964944
+    - path: src/data/match_gbif_pfts.py
+      hash: md5
+      md5: 0f83e8a4884f7df33eeac770bc74b40b
+      size: 1815
+    params:
+      params.yaml:
+        datasets.Y.gbif: all_tracheophyta_non-cult_2024-04-10
+        gbif.raw.dir: data/raw/all_tracheophyta_non-cult_2024-04-10
+        interim.gbif.dir: data/interim/gbif
+        interim.gbif.matched: gbif_pfts.parquet
+    outs:
+    - path: data/interim/gbif/gbif_pfts.parquet
+      hash: md5
+      md5: c9078ef73b30584ed1e18ee636ab5854.dir
+      size: 4424184130
+      nfiles: 122
