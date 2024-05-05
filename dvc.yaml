@@ -42,6 +42,21 @@ stages:
       - ${interim.gbif.dir}/${interim.gbif.matched}:
           persist: true
 
+  subsample_gbif:
+    cmd: python src/data/subsample_gbif.py
+    deps:
+      - src/data/subsample_gbif.py
+      - ${interim.gbif.dir}/${interim.gbif.matched}
+    params:
+      - interim.gbif.dir
+      - interim.gbif.matched
+      - interim.gbif.subsampled
+      - interim.gbif.subsample_binsize
+      - interim.gbif.subsample_n_max
+    outs:
+      - ${interim.gbif.dir}/${interim.gbif.subsampled}:
+          persist: true
+
   # harmonize_trait_data:
   #   cmd: python src/data/harmonize_trait_data.py
   #   deps:

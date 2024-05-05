@@ -90,3 +90,28 @@ stages:
       md5: c9078ef73b30584ed1e18ee636ab5854.dir
       size: 4424184130
       nfiles: 122
+  subsample_gbif:
+    cmd: python src/data/subsample_gbif.py
+    deps:
+    - path: data/interim/gbif/gbif_pfts.parquet
+      hash: md5
+      md5: c9078ef73b30584ed1e18ee636ab5854.dir
+      size: 4424184130
+      nfiles: 122
+    - path: src/data/subsample_gbif.py
+      hash: md5
+      md5: c3caf59a8a9962b75ce12f50fba0a59c
+      size: 2861
+    params:
+      params.yaml:
+        interim.gbif.dir: data/interim/gbif
+        interim.gbif.matched: gbif_pfts.parquet
+        interim.gbif.subsample_binsize: 4
+        interim.gbif.subsample_n_max: 10000
+        interim.gbif.subsampled: gbif_subsampled.parquet
+    outs:
+    - path: data/interim/gbif/gbif_subsampled.parquet
+      hash: md5
+      md5: dfb1919cfb7d99e1b8a8d583a3f2316e.dir
+      size: 807015438
+      nfiles: 64

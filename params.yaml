@@ -1,5 +1,7 @@
 model_res: "001"
 PFT: "Shrub_Tree_Grass"
+random_seed: 42
+
 mask:
   path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
   keep_classes:
@@ -42,6 +44,10 @@ interim:
     dir: data/interim/splot
   gbif:
     dir: data/interim/gbif
+    matched: gbif_pfts.parquet
+    subsampled: gbif_subsampled.parquet
+    subsample_binsize: 4
+    subsample_n_max: 10000
 
 train:
   path: data/processed/train
