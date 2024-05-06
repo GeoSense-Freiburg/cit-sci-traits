@@ -1,0 +1,13 @@
+md5: cf0682bf732ca3a29884bd3fa588a764
+frozen: true
+deps:
+- path: data/try/TRY_5_GapFilledData_2020
+  repo:
+    url: /mnt/FS_data/panops-data/registry
+    rev_lock: 291495672b61227f8f21a6a9e98dee1000c0cb14
+outs:
+- md5: 84cc29bf1c2f949ef2c533f08a5f6f90.dir
+  size: 452814652
+  nfiles: 1
+  hash: md5
+  path: TRY_5_GapFilledData_2020
