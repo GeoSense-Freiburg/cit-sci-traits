@@ -76,8 +76,8 @@ stages:
       size: 3964944
     - path: src/data/match_gbif_pfts.py
       hash: md5
-      md5: 0f83e8a4884f7df33eeac770bc74b40b
-      size: 1815
+      md5: 92c088df22544393d7faeb93a24f19b6
+      size: 2077
     params:
       params.yaml:
         datasets.Y.gbif: all_tracheophyta_non-cult_2024-04-10
@@ -87,21 +87,21 @@ stages:
     outs:
     - path: data/interim/gbif/gbif_pfts.parquet
       hash: md5
-      md5: c9078ef73b30584ed1e18ee636ab5854.dir
-      size: 4424184130
+      md5: 78f983f8785ca9ee69666a4eb7b61c88.dir
+      size: 6797540635
       nfiles: 122
   subsample_gbif:
     cmd: python src/data/subsample_gbif.py
     deps:
     - path: data/interim/gbif/gbif_pfts.parquet
       hash: md5
-      md5: c9078ef73b30584ed1e18ee636ab5854.dir
-      size: 4424184130
+      md5: 78f983f8785ca9ee69666a4eb7b61c88.dir
+      size: 6797540635
       nfiles: 122
     - path: src/data/subsample_gbif.py
       hash: md5
-      md5: c3caf59a8a9962b75ce12f50fba0a59c
-      size: 2861
+      md5: ba0f8cf5f06b7156d52a4eab5a7295a4
+      size: 2965
     params:
       params.yaml:
         interim.gbif.dir: data/interim/gbif
@@ -112,6 +112,6 @@ stages:
     outs:
     - path: data/interim/gbif/gbif_subsampled.parquet
       hash: md5
-      md5: dfb1919cfb7d99e1b8a8d583a3f2316e.dir
-      size: 807015438
+      md5: 76716c908063b845b799581377f9ad1c.dir
+      size: 905012650
       nfiles: 64

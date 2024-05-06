@@ -7,6 +7,7 @@ from box import ConfigBox
 
 from src.conf.conf import get_config
 from src.conf.environment import log
+from src.utils.trait_utils import clean_species_name
 
 
 def main(cfg: ConfigBox = get_config()):
@@ -32,33 +33,29 @@ def main(cfg: ConfigBox = get_config()):
     ddf = (
         ddf[ddf["taxonrank"] == "SPECIES"]
         .drop(columns=["taxonrank"])
-        .assign(
-            speciesname=lambda ddf: ddf.species.str.extract(
-                "([A-Za-z]+ [A-Za-z]+)", expand=False
-            )
-        )
-        .dropna(subset=["speciesname"])
+        .dropna(subset=["species"])
+        .pipe(clean_species_name, "species", "speciesname")
         .drop(columns=["species"])
         .set_index("speciesname")
     )
 
     # 03. Preprocess PFT data
-    pfts = pfts.drop(columns=["AccSpeciesID"]).assign(
-        speciesname=lambda df: df.AccSpeciesName.str.extract(
-            "([A-Za-z]+ [A-Za-z]+)", expand=False
-        )
-        .dropna(subset="speciesname")
+    pfts = (
+        pfts.drop(columns=["AccSpeciesID"])
+        .dropna(subset=["AccSpeciesName"])
+        .pipe(clean_species_name, "AccSpeciesName", "speciesname")
         .drop(columns=["AccSpeciesName"])
         .set_index("speciesname")
     )
 
     log.info("Matching GBIF and PFT data and saving to disk...")
     # 04. Merge GBIF and PFT data and save to disk
-    ddf = (
-        dd.merge(ddf, pfts, left_index=True, right_index=True)
-        .reset_index()
-        .to_parquet(gbif_prep_dir / cfg.interim.gbif.matched, write_index=False)
-    )
+    try:
+        ddf = (
+            ddf.join(pfts, how="inner")
+            .reset_index()
+            .to_parquet(gbif_prep_dir / cfg.interim.gbif.matched, write_index=False)
+        )
 
 
 if __name__ == "__main__":
