@@ -76,8 +76,8 @@ stages:
       size: 3964944
     - path: src/data/match_gbif_pfts.py
       hash: md5
-      md5: 92c088df22544393d7faeb93a24f19b6
-      size: 2077
+      md5: d331ffd76c83b0f65e6838a024fa8232
+      size: 2075
     params:
       params.yaml:
         datasets.Y.gbif: all_tracheophyta_non-cult_2024-04-10

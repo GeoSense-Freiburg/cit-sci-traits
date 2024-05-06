@@ -10,7 +10,7 @@ import pandas as pd
 from box import ConfigBox
 from dask import config
 from dask.diagnostics import ProgressBar
-from dask.distributed import Client
+from dask.distributed import Client, LocalCluster
 
 from src.conf.conf import get_config
 
@@ -49,7 +49,10 @@ def main(cfg: ConfigBox = get_config()) -> None:
             "distributed.worker.memory.terminate": 0.98,
         }
     ):
-        client = Client(n_workers=24, memory_limit="120GB")
+        cluster = LocalCluster(
+            n_workers=24, memory_limit="120GB", dashboard_address=":39143"
+        )
+        client = Client(cluster)
 
     # 02. Load GBIF data
     gbif_prep_dir = Path(cfg.interim.gbif.dir)
