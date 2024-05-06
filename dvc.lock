@@ -5,20 +5,20 @@ stages:
     deps:
     - path: src/data/harmonize_eo_data.py
       hash: md5
-      md5: 99dfc579b261c977dc9b75e55f688801
-      size: 4415
+      md5: c796bb110058808c7cc98cfb474b8b10
+      size: 4419
     params:
       params.yaml:
         base_resolution: 0.01
         datasets.X:
         - modis_sur_refl_monthly_avg_1km
         - wc2-1_30s_bio
+        eo_data.interim.dir: data/interim/eo_data
         extent:
         - -180
         - -60
         - 180
         - 90
-        interim.eo_data: data/interim/eo_data
         mask:
           path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
           keep_classes:
@@ -49,12 +49,12 @@ stages:
       nfiles: 3
     - path: src/data/extract_splot.py
       hash: md5
-      md5: 22c1a1f79340bbf2f9dde9af934dd146
+      md5: 2f6866ca72aeec62dc646ee33c2056fa
       size: 3044
     params:
       params.yaml:
         datasets.Y.splot: splot4-0
-        interim.splot:
+        splot.interim:
           dir: data/interim/splot
     outs:
     - path: data/interim/splot
@@ -76,14 +76,14 @@ stages:
       size: 3964944
     - path: src/data/match_gbif_pfts.py
       hash: md5
-      md5: d331ffd76c83b0f65e6838a024fa8232
+      md5: 8cfb24496175ab83cc97dc9129b4c7d4
       size: 2075
     params:
       params.yaml:
         datasets.Y.gbif: all_tracheophyta_non-cult_2024-04-10
+        gbif.interim.dir: data/interim/gbif
+        gbif.interim.matched: gbif_pfts.parquet
         gbif.raw.dir: data/raw/all_tracheophyta_non-cult_2024-04-10
-        interim.gbif.dir: data/interim/gbif
-        interim.gbif.matched: gbif_pfts.parquet
     outs:
     - path: data/interim/gbif/gbif_pfts.parquet
       hash: md5
@@ -100,15 +100,15 @@ stages:
       nfiles: 122
     - path: src/data/subsample_gbif.py
       hash: md5
-      md5: ba0f8cf5f06b7156d52a4eab5a7295a4
+      md5: 23b055d9c55abcf906a6fd3d647a6e95
       size: 2965
     params:
       params.yaml:
-        interim.gbif.dir: data/interim/gbif
-        interim.gbif.matched: gbif_pfts.parquet
-        interim.gbif.subsample_binsize: 4
-        interim.gbif.subsample_n_max: 10000
-        interim.gbif.subsampled: gbif_subsampled.parquet
+        gbif.interim.dir: data/interim/gbif
+        gbif.interim.matched: gbif_pfts.parquet
+        gbif.interim.subsample_binsize: 4
+        gbif.interim.subsample_n_max: 10000
+        gbif.interim.subsampled: gbif_subsampled.parquet
     outs:
     - path: data/interim/gbif/gbif_subsampled.parquet
       hash: md5

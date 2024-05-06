@@ -27,11 +27,11 @@ def main(cfg: ConfigBox = get_config()) -> None:
             hex=lat_lon_to_hex_vectorized(
                 df.decimallatitude,
                 df.decimallongitude,
-                cfg.interim.gbif.subsample_binsize,
+                cfg.gbif.interim.subsample_binsize,
             )
         )
 
-    def _sample_partition(df, n_samples: int = cfg.interim.gbif.subsample_n_max):
+    def _sample_partition(df, n_samples: int = cfg.gbif.interim.subsample_n_max):
         return df.groupby(level=0).apply(
             lambda group: (
                 group
@@ -55,9 +55,9 @@ def main(cfg: ConfigBox = get_config()) -> None:
         client = Client(cluster)
 
     # 02. Load GBIF data
-    gbif_prep_dir = Path(cfg.interim.gbif.dir)
+    gbif_prep_dir = Path(cfg.gbif.interim.dir)
     gbif = (
-        dd.read_parquet(gbif_prep_dir / cfg.interim.gbif.matched)
+        dd.read_parquet(gbif_prep_dir / cfg.gbif.interim.matched)
         .repartition(npartitions=64)
         .astype({"pft": "category", "speciesname": "string[pyarrow]"})
     )
@@ -85,7 +85,7 @@ def main(cfg: ConfigBox = get_config()) -> None:
         with ProgressBar():
             gbif_hex_binned.map_partitions(_sample_partition, meta=meta).reset_index(
                 drop=True
-            ).to_parquet(gbif_prep_dir / cfg.interim.gbif.subsampled, write_index=False)
+            ).to_parquet(gbif_prep_dir / cfg.gbif.interim.subsampled, write_index=False)
     finally:
         client.close()
 

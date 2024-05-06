@@ -102,7 +102,7 @@ def main(args: argparse.Namespace) -> None:
     log.info("Collecting files...")
     filenames = get_dataset_filenames(conf.datasets.X, stage="raw")
 
-    out_dir = Path(conf.interim.eo_data) / conf.model_res
+    out_dir = Path(conf.eo_data.interim.dir) / conf.model_res
 
     if args.resume:
         processed_files = list(out_dir.rglob("*/*.parquet"))

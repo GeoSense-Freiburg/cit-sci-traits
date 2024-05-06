@@ -26,9 +26,25 @@ datasets:
     splot: splot4-0
     gbif: all_tracheophyta_non-cult_2024-04-10
 
+eo_data:
+  interim:
+    dir: data/interim/eo_data
+
 gbif:
   raw:
     dir: data/raw/all_tracheophyta_non-cult_2024-04-10
+  interim:
+    dir: data/interim/gbif
+    matched: gbif_pfts.parquet
+    subsampled: gbif_subsampled.parquet
+    subsample_binsize: 4
+    subsample_n_max: 10000
+
+splot:
+  raw:
+    dir: data/raw/splot4-0
+  interim:
+    dir: data/interim/splot
 
 trydb:
   raw:
@@ -37,17 +53,6 @@ trydb:
 base_resolution: 0.01 # Shared best resolution of all datasets (used for masking)
 target_resolution: 0.01 # Target resolution for model training
 extent: [-180, -60, 180, 90] # Extent of the final dataset
-
-interim:
-  eo_data: data/interim/eo_data
-  splot:
-    dir: data/interim/splot
-  gbif:
-    dir: data/interim/gbif
-    matched: gbif_pfts.parquet
-    subsampled: gbif_subsampled.parquet
-    subsample_binsize: 4
-    subsample_n_max: 10000
 
 train:
   path: data/processed/train

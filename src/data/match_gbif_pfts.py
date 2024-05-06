@@ -21,7 +21,7 @@ def main(cfg: ConfigBox = get_config()):
 
     # 01. Load data
     gbif_raw_dir = Path(cfg.gbif.raw.dir)
-    gbif_prep_dir = Path(cfg.interim.gbif.dir)
+    gbif_prep_dir = Path(cfg.gbif.interim.dir)
 
     columns = [
         "species",
@@ -61,7 +61,7 @@ def main(cfg: ConfigBox = get_config()):
         ddf = (
             ddf.join(pfts, how="inner")
             .reset_index()
-            .to_parquet(gbif_prep_dir / cfg.interim.gbif.matched, write_index=False)
+            .to_parquet(gbif_prep_dir / cfg.gbif.interim.matched, write_index=False)
         )
     finally:
         log.info("Shutting down Dask client...")

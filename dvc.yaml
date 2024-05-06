@@ -10,22 +10,23 @@ stages:
       - base_resolution
       - target_resolution
       - extent
-      - interim.eo_data
+      - eo_data.interim.dir
     outs:
-      - ${interim.eo_data}/${model_res}:
+      - ${eo_data.interim.dir}/${model_res}:
           persist: true
 
-  extract_splot:
-    cmd: python src/data/extract_splot.py
+  get_TRY_mean_traits:
+    cmd: python src/data/build_try_traits.py
     deps:
-      - src/data/extract_splot.py
-      - data/raw/${datasets.Y.splot}
+      - src/data/build_try_traits.py
+      - ${trydb.raw.dir}/${trydb.raw.zip}
     params:
-      - datasets.Y.splot
-      - interim.splot
+      - trydb.raw.dir
+      - trydb.raw.zip
+      - trydb.raw.zipfile_csv
+      - trydb.interim
     outs:
-      - ${interim.splot.dir}:
-          persist: true
+      - ${trydb.interim.dir}/${trydb.interim.filtered}
 
   match_gbif_pfts:
     cmd: python src/data/match_gbif_pfts.py
@@ -36,25 +37,37 @@ stages:
     params:
       - datasets.Y.gbif
       - gbif.raw.dir
-      - interim.gbif.dir
-      - interim.gbif.matched
+      - gbif.interim.dir
+      - gbif.interim.matched
     outs:
-      - ${interim.gbif.dir}/${interim.gbif.matched}:
+      - ${gbif.interim.dir}/${gbif.interim.matched}:
           persist: true
 
   subsample_gbif:
     cmd: python src/data/subsample_gbif.py
     deps:
       - src/data/subsample_gbif.py
-      - ${interim.gbif.dir}/${interim.gbif.matched}
+      - ${gbif.interim.dir}/${gbif.interim.matched}
     params:
-      - interim.gbif.dir
-      - interim.gbif.matched
-      - interim.gbif.subsampled
-      - interim.gbif.subsample_binsize
-      - interim.gbif.subsample_n_max
+      - gbif.interim.dir
+      - gbif.interim.matched
+      - gbif.interim.subsampled
+      - gbif.interim.subsample_binsize
+      - gbif.interim.subsample_n_max
     outs:
-      - ${interim.gbif.dir}/${interim.gbif.subsampled}:
+      - ${gbif.interim.dir}/${gbif.interim.subsampled}:
+          persist: true
+
+  extract_splot:
+    cmd: python src/data/extract_splot.py
+    deps:
+      - src/data/extract_splot.py
+      - data/raw/${datasets.Y.splot}
+    params:
+      - datasets.Y.splot
+      - splot.interim
+    outs:
+      - ${splot.interim.dir}:
           persist: true
 
   # harmonize_trait_data:
@@ -79,25 +92,25 @@ stages:
   #   cmd: python src/data/calculate_ndvi.py
   #   deps:
   #     - src/data/calculate_ndvi.py
-  #     - ${interim.eo_data}/${model_res}
+  #     - ${eo_data.interim.dir}/${model_res}
   #   outs:
-  #     - ${interim.eo_data}/${model_res}:
+  #     - ${eo_data.interim.dir}/${model_res}:
   #         persist: true
 
   # prune_bio_vars:
   #   cmd: python src/data/prune_bio_vars.py
   #   deps:
   #     - src/data/prune_bio_vars.py
-  #     - ${interim.eo_data}/${model_res}
+  #     - ${eo_data.interim.dir}/${model_res}
   #   outs:
-  #     - ${interim.eo_data}/${model_res}:
+  #     - ${eo_data.interim.dir}/${model_res}:
   #         persist: true
 
   # build_train:
   #   cmd: python src/data/build_train.py
   #   deps:
   #     - src/data/build_train.py
-  #     - ${interim.eo_data}/${model_res}
+  #     - ${eo_data.interim.dir}/${model_res}
   #   outs:
   #     - ${train.path}/${model_res}:
   #         persist: true
