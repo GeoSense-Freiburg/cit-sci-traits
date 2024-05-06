@@ -4,6 +4,7 @@ from pathlib import Path
 
 import dask.dataframe as dd
 from box import ConfigBox
+from dask.distributed import Client, LocalCluster
 
 from src.conf.conf import get_config
 from src.conf.environment import log
@@ -12,6 +13,12 @@ from src.utils.trait_utils import clean_species_name
 
 def main(cfg: ConfigBox = get_config()):
     """Match GBIF and PFT data and save to disk."""
+    # 00. Initialize Dask client
+    cluster = LocalCluster(
+        dashboard_address=":39143", n_workers=40, memory_limit="48GB"
+    )
+    client = Client(cluster)
+
     # 01. Load data
     gbif_raw_dir = Path(cfg.gbif.raw.dir)
     gbif_prep_dir = Path(cfg.interim.gbif.dir)
@@ -25,8 +32,8 @@ def main(cfg: ConfigBox = get_config()):
     ddf = dd.read_parquet(
         gbif_raw_dir / "all_tracheophyta_non-cult_2024-04-10.parquet/*",
         columns=columns,
-        npartitions=60,
-    )
+    ).repartition(npartitions=60)
+
     pfts = dd.read_csv(Path(cfg.trydb.raw.pfts), encoding="latin-1")
 
     # 02. Preprocess GBIF data
@@ -56,7 +63,12 @@ def main(cfg: ConfigBox = get_config()):
             .reset_index()
             .to_parquet(gbif_prep_dir / cfg.interim.gbif.matched, write_index=False)
         )
+    finally:
+        log.info("Shutting down Dask client...")
+        client.close()
+        cluster.close()
 
 
 if __name__ == "__main__":
     main()
+    log.info("Done!")
