@@ -70,6 +70,18 @@ stages:
       - ${splot.interim.dir}:
           persist: true
 
+  # match_splot_pfts:
+  #   cmd: python src/data/match_splot_pfts.py
+  #   deps:
+  #     - src/data/match_splot_pfts.py
+  #     - ${splot.interim.dir}
+  #     - ${trydb.raw.pfts}
+  #   params:
+  #     - datasets.Y.splot
+  #     - splot.interim
+  #   outs:
+  #     - ${splot.interim.dir}/${splot.interim.matched}:
+  #         persist: true
   # harmonize_trait_data:
   #   cmd: python src/data/harmonize_trait_data.py
   #   deps:
