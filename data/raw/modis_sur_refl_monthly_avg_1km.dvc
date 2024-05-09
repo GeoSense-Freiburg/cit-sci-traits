@@ -1,13 +1,10 @@
-md5: 337c209ea94e27e5fee94f70c2f547b7
+md5: 95a2c4673bb7a42c5922ea240e105e9d
 frozen: true
 deps:
 - path: data/modis/modis_sur_refl_monthly_avg_1km
   repo:
-    url: /mnt/FS_data/panops-data/registry
-    rev_lock: 291495672b61227f8f21a6a9e98dee1000c0cb14
+    url: https://github.com/GeoSense-Freiburg/panops-data-registry
+    rev_lock: ac7118ccc38730b4309c8805f776e4cd61f275b6
 outs:
-- md5: 5659a396fd8895b5d903eb74d628a4e0.dir
-  size: 58238905336
-  nfiles: 60
-  hash: md5
+- hash: md5
   path: modis_sur_refl_monthly_avg_1km
