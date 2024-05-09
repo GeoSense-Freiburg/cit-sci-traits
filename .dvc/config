@@ -4,7 +4,9 @@
 [core]
     autostage = true
     remote = gcs
-['remote "panops-registry"']
+[remote "panops-registry"]
     url = /mnt/FS_data/panops-data/registry
-['remote "gcs"']
+[remote "gcs"]
     url = gs://cit-sci-traits_dvc
+[remote "panops-registry-gcs"]
+    url = gs://panops-data-registry
