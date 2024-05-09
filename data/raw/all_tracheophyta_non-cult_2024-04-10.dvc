@@ -1,4 +1,4 @@
-md5: 61382ef9fcb697b9bdd9c9dc1bab88a8
+md5: 1f810d5f60382fb7f0ab0062da61cdb5
 frozen: true
 deps:
 - path: data/gbif/all_tracheophyta_non-cult_2024-04-10
@@ -9,3 +9,6 @@ deps:
 outs:
 - hash: md5
   path: all_tracheophyta_non-cult_2024-04-10
+  md5: ada860692d425bd047bd09fd4531fdbf.dir
+  size: 30005038638
+  nfiles: 1584
