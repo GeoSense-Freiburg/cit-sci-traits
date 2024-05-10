@@ -1,4 +1,4 @@
-md5: 95a2c4673bb7a42c5922ea240e105e9d
+md5: a1613ce0c9d0c6c78f0c839a00d82c58
 frozen: true
 deps:
 - path: data/modis/modis_sur_refl_monthly_avg_1km
@@ -8,3 +8,6 @@ deps:
 outs:
 - hash: md5
   path: modis_sur_refl_monthly_avg_1km
+  md5: 5659a396fd8895b5d903eb74d628a4e0.dir
+  size: 58238905336
+  nfiles: 60

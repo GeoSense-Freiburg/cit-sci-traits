@@ -1,13 +1,13 @@
-md5: 17d070b2a35781efa87c7a67757d26c0
+md5: e18a1d16155c56b49efd9e1d4e27ebad
 frozen: true
 deps:
 - path: data/vodca/vodca_mean-p5-p95_1km
   repo:
-    url: /mnt/FS_data/panops-data/registry
-    rev_lock: 291495672b61227f8f21a6a9e98dee1000c0cb14
+    url: https://github.com/GeoSense-Freiburg/panops-data-registry
+    rev_lock: ac7118ccc38730b4309c8805f776e4cd61f275b6
 outs:
-- md5: ba45ecdbdf81992cef311ae550643bf1.dir
+- hash: md5
+  path: vodca_mean-p5-p95_1km
+  md5: ba45ecdbdf81992cef311ae550643bf1.dir
   size: 11858431661
   nfiles: 9
-  hash: md5
-  path: vodca_mean-p5-p95_1km

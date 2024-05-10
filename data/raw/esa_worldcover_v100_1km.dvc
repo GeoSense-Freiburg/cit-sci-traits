@@ -1,4 +1,4 @@
-md5: d3a6c5623f60e863608a21d9a500ad51
+md5: b4105fcff6f78bf0982b8ad4717c2260
 frozen: true
 deps:
 - path: data/landcover/esa_worldcover_v100_1km
@@ -9,3 +9,6 @@ deps:
 outs:
 - hash: md5
   path: esa_worldcover_v100_1km
+  md5: 3cc4d8f50aa3b1441f8843cf46381e42.dir
+  size: 40502767
+  nfiles: 1

@@ -1,12 +1,12 @@
-md5: e3c63523fddcbd4262d4241782fc4922
+md5: 5ef58fd662321982b313f6640abafb14
 frozen: true
 deps:
 - path: data/try/try_pft_v1.csv
   repo:
-    url: /mnt/FS_data/panops-data/registry
-    rev_lock: 291495672b61227f8f21a6a9e98dee1000c0cb14
+    url: https://github.com/GeoSense-Freiburg/panops-data-registry
+    rev_lock: ac7118ccc38730b4309c8805f776e4cd61f275b6
 outs:
-- md5: c8c8c94250a247ce30b76ce150bedf90
-  size: 3964944
-  hash: md5
+- hash: md5
   path: try_pft_v1.csv
+  md5: c8c8c94250a247ce30b76ce150bedf90
+  size: 3964944

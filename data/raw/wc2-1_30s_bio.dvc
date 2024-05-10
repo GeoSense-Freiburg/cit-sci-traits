@@ -1,13 +1,13 @@
-md5: 6039ce17998c0908837a8fb276e62645
+md5: 31b1699bd964cd3d3a0e7ace85a6e1dd
 frozen: true
 deps:
 - path: data/worldclim/wc2-1_30s_bio
   repo:
-    url: /mnt/FS_data/panops-data/registry
-    rev_lock: 291495672b61227f8f21a6a9e98dee1000c0cb14
+    url: https://github.com/GeoSense-Freiburg/panops-data-registry
+    rev_lock: ac7118ccc38730b4309c8805f776e4cd61f275b6
 outs:
-- md5: 53925e6b695fc9ad52b84dbb92471a22.dir
+- hash: md5
+  path: wc2-1_30s_bio
+  md5: 53925e6b695fc9ad52b84dbb92471a22.dir
   size: 10773356934
   nfiles: 19
-  hash: md5
-  path: wc2-1_30s_bio

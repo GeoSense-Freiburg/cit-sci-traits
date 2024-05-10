@@ -1,13 +1,13 @@
-md5: 2316880099c1cbe2bfc82d108ab37600
+md5: 712f0e5eda309cdeee0f2394780ce95a
 frozen: true
 deps:
 - path: data/soilgrids/soilgrids_v2-0_1km
   repo:
-    url: /mnt/FS_data/panops-data/registry
-    rev_lock: 291495672b61227f8f21a6a9e98dee1000c0cb14
+    url: https://github.com/GeoSense-Freiburg/panops-data-registry
+    rev_lock: ac7118ccc38730b4309c8805f776e4cd61f275b6
 outs:
-- md5: c7c807d6306555672a2f93959f7b7bcc.dir
+- hash: md5
+  path: soilgrids_v2-0_1km
+  md5: c7c807d6306555672a2f93959f7b7bcc.dir
   size: 15944244263
   nfiles: 61
-  hash: md5
-  path: soilgrids_v2-0_1km
