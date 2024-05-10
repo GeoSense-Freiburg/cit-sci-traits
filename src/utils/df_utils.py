@@ -1,5 +1,6 @@
 """Utility functions for working with DataFrames and GeoDataFrames."""
 
+import gc
 from pathlib import Path
 
 import dask.dataframe as dd
@@ -9,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from src.utils.log_utils import setup_logger
+from src.utils.raster_utils import create_sample_raster, xr_to_raster
 
 log = setup_logger(__name__, "INFO")
 
@@ -187,3 +189,83 @@ def filter_outliers(
         pct_dropped = (num_dropped / len(df)) * 100
         log.info("Dropping %d rows (%.2f%%)", num_dropped, pct_dropped)
     return df[comb_mask]
+
+
+def global_grid_df(
+    df: dd.DataFrame,
+    col: str,
+    lon: str = "decimallongitude",
+    lat: str = "decimallatitude",
+    res: int | float = 0.5,
+) -> dd.DataFrame:
+    """
+    Calculate gridded statistics for a given DataFrame.
+
+    Args:
+        df (dd.DataFrame): The input DataFrame.
+        col (str): The column name for which to calculate statistics.
+        lon (str, optional): The column name for longitude values. Defaults to "decimallongitude".
+        lat (str, optional): The column name for latitude values. Defaults to "decimallatitude".
+        res (int | float, optional): The resolution of the grid. Defaults to 0.5.
+
+    Returns:
+        dd.DataFrame: A DataFrame containing gridded statistics.
+
+    """
+    stat_funcs = [
+        "mean",
+        "std",
+        "median",
+        lambda x: x.quantile(0.05, interpolation="nearest"),
+        lambda x: x.quantile(0.95, interpolation="nearest"),
+    ]
+
+    stat_names = ["mean", "std", "median", "q05", "q95"]
+
+    # Calculate the bin for each row directly
+    df["y"] = (df[lat] + 90) // res * res - 90 + res / 2
+    df["x"] = (df[lon] + 180) // res * res - 180 + res / 2
+
+    gridded_df = (
+        df.drop(columns=[lat, lon])
+        .groupby(["y", "x"], observed=False)[[col]]
+        .agg(stat_funcs)
+    )
+
+    gridded_df.columns = stat_names
+
+    return gridded_df
+
+
+def grid_df_to_raster(df: pd.DataFrame, res: int | float, out: Path) -> None:
+    """
+    Converts a grid DataFrame to a raster file.
+
+    Args:
+        df (pd.DataFrame): The grid DataFrame to convert.
+        res (int | float): The resolution of the raster.
+        out (Path): The output path for the raster file.
+
+    Returns:
+        None
+    """
+    rast = create_sample_raster(resolution=res)
+    ds = df.to_xarray()
+    ds = ds.rio.write_crs(rast.rio.crs)
+    ds = ds.rio.reproject_match(rast)
+
+    for var in ds.data_vars:
+        nodata = ds[var].attrs["_FillValue"]
+        ds[var] = ds[var].where(ds[var] != nodata, np.nan)
+        ds[var] = ds[var].rio.write_nodata(-32767.0, encoded=True)
+
+    ds.attrs["long_name"] = list(ds.data_vars)
+    ds.attrs["trait"] = out.stem
+
+    xr_to_raster(ds, out)
+
+    rast.close()
+    ds.close()
+
+    del rast, ds
+    gc.collect()

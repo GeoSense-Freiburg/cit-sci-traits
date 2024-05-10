@@ -25,7 +25,10 @@ def xr_to_raster(
     **kwargs
 ) -> None:
     """Write a DataArray to a raster file."""
-    dtype = dtype if dtype is not None else data.dtype
+    if isinstance(data, xr.DataArray):
+        dtype = dtype if dtype is not None else data.dtype
+    else:
+        dtype = dtype if dtype is not None else data[list(data.data_vars)[0]].dtype
     if num_threads == -1:
         num_threads = multiprocessing.cpu_count()
 

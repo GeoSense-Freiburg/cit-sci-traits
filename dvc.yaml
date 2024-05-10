@@ -58,6 +58,23 @@ stages:
       - ${gbif.interim.dir}/${gbif.interim.subsampled}:
           persist: true
 
+  build_gbif_maps:
+    cmd: python src/data/build_gbif_maps.py
+    deps:
+      - src/data/build_gbif_maps.py
+      - ${gbif.interim.dir}/${gbif.interim.subsampled}
+      - ${trydb.interim.dir}/${trydb.interim.filtered}
+    params:
+      - gbif.interim.dir
+      - gbif.interim.subsampled
+      - trydb.interim.dir
+      - trydb.interim.filtered
+      - datasets.Y.gbif
+      - PFT
+      - model_res
+    outs:
+      - ${train.dir}/${train.traits.dir_name}/${model_res}/${train.gbif.dir_name}
+
   extract_splot:
     cmd: python src/data/extract_splot.py
     deps:

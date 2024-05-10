@@ -144,3 +144,34 @@ stages:
       hash: md5
       md5: 9333c1de42af6e722c8d8b4e726a76e7
       size: 13698859
+  build_gbif_maps:
+    cmd: python src/data/build_gbif_maps.py
+    deps:
+    - path: data/interim/gbif/gbif_subsampled.parquet
+      hash: md5
+      md5: 76716c908063b845b799581377f9ad1c.dir
+      size: 905012650
+      nfiles: 64
+    - path: data/interim/try/mean_gf_bt_sp_filt.parquet
+      hash: md5
+      md5: 9333c1de42af6e722c8d8b4e726a76e7
+      size: 13698859
+    - path: src/data/build_gbif_maps.py
+      hash: md5
+      md5: d9f934ab00fca9ceea98fc78f0714c42
+      size: 2834
+    params:
+      params.yaml:
+        PFT: Shrub_Tree_Grass
+        datasets.Y.gbif: all_tracheophyta_non-cult_2024-04-10
+        gbif.interim.dir: data/interim/gbif
+        gbif.interim.subsampled: gbif_subsampled.parquet
+        model_res: '001'
+        trydb.interim.dir: data/interim/try
+        trydb.interim.filtered: mean_gf_bt_sp_filt.parquet
+    outs:
+    - path: data/processed/traits/001/gbif
+      hash: md5
+      md5: bf3e651ff556369c773ed752b39c5a13.dir
+      size: 7463209367
+      nfiles: 33
