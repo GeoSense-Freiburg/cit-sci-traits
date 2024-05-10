@@ -212,15 +212,14 @@ def global_grid_df(
         dd.DataFrame: A DataFrame containing gridded statistics.
 
     """
-    stat_funcs = [
-        "mean",
-        "std",
-        "median",
-        lambda x: x.quantile(0.05, interpolation="nearest"),
-        lambda x: x.quantile(0.95, interpolation="nearest"),
-    ]
 
-    stat_names = ["mean", "std", "median", "q05", "q95"]
+    stat_funcs = {
+        "mean": "mean",
+        "std": "std",
+        "median": "median",
+        "q05": lambda x: x.quantile(0.05, interpolation="nearest"),
+        "q95": lambda x: x.quantile(0.95, interpolation="nearest"),
+    }
 
     # Calculate the bin for each row directly
     df["y"] = (df[lat] + 90) // res * res - 90 + res / 2
@@ -229,10 +228,10 @@ def global_grid_df(
     gridded_df = (
         df.drop(columns=[lat, lon])
         .groupby(["y", "x"], observed=False)[[col]]
-        .agg(stat_funcs)
+        .agg(list(stat_funcs.values()))
     )
 
-    gridded_df.columns = stat_names
+    gridded_df.columns = list(stat_funcs.keys())
 
     return gridded_df
 
