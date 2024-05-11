@@ -104,8 +104,8 @@ def open_raster(
 
 def create_sample_raster(
     extent: list[int] | list[float] | None = None, resolution: int | float = 1
-) -> xr.DataArray:
-    """Sample a raster at a given resolution."""
+) -> xr.Dataset:
+    """Generate a sample raster at a given resolution."""
     if extent is None:
         extent = [-180, -90, 180, 90]
 
@@ -113,17 +113,19 @@ def create_sample_raster(
     width = int((xmax - xmin) / resolution)
     height = int((ymax - ymin) / resolution)
     half_res = resolution * 0.5
+    decimals = int(np.ceil(-np.log10(half_res)))
 
-    x_data = np.linspace(xmin + half_res, xmax - half_res, width, dtype=np.float64)
-    y_data = np.linspace(ymax - half_res, ymin + half_res, height, dtype=np.float64)
-    x_var = xr.DataArray(x_data, dims="x", attrs={"units": "degrees_east"})
-    y_var = xr.DataArray(y_data, dims="y", attrs={"units": "degrees_north"})
-    coords = {"x": x_var, "y": y_var}
+    x_data = np.round(
+        np.linspace(xmin + half_res, xmax - half_res, width, dtype=np.float64), decimals
+    )
+    y_data = np.round(
+        np.linspace(ymax - half_res, ymin + half_res, height, dtype=np.float64),
+        decimals,
+    )
 
-    data = np.zeros((height, width), dtype=np.uint8)
-    data_array = xr.DataArray(data, dims=("y", "x"), coords=coords)
+    ds = xr.Dataset({"y": (("y"), y_data), "x": (("x"), x_data)})
 
-    return data_array.rio.write_crs("EPSG:4326")
+    return ds.rio.write_crs("EPSG:4326")
 
 
 def raster_to_df(

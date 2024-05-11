@@ -8,6 +8,7 @@ import dask_geopandas as dgpd
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 from src.utils.log_utils import setup_logger
 from src.utils.raster_utils import create_sample_raster, xr_to_raster
@@ -197,6 +198,7 @@ def global_grid_df(
     lon: str = "decimallongitude",
     lat: str = "decimallatitude",
     res: int | float = 0.5,
+    stats: list | None = None,
 ) -> dd.DataFrame:
     """
     Calculate gridded statistics for a given DataFrame.
@@ -219,7 +221,11 @@ def global_grid_df(
         "median": "median",
         "q05": lambda x: x.quantile(0.05, interpolation="nearest"),
         "q95": lambda x: x.quantile(0.95, interpolation="nearest"),
+        "count": "count",
     }
+
+    if stats is not None:
+        stat_funcs = {k: v for k, v in stat_funcs.items() if k in stats}
 
     # Calculate the bin for each row directly
     df["y"] = (df[lat] + 90) // res * res - 90 + res / 2
@@ -248,14 +254,27 @@ def grid_df_to_raster(df: pd.DataFrame, res: int | float, out: Path) -> None:
     Returns:
         None
     """
-    rast = create_sample_raster(resolution=res)
-    ds = df.to_xarray()
-    ds = ds.rio.write_crs(rast.rio.crs)
-    ds = ds.rio.reproject_match(rast)
+    ref = create_sample_raster(resolution=res)
+
+    decimals = int(np.ceil(-np.log10(res / 2)))
+
+    ds = (
+        df.to_xarray()
+        .assign_coords(
+            x=lambda ds: np.round(ds["x"], decimals),
+            y=lambda ds: np.round(ds["y"], decimals),
+        )
+        .merge(ref, join="right")
+        .rio.write_crs(ref.rio.crs)
+    )
 
     for var in ds.data_vars:
-        nodata = ds[var].attrs["_FillValue"]
-        ds[var] = ds[var].where(ds[var] != nodata, np.nan)
+        if "_FillValue" in ds[var].attrs:
+            nodata = ds[var].attrs["_FillValue"]
+            ds[var] = ds[var].where(ds[var] != nodata, np.nan)
+        else:
+            ds[var] = ds[var].where(~ds[var].isnull(), np.nan)
+
         ds[var] = ds[var].rio.write_nodata(-32767.0, encoded=True)
 
     ds.attrs["long_name"] = list(ds.data_vars)
@@ -263,8 +282,8 @@ def grid_df_to_raster(df: pd.DataFrame, res: int | float, out: Path) -> None:
 
     xr_to_raster(ds, out)
 
-    rast.close()
+    ref.close()
     ds.close()
 
-    del rast, ds
+    del ref, ds
     gc.collect()
