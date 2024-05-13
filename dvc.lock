@@ -109,6 +109,7 @@ stages:
         gbif.interim.subsample_binsize: 4
         gbif.interim.subsample_n_max: 10000
         gbif.interim.subsampled: gbif_subsampled.parquet
+        random_seed: 42
     outs:
     - path: data/interim/gbif/gbif_subsampled.parquet
       hash: md5

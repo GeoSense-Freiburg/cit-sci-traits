@@ -54,6 +54,7 @@ stages:
       - gbif.interim.subsampled
       - gbif.interim.subsample_binsize
       - gbif.interim.subsample_n_max
+      - random_seed
     outs:
       - ${gbif.interim.dir}/${gbif.interim.subsampled}:
           persist: true
