@@ -72,8 +72,10 @@ stages:
       - datasets.Y.gbif
       - PFT
       - model_res
+      - target_resolution
     outs:
-      - ${train.dir}/${train.traits.dir_name}/${model_res}/${train.gbif.dir_name}
+      - ${train.dir}/${train.traits.dir_name}/${PFT}/${model_res}/${train.gbif.dir_name}:
+          persist: true
 
   extract_splot:
     cmd: python src/data/extract_splot.py

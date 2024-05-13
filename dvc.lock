@@ -158,8 +158,8 @@ stages:
       size: 13698859
     - path: src/data/build_gbif_maps.py
       hash: md5
-      md5: d9f934ab00fca9ceea98fc78f0714c42
-      size: 2834
+      md5: 9b9471bb8da0244fbeeaa4261a40e004
+      size: 2118
     params:
       params.yaml:
         PFT: Shrub_Tree_Grass
@@ -167,11 +167,12 @@ stages:
         gbif.interim.dir: data/interim/gbif
         gbif.interim.subsampled: gbif_subsampled.parquet
         model_res: '001'
+        target_resolution: 0.01
         trydb.interim.dir: data/interim/try
         trydb.interim.filtered: mean_gf_bt_sp_filt.parquet
     outs:
-    - path: data/processed/traits/001/gbif
+    - path: data/processed/traits/Shrub_Tree_Grass/001/gbif
       hash: md5
-      md5: bf3e651ff556369c773ed752b39c5a13.dir
-      size: 7463209367
+      md5: 499003834d29c5cebcdc7ba44081be40.dir
+      size: 7609417391
       nfiles: 33

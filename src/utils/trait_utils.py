@@ -35,3 +35,26 @@ def clean_species_name(
         .dropna(subset=[new_sp_col])
         .assign(**{new_sp_col: lambda _df: genus_species_caps(_df[new_sp_col])})
     )
+
+
+def filter_pft(df: pd.DataFrame, pft_set: str, pft_col: str = "pft") -> pd.DataFrame:
+    """
+    Filter the DataFrame based on the specified plant functional types (PFTs).
+
+    Args:
+        df (pd.DataFrame): The DataFrame to filter.
+        pft_set (str): The plant functional types to filter by, separated by underscores.
+        pft_col (str, optional): The column name in the DataFrame that contains the PFTs.
+            Defaults to "pft".
+
+    Returns:
+        pd.DataFrame: The filtered DataFrame.
+
+    Raises:
+        ValueError: If an invalid PFT designation is provided.
+    """
+    pfts = pft_set.split("_")
+    if not any(pft in ["Shrub", "Tree", "Grass"] for pft in pfts):
+        raise ValueError(f"Invalid PFT designation: {pft_set}")
+
+    return df[df[pft_col].isin(pfts)]
