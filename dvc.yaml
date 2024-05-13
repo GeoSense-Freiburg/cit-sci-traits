@@ -90,6 +90,22 @@ stages:
       - ${splot.interim.dir}:
           persist: true
 
+  build_splot_maps:
+    cmd: python src/data/build_splot_maps.py
+    deps:
+      - src/data/build_splot_maps.py
+      - ${splot.interim.dir}
+      - ${trydb.raw.pfts}
+      - ${trydb.interim.dir}/${trydb.interim.filtered}
+    params:
+      - splot.interim
+      - model_res
+      - PFT
+      - target_resolution
+    outs:
+      - ${train.dir}/${train.traits.dir_name}/${PFT}/${model_res}/${train.splot.dir_name}:
+          persist: true
+
   # match_splot_pfts:
   #   cmd: python src/data/match_splot_pfts.py
   #   deps:

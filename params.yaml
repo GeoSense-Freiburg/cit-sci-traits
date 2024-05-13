@@ -1,6 +1,9 @@
 model_res: "001"
 PFT: "Shrub_Tree_Grass"
 random_seed: 42
+base_resolution: 0.01 # Shared best resolution of all EO datasets (used for masking)
+target_resolution: 0.01 # Target resolution for model training
+extent: [-180, -60, 180, 90] # Extent of the final dataset
 
 mask:
   path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
@@ -92,13 +95,11 @@ trydb:
     quantile_range: [0.005, 0.995]
     filtered: mean_gf_bt_sp_filt.parquet
 
-base_resolution: 0.01 # Shared best resolution of all datasets (used for masking)
-target_resolution: 0.01 # Target resolution for model training
-extent: [-180, -60, 180, 90] # Extent of the final dataset
-
 train:
   dir: data/processed
   traits:
     dir_name: traits
   gbif:
     dir_name: gbif
+  splot:
+    dir_name: splot
