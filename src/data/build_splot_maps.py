@@ -34,7 +34,7 @@ def main(cfg: ConfigBox = get_config()) -> None:
     """Match sPlot data with filtered trait data, calculate CWMs, and grid it."""
 
     # Setup ################
-    splot_dir = Path(cfg.splot.interim.dir)
+    splot_dir = Path(cfg.splot.interim.dir) / cfg.splot.interim.extracted
     npartitions = 60
     cluster = LocalCluster(
         n_workers=40, memory_limit="40GB", dashboard_address=":39143"

@@ -49,18 +49,18 @@ stages:
       nfiles: 3
     - path: src/data/extract_splot.py
       hash: md5
-      md5: 2f6866ca72aeec62dc646ee33c2056fa
-      size: 3044
+      md5: 64e433e13b7557d00ab99bce92e6022f
+      size: 3074
     params:
       params.yaml:
         datasets.Y.splot: splot4-0
         splot.interim.dir: data/interim/splot
     outs:
-    - path: data/interim/splot
+    - path: data/interim/splot/extracted
       hash: md5
-      md5: 0107448db2daf58ac9534f4c3f930643.dir
-      size: 1558197548
-      nfiles: 36
+      md5: cd41e7ce8ca0b67b8dcef9f5d5e3c5ed.dir
+      size: 508142149
+      nfiles: 3
   match_gbif_pfts:
     cmd: python src/data/match_gbif_pfts.py
     deps:
@@ -179,11 +179,11 @@ stages:
   build_splot_maps:
     cmd: python src/data/build_splot_maps.py
     deps:
-    - path: data/interim/splot
+    - path: data/interim/splot/extracted
       hash: md5
-      md5: 0107448db2daf58ac9534f4c3f930643.dir
-      size: 1558197548
-      nfiles: 36
+      md5: cd41e7ce8ca0b67b8dcef9f5d5e3c5ed.dir
+      size: 508142149
+      nfiles: 3
     - path: data/interim/try/mean_gf_bt_sp_filt.parquet
       hash: md5
       md5: 9333c1de42af6e722c8d8b4e726a76e7
@@ -194,14 +194,15 @@ stages:
       size: 3964944
     - path: src/data/build_splot_maps.py
       hash: md5
-      md5: 1dcd95d645e50ac55dfba47e01a56a75
-      size: 4339
+      md5: abdb8a1d6ee1f71761df29c786131774
+      size: 4369
     params:
       params.yaml:
         PFT: Shrub_Tree_Grass
         model_res: '001'
         splot.interim:
           dir: data/interim/splot
+          extracted: extracted
           traits: trait_maps
         target_resolution: 0.01
     outs:

@@ -83,6 +83,7 @@ splot:
     dir: data/raw/splot4-0
   interim:
     dir: data/interim/splot
+    extracted: extracted
     traits: trait_maps
 
 trydb:

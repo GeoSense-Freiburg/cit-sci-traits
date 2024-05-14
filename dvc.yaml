@@ -87,14 +87,14 @@ stages:
       - datasets.Y.splot
       - splot.interim.dir
     outs:
-      - ${splot.interim.dir}:
+      - ${splot.interim.dir}/${splot.interim.extracted}:
           persist: true
 
   build_splot_maps:
     cmd: python src/data/build_splot_maps.py
     deps:
       - src/data/build_splot_maps.py
-      - ${splot.interim.dir}
+      - ${splot.interim.dir}/${splot.interim.extracted}
       - ${trydb.raw.pfts}
       - ${trydb.interim.dir}/${trydb.interim.filtered}
     params:

@@ -16,7 +16,7 @@ from src.conf.environment import log
 def main(cfg: ConfigBox = get_config()) -> None:
     """Extracts and converts the sPlot data to pandas DataFrames."""
     splot_raw_dir = Path("data/raw", cfg.datasets.Y.splot)
-    splot_prep_dir = Path(cfg.splot.interim.dir)
+    splot_prep_dir = Path(cfg.splot.interim.dir) / cfg.splot.interim.extracted
     splot_prep_dir.mkdir(parents=True, exist_ok=True)
     zip_path = splot_raw_dir / "extracted_data.zip"
     extracted_rdata_fp = splot_prep_dir / "extracted_data.RData"
