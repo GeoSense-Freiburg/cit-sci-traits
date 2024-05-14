@@ -95,11 +95,7 @@ def main(cfg: ConfigBox = get_config()) -> None:
     )
 
     out_dir = (
-        Path(cfg.train.dir)
-        / cfg.train.traits.dir_name
-        / cfg.PFT
-        / cfg.model_res
-        / cfg.train.splot.dir_name
+        Path(cfg.splot.interim.dir) / cfg.splot.interim.traits / cfg.PFT / cfg.model_res
     )
     out_dir.mkdir(parents=True, exist_ok=True)
 

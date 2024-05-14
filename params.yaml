@@ -76,12 +76,14 @@ gbif:
     subsampled: gbif_subsampled.parquet
     subsample_binsize: 4
     subsample_n_max: 10000
+    traits: trait_maps
 
 splot:
   raw:
     dir: data/raw/splot4-0
   interim:
     dir: data/interim/splot
+    traits: trait_maps
 
 trydb:
   raw:

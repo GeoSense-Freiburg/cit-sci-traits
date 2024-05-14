@@ -75,7 +75,7 @@ stages:
       - model_res
       - target_resolution
     outs:
-      - ${train.dir}/${train.traits.dir_name}/${PFT}/${model_res}/${train.gbif.dir_name}:
+      - ${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}:
           persist: true
 
   extract_splot:
@@ -85,7 +85,7 @@ stages:
       - data/raw/${datasets.Y.splot}
     params:
       - datasets.Y.splot
-      - splot.interim
+      - splot.interim.dir
     outs:
       - ${splot.interim.dir}:
           persist: true
@@ -103,7 +103,7 @@ stages:
       - PFT
       - target_resolution
     outs:
-      - ${train.dir}/${train.traits.dir_name}/${PFT}/${model_res}/${train.splot.dir_name}:
+      - ${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}:
           persist: true
 
   # match_splot_pfts:

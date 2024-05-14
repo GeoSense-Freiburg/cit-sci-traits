@@ -26,11 +26,7 @@ def main(cfg: ConfigBox = get_config()) -> None:
     npartitions = 90
 
     out_dir = (
-        Path(cfg.train.dir)
-        / cfg.train.traits.dir_name
-        / cfg.PFT
-        / cfg.model_res
-        / cfg.train.gbif.dir_name
+        Path(cfg.gbif.interim.dir) / cfg.gbif.interim.traits / cfg.PFT / cfg.model_res
     )
     out_dir.mkdir(parents=True, exist_ok=True)
 

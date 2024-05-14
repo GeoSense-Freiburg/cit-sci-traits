@@ -54,14 +54,13 @@ stages:
     params:
       params.yaml:
         datasets.Y.splot: splot4-0
-        splot.interim:
-          dir: data/interim/splot
+        splot.interim.dir: data/interim/splot
     outs:
     - path: data/interim/splot
       hash: md5
-      md5: cd41e7ce8ca0b67b8dcef9f5d5e3c5ed.dir
-      size: 508142149
-      nfiles: 3
+      md5: 0107448db2daf58ac9534f4c3f930643.dir
+      size: 1558197548
+      nfiles: 36
   match_gbif_pfts:
     cmd: python src/data/match_gbif_pfts.py
     deps:
@@ -159,8 +158,8 @@ stages:
       size: 13698859
     - path: src/data/build_gbif_maps.py
       hash: md5
-      md5: 9b9471bb8da0244fbeeaa4261a40e004
-      size: 2118
+      md5: 368b8009661fd43e796dc3fba2f502ac
+      size: 2065
     params:
       params.yaml:
         PFT: Shrub_Tree_Grass
@@ -172,7 +171,7 @@ stages:
         trydb.interim.dir: data/interim/try
         trydb.interim.filtered: mean_gf_bt_sp_filt.parquet
     outs:
-    - path: data/processed/traits/Shrub_Tree_Grass/001/gbif
+    - path: data/interim/gbif/trait_maps/Shrub_Tree_Grass/001
       hash: md5
       md5: 499003834d29c5cebcdc7ba44081be40.dir
       size: 7609417391
@@ -182,9 +181,9 @@ stages:
     deps:
     - path: data/interim/splot
       hash: md5
-      md5: cd41e7ce8ca0b67b8dcef9f5d5e3c5ed.dir
-      size: 508142149
-      nfiles: 3
+      md5: 0107448db2daf58ac9534f4c3f930643.dir
+      size: 1558197548
+      nfiles: 36
     - path: data/interim/try/mean_gf_bt_sp_filt.parquet
       hash: md5
       md5: 9333c1de42af6e722c8d8b4e726a76e7
@@ -195,17 +194,18 @@ stages:
       size: 3964944
     - path: src/data/build_splot_maps.py
       hash: md5
-      md5: fbb5a8f07efd36f980cab73ec20c5a2b
-      size: 4391
+      md5: 1dcd95d645e50ac55dfba47e01a56a75
+      size: 4339
     params:
       params.yaml:
         PFT: Shrub_Tree_Grass
         model_res: '001'
         splot.interim:
           dir: data/interim/splot
+          traits: trait_maps
         target_resolution: 0.01
     outs:
-    - path: data/processed/traits/Shrub_Tree_Grass/001/splot
+    - path: data/interim/splot/trait_maps/Shrub_Tree_Grass/001
       hash: md5
       md5: ce3392f86249ee2ddb4deac861c0f2b5.dir
       size: 1050055399
