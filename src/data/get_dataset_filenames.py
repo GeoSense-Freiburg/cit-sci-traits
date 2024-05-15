@@ -1,54 +1,71 @@
 """Get the filenames of datasets based on the specified stage of processing."""
 
 from pathlib import Path
-from typing import Generator, List
+from typing import Dict, Generator, List
 
 from src.conf.conf import get_config
 
 
-def get_dataset_filenames(
-    datasets: List[str], stage: str
-) -> Generator[Path, None, None]:
+def get_dataset_filenames(stage: str, datasets: str | List[str] | None = None) -> Dict:
     """
-    Get the filenames of datasets based on the specified stage.
+    Get the filenames of datasets for a given stage.
 
     Args:
-        datasets (List[str]): A list of dataset names.
-        stage (str): The stage of the datasets. Must be one of 'raw', 'interim', or 'processed'.
+        stage (str): The stage of the dataset. Must be one of 'raw', 'interim', or 'processed'.
+        datasets (str | List[str] | None, optional): The specific datasets to retrieve
+            filenames for. If None, all datasets will be considered. Defaults to None.
 
-    Yields:
-        Path: The path to each dataset file.
+    Returns:
+        Dict: A dictionary where the keys are dataset names and the values are lists of filenames.
 
     Raises:
         ValueError: If an invalid stage is provided.
 
-    Returns:
-        Generator[Path, None, None]: A generator that yields the filenames of the datasets.
     """
-    if stage not in ["raw", "interim", "processed"]:
+    cfg = get_config()
+
+    stage_map = {
+        "raw": {"path": Path(cfg.raw), "ext": ".tif"},
+    }
+
+    if stage not in stage_map:
         raise ValueError(
             "Invalid stage. Must be one of 'raw', 'interim', or 'processed'."
         )
 
-    conf = get_config()
-    if stage == "raw":
-        data_dir = Path("data/raw")
-        ext = ".tif"
-    elif stage == "interim":
-        data_dir = Path("data/interim/eo_data", conf.model_res)
-        ext = ".parquet"
-    else:
-        data_dir = Path("data/processed")
-        ext = ".parquet"
+    fns = {}
+    for k, v in cfg.datasets.X.items():
+        fns[k] = list(stage_map[stage]["path"].glob(f"{v}/*{stage_map[stage]['ext']}"))
 
-    for dataset in datasets:
-        for filename in Path(data_dir, dataset).glob(f"*{ext}"):
-            yield filename
+    if datasets is not None:
+        return {k: v for k, v in fns.items() if k in datasets}
+
+    return fns
 
 
 def get_traits_filenames(
     dataset: str, pft: str, trait_set: str, res: str
 ) -> Generator[Path, None, None]:
+    """
+    Get the filenames of traits data based on the specified dataset, PFT, trait set, and
+    resolution.
+
+    Args:
+        dataset (str): The dataset name. Must be 'gbif_spo_wolf'.
+        pft (str): The PFT (Plant Functional Type). Must be one of 'Shrub_Tree_Grass',
+            'Shrub_Tree', or 'Grass'.
+        trait_set (str): The trait set. Must be one of 'gbif' or 'splot'.
+        res (str): The resolution. Must be one of '001deg', '02deg', '05deg', or '02deg'.
+
+    Yields:
+        Path: The path to the traits data file.
+
+    Raises:
+        ValueError: If the dataset, PFT, trait set, or resolution is invalid.
+
+    Returns:
+        Generator[Path, None, None]: A generator that yields the filenames of traits data.
+    """
     if dataset not in ["gbif_spo_wolf"]:
         raise ValueError("Invalid dataset. Must be 'gbif_spo_wolf'.")
 
@@ -76,8 +93,10 @@ def get_traits_filenames(
         yield fn
 
 
-if __name__ == "__main__":
-    fns = list(
-        get_traits_filenames("gbif_spo_wolf", "Shrub_Tree_Grass", "gbif", "001deg")
-    )
-    print("Done.")
+# if __name__ == "__main__":
+# print(
+#     list(
+#         get_traits_filenames("gbif_spo_wolf", "Shrub_Tree_Grass", "gbif", "001deg")
+#     )
+# )
+# pprint(get_dataset_filenames("raw", "worldclim"))

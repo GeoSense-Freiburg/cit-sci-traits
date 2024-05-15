@@ -4,7 +4,7 @@ import gc
 import multiprocessing
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import geopandas as gpd
 import numpy as np
@@ -16,10 +16,44 @@ from rasterio.enums import Resampling
 from rioxarray.merge import merge_arrays, merge_datasets
 
 
+def encode_nodata(da: xr.DataArray, dtype: str | np.dtype) -> xr.DataArray:
+    """Encode the nodata value of a DataArray."""
+    nodata = (
+        np.iinfo(dtype).max if np.issubdtype(dtype, np.integer) else np.finfo(dtype).max
+    )
+    if da.max() == nodata and not da.max() == da.rio.nodata:
+        # use min_val as nodata
+        nodata = (
+            np.iinfo(dtype).min
+            if np.issubdtype(dtype, np.integer)
+            else np.finfo(dtype).min
+        )
+
+    if dtype != da.dtype:
+        da = da.fillna(nodata)
+        da = da.astype(dtype)
+
+    if np.issubdtype(dtype, np.integer):
+        return da.rio.write_nodata(nodata)
+
+    return da.rio.write_nodata(nodata, encoded=True)
+
+
+def scale_data(
+    da: xr.DataArray, dtype: str | np.dtype, all_pos: bool = False
+) -> xr.DataArray:
+    if all_pos:
+        return (da - da.min()) * (np.iinfo(dtype).max - 1) / (da.max() - da.min())
+
+    return (da - da.min()) * (np.iinfo(dtype).max - np.iinfo(dtype).min - 1) / (
+        da.max() - da.min()
+    ) + np.iinfo(dtype).min
+
+
 def xr_to_raster(
     data: xr.DataArray | xr.Dataset,
     out: str | os.PathLike,
-    dtype: Optional[Any] = None,
+    dtype: np.dtype | str | None = None,
     compress: str = "ZSTD",
     num_threads: int = -1,
     **kwargs
@@ -27,8 +61,12 @@ def xr_to_raster(
     """Write a DataArray to a raster file."""
     if isinstance(data, xr.DataArray):
         dtype = dtype if dtype is not None else data.dtype
+        data = encode_nodata(data, dtype)
     else:
         dtype = dtype if dtype is not None else data[list(data.data_vars)[0]].dtype
+        for dv in data.data_vars:
+            data[dv] = encode_nodata(data[dv], dtype)
+
     if num_threads == -1:
         num_threads = multiprocessing.cpu_count()
 

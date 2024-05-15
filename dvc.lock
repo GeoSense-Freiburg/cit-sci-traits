@@ -1,24 +1,22 @@
 schema: '2.0'
 stages:
   harmonize_eo_data:
-    cmd: python src/data/harmonize_eo_data.py -n 8 -r
+    cmd: python src/data/harmonize_eo_data.py -n 12
     deps:
     - path: src/data/harmonize_eo_data.py
       hash: md5
-      md5: c796bb110058808c7cc98cfb474b8b10
-      size: 4419
+      md5: aeb6b1d59eaf92fdc2eb984ab17ed0a9
+      size: 7096
     params:
       params.yaml:
         base_resolution: 0.01
         datasets.X:
-        - modis_sur_refl_monthly_avg_1km
-        - wc2-1_30s_bio
+          canopy_height: ETH_GlobalCanopyHeight_2020_v1_1km
+          modis: modis_sur_refl_monthly_avg_1km
+          soilgrids: soilgrids_v2-0_1km
+          vodca: vodca_mean-p5-p95_1km
+          worldclim: wc2-1_30s_bio
         eo_data.interim.dir: data/interim/eo_data
-        extent:
-        - -180
-        - -60
-        - 180
-        - 90
         mask:
           path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
           keep_classes:
@@ -33,12 +31,19 @@ stages:
           - 100
         model_res: '001'
         target_resolution: 0.01
+        worldclim.bio_vars:
+        - '1'
+        - '4'
+        - '7'
+        - '12'
+        - 13-14
+        - '15'
     outs:
     - path: data/interim/eo_data/001
       hash: md5
-      md5: 4e9a7d78d9bcb7b3139a34536a597691.dir
-      size: 27006697782
-      nfiles: 79
+      md5: 33b4751370ba70d27e0b170fa13beb54.dir
+      size: 34856945252
+      nfiles: 150
   extract_splot:
     cmd: python src/data/extract_splot.py
     deps:

@@ -5,7 +5,9 @@ import argparse
 import gc
 import os
 from pathlib import Path
+from typing import List
 
+import numpy as np
 import xarray as xr
 from joblib import Parallel, delayed
 from tqdm import tqdm
@@ -14,8 +16,12 @@ from src.conf.conf import get_config
 from src.conf.environment import log
 from src.data.get_dataset_filenames import get_dataset_filenames
 from src.data.mask import get_mask, mask_raster
-from src.utils.df_utils import optimize_columns, write_df
-from src.utils.raster_utils import create_sample_raster, open_raster, raster_to_df
+from src.utils.raster_utils import (
+    create_sample_raster,
+    open_raster,
+    scale_data,
+    xr_to_raster,
+)
 
 
 def cli() -> argparse.Namespace:
@@ -28,9 +34,6 @@ def cli() -> argparse.Namespace:
         default=1,
         help="Number of workers. Use -1 for all CPUs.",
     )
-    parser.add_argument(
-        "-r", "--resume", action="store_true", help="Resume processing."
-    )
     parser.add_argument("-d", "--dry-run", action="store_true", help="Dry run.")
     args = parser.parse_args()
 
@@ -42,6 +45,7 @@ def cli() -> argparse.Namespace:
 
 def process_file(
     filename: str | os.PathLike,
+    dataset: str,
     mask: xr.DataArray,
     out_dir: str | Path,
     target_raster: xr.DataArray,
@@ -62,75 +66,164 @@ def process_file(
     """
     filename = Path(filename)
     rast = open_raster(filename).sel(band=1).rio.reproject_match(mask)
-    masked = mask_raster(rast, mask)
+    rast_masked = mask_raster(rast, mask)
 
     rast.close()
     mask.close()
     del rast, mask
 
-    if masked.rio.resolution() != target_raster.rio.resolution():
-        masked = masked.rio.reproject_match(target_raster)
+    if rast_masked.rio.resolution() != target_raster.rio.resolution():
+        rast_masked = rast_masked.rio.reproject_match(target_raster)
 
-    if "long_name" not in masked.attrs:
-        masked.attrs["long_name"] = Path(filename).stem
+    dtype = rast_masked.dtype
 
-    df = raster_to_df(masked)
-    masked.close()
-    del masked
+    if dataset == "modis":
+        # Values outside this range usually represent errors in the atmospheric correction
+        # algorithm
+        rast_masked = rast_masked.clip(0, 10000)
+        dtype = "int16"
 
-    df = optimize_columns(df, coords_as_categories=True)
+    if dataset == "soilgrids":
+        dtype = "int16"
+        # some soil properties have smaller ranges
+        if (
+            rast_masked.max() < np.iinfo(np.int8).max
+            and rast_masked.min() >= np.iinfo(np.int8).min
+        ):
+            dtype = "int8"
 
-    dataset_dir = Path(filename).parent.name
-    dataset_dir = (
-        dataset_dir.replace("_1km", "") if "_1km" in dataset_dir else dataset_dir
-    )
+    if dataset == "canopy_height":
+        dtype = "uint8"
 
-    out_path = Path(out_dir) / dataset_dir / f"{Path(filename).stem}.parquet"
+    if dataset == "vodca":
+        dtype = "int16"
+        rast_masked = scale_data(rast_masked, dtype, True)
+
+    if "long_name" not in rast_masked.attrs:
+        rast_masked.attrs["long_name"] = Path(filename).stem
+
+    out_path = Path(out_dir) / dataset / f"{Path(filename).stem}.tif"
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     if not dry_run:
-        write_df(df, out_path, writer="parquet", dask=False)
+        xr_to_raster(
+            rast_masked, out_path, compression_level=18, num_threads=1, dtype=dtype
+        )
 
-    del df
+    rast_masked.close()
+    del rast_masked
+
     gc.collect()
+
+
+def modis_ndvi(out_dir: Path, dry_run: bool = False) -> None:
+    """
+    Calculate the Normalized Difference Vegetation Index (NDVI) from MODIS satellite data.
+
+    Parameters:
+    - out_dir (Path): The output directory where the NDVI raster will be saved.
+    """
+    for month in range(1, 13):
+        fns = sorted(list(out_dir.glob(f"modis/*_m{month}_*.tif")))
+        out_path = fns[0].parent / fns[0].name.replace("b01", "ndvi")
+        fns = sorted(list((out_dir / "modis").glob(f"*_m{month}_*.tif")))
+
+        red = open_raster(fns[0]).sel(band=1)
+        nir = open_raster(fns[1]).sel(band=1)
+        ndvi = (nir - red) / (nir + red)
+
+        # Scale the values prior to int conversion
+        ndvi = ndvi * 10000
+        ndvi.attrs["long_name"] = out_path.stem
+
+        if not dry_run:
+            xr_to_raster(ndvi, out_path, dtype="int16")
+
+        # Clean up
+        for da in [red, nir, ndvi]:
+            da.close()
+
+        del red, nir, ndvi
+        gc.collect()
+
+
+def prune_worldclim(out_dir: Path, bio_vars: List[str], dry_run: bool = False) -> None:
+    """
+    Prunes WorldClim data files based on the specified bio_vars.
+
+    Args:
+        out_dir (Path): The output directory where the pruned files will be saved.
+        bio_vars (List[str]): A list of bio_vars to be pruned.
+    """
+    fns = list(out_dir.glob("worldclim/*.tif"))
+
+    for bio_var in bio_vars:
+        if "-" in bio_var:
+            start, end = bio_var.split("-")
+            da1 = open_raster([fn for fn in fns if f"bio_{start}" in fn.name][0]).sel(
+                band=1
+            )
+            da2 = open_raster([fn for fn in fns if f"bio_{end}" in fn.name][0]).sel(
+                band=1
+            )
+            diff = da1 - da2
+            diff_name = f"wc2.1_30s_bio_{start}-{end}"
+            diff.attrs["long_name"] = diff_name
+
+            if not dry_run:
+                xr_to_raster(diff, out_dir / "worldclim" / f"{diff_name}.tif")
+
+            for da in [da1, da2, diff]:
+                da.close()
+
+            del da1, da2, diff
+            gc.collect()
+
+    # Delete files that don't contain a bio_var
+    for fn in fns:
+        if not any(f"bio_{var}.tif" in fn.name for var in bio_vars) and not dry_run:
+            fn.unlink()
 
 
 def main(args: argparse.Namespace) -> None:
     """Main function."""
-    conf = get_config()
+    cfg = get_config()
 
     log.info("Collecting files...")
-    filenames = get_dataset_filenames(conf.datasets.X, stage="raw")
+    filenames = get_dataset_filenames(stage="raw")
 
-    out_dir = Path(conf.eo_data.interim.dir) / conf.model_res
-
-    if args.resume:
-        processed_files = list(out_dir.rglob("*/*.parquet"))
-        processed_files = [f.stem for f in processed_files]
-        filenames = [f for f in filenames if f.stem not in processed_files]
+    out_dir = Path(cfg.eo_data.interim.dir) / cfg.model_res
 
     if not filenames:
         log.error("No files to process.")
         return
 
     log.info("Building reference rasters...")
-    base_sample_raster = create_sample_raster(conf.extent, conf.base_resolution)
-    target_sample_raster = create_sample_raster(conf.extent, conf.target_resolution)
+    target_sample_raster = create_sample_raster(resolution=cfg.target_resolution)
 
     log.info("Building landcover mask...")
-    mask = get_mask(conf.mask.path, conf.mask.keep_classes, base_sample_raster)
+    mask = get_mask(cfg.mask.path, cfg.mask.keep_classes, cfg.base_resolution)
 
     if not args.dry_run:
         out_dir.mkdir(parents=True, exist_ok=True)
 
-    log.info("Harmonizing rasters and saving as dataframes...")
+    log.info("Harmonizing rasters...")
     tasks = [
         delayed(process_file)(
-            filename, mask, out_dir, target_sample_raster, args.dry_run
+            filename, dataset, mask, out_dir, target_sample_raster, args.dry_run
         )
-        for filename in filenames
+        for dataset, ds_fns in filenames.items()
+        for filename in ds_fns
     ]
     Parallel(n_jobs=args.n_workers)(tqdm(tasks, total=len(tasks)))
+
+    if "modis" in cfg.datasets.X:
+        log.info("Calculating MODIS NDVI...")
+        modis_ndvi(out_dir)
+
+    if "worldclim" in cfg.datasets.X:
+        log.info("Calculating WorldClim bioclimatic variables...")
+        prune_worldclim(out_dir, cfg.worldclim.bio_vars)
 
     log.info("Done. ✅")
 

@@ -1,6 +1,6 @@
 import xarray as xr
 
-from src.utils.raster_utils import open_raster
+from src.utils.raster_utils import create_sample_raster, open_raster
 
 
 def mask_raster(rast: xr.DataArray, mask: xr.DataArray) -> xr.DataArray:
@@ -24,7 +24,7 @@ def mask_raster(rast: xr.DataArray, mask: xr.DataArray) -> xr.DataArray:
 def get_mask(
     mask_path: str,
     keep_classes: list[int],
-    ref_raster: xr.DataArray,
+    resolution: int | float,
     binary: bool = True,
 ) -> xr.DataArray:
     """
@@ -34,7 +34,7 @@ def get_mask(
     Args:
         mask_path (str): The path to the mask file.
         keep_classes (list[int]): A list of classes to keep in the mask.
-        ref_raster (xr.DataArray): The reference raster used for reprojection.
+        ref_raster (xr.Dataset): The reference raster used for reprojection.
         binary (bool, optional): Whether to convert the mask to a binary mask. Defaults
             to True.
 
@@ -42,6 +42,8 @@ def get_mask(
         xr.DataArray: The generated mask.
 
     """
+    ref_raster = create_sample_raster(resolution=resolution)
+
     mask = (
         open_raster(mask_path)
         .sel(band=1)

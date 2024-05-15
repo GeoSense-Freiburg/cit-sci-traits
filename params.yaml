@@ -4,6 +4,9 @@ random_seed: 42
 base_resolution: 0.01 # Shared best resolution of all EO datasets (used for masking)
 target_resolution: 0.01 # Target resolution for model training
 extent: [-180, -60, 180, 90] # Extent of the final dataset
+raw: data/raw
+interim: data/interim
+processed: data/processed
 
 mask:
   path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
@@ -20,11 +23,11 @@ mask:
 
 datasets:
   X:
-    # - ETH_GlobalCanopyHeight_2020_v1_1km
-    - modis_sur_refl_monthly_avg_1km
-    # - soilgrids_v2-0_1km
-    # - vodca_mean-p5-p95_1km
-    - wc2-1_30s_bio
+    canopy_height: ETH_GlobalCanopyHeight_2020_v1_1km
+    modis: modis_sur_refl_monthly_avg_1km
+    soilgrids: soilgrids_v2-0_1km
+    vodca: vodca_mean-p5-p95_1km
+    worldclim: wc2-1_30s_bio
   Y:
     splot: splot4-0
     gbif: all_tracheophyta_non-cult_2024-04-10
@@ -66,6 +69,9 @@ datasets:
 eo_data:
   interim:
     dir: data/interim/eo_data
+
+worldclim:
+  bio_vars: ["1", "4", "7", "12", "13-14", "15"]
 
 gbif:
   raw:

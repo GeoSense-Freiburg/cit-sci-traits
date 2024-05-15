@@ -1,6 +1,6 @@
 stages:
   harmonize_eo_data:
-    cmd: python src/data/harmonize_eo_data.py -n 8 -r
+    cmd: python src/data/harmonize_eo_data.py -n 12 # 12 is max procs w/ 250 GB RAM
     deps:
       - src/data/harmonize_eo_data.py
     params:
@@ -9,11 +9,11 @@ stages:
       - datasets.X
       - base_resolution
       - target_resolution
-      - extent
       - eo_data.interim.dir
+      - worldclim.bio_vars
     outs:
       - ${eo_data.interim.dir}/${model_res}:
-          persist: true
+          persist: false
 
   get_TRY_mean_traits:
     cmd: python src/data/build_try_traits.py
