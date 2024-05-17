@@ -162,7 +162,8 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
 
     # Get trait map and EO data filenames
     trait_map_fns = []
-    for dataset in cfg.datasets.Y.use:
+    y_datasets = cfg.datasets.Y.use.split("_")
+    for dataset in y_datasets:
         trait_maps_dir = (
             Path(cfg[dataset].interim.dir)
             / cfg[dataset].interim.traits
@@ -248,10 +249,9 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
 
     # Concatenate the chunks
     log.info("Writing to disk...")
-    out_dir = (
-        Path(cfg.train.dir) / cfg.PFT / cfg.model_res / "_".join(cfg.datasets.Y.use)
-    )
+    out_dir = Path(cfg.train.dir) / cfg.PFT / cfg.model_res / cfg.datasets.Y.use
     out_dir.mkdir(parents=True, exist_ok=True)
+
     pd.concat(dfs).to_parquet(
         out_dir / cfg.train.features, compression="zstd", index=False
     )

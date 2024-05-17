@@ -126,7 +126,7 @@ stages:
       - train.dir
       - train.features
     outs:
-      - ${train.dir}/${PFT}/${model_res}:
+      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.features}:
           persist: true
   # calculate_spatial_lag:
   #   cmd: python src/features/calculate_spatial_lag.py
