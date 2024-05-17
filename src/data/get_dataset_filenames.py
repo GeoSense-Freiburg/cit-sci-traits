@@ -29,9 +29,7 @@ def get_dataset_filenames(stage: str, datasets: str | List[str] | None = None) -
     }
 
     if stage not in stage_map:
-        raise ValueError(
-            "Invalid stage. Must be one of 'raw', 'interim', or 'processed'."
-        )
+        raise ValueError("Invalid stage. Must be one of 'raw'.")
 
     fns = {}
     for k, v in cfg.datasets.X.items():
