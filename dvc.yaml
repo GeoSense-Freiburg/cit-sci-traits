@@ -106,63 +106,28 @@ stages:
       - ${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}:
           persist: true
 
-  # match_splot_pfts:
-  #   cmd: python src/data/match_splot_pfts.py
-  #   deps:
-  #     - src/data/match_splot_pfts.py
-  #     - ${splot.interim.dir}
-  #     - ${trydb.raw.pfts}
-  #   params:
-  #     - datasets.Y.splot
-  #     - splot.interim
-  #   outs:
-  #     - ${splot.interim.dir}/${splot.interim.matched}:
-  #         persist: true
-  # harmonize_trait_data:
-  #   cmd: python src/data/harmonize_trait_data.py
-  #   deps:
-  #     - src/data/harmonize_trait_data.py
-  #     - data/raw/${datasets.Y.splot}
-  #     - data/raw/${datasets.Y.gbif}
-  #   params:
-  #     - model_res
-  #     - mask
-  #     - datasets.Y
-  #     - base_resolution
-  #     - target_resolution
-  #     - extent
-  #     - interim.traits
-  #   outs:
-  #     - ${interim.traits}/${model_res}:
-  #         persist: true
-
-  # calculate_ndvi:
-  #   cmd: python src/data/calculate_ndvi.py
-  #   deps:
-  #     - src/data/calculate_ndvi.py
-  #     - ${eo_data.interim.dir}/${model_res}
-  #   outs:
-  #     - ${eo_data.interim.dir}/${model_res}:
-  #         persist: true
-
-  # prune_bio_vars:
-  #   cmd: python src/data/prune_bio_vars.py
-  #   deps:
-  #     - src/data/prune_bio_vars.py
-  #     - ${eo_data.interim.dir}/${model_res}
-  #   outs:
-  #     - ${eo_data.interim.dir}/${model_res}:
-  #         persist: true
-
-  # build_train:
-  #   cmd: python src/data/build_train.py
-  #   deps:
-  #     - src/data/build_train.py
-  #     - ${eo_data.interim.dir}/${model_res}
-  #   outs:
-  #     - ${train.path}/${model_res}:
-  #         persist: true
-
+  build_features:
+    cmd: python src/features/featurize_train.py --nchunks 13
+    deps:
+      - src/features/featurize_train.py
+      - ${eo_data.interim.dir}/${model_res}
+      - ${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}
+      - ${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
+    params:
+      - PFT
+      - model_res
+      - eo_data.interim.dir
+      - datasets.Y.trait_stat
+      - datasets.Y.use
+      - gbif.interim.dir
+      - gbif.interim.traits
+      - splot.interim.dir
+      - splot.interim.traits
+      - train.dir
+      - train.features
+    outs:
+      - ${train.dir}/${PFT}/${model_res}:
+          persist: true
   # calculate_spatial_lag:
   #   cmd: python src/features/calculate_spatial_lag.py
   #   deps:
