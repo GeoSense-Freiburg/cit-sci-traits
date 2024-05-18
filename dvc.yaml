@@ -128,11 +128,14 @@ stages:
     outs:
       - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.features}:
           persist: true
-  # calculate_spatial_lag:
-  #   cmd: python src/features/calculate_spatial_lag.py
-  #   deps:
-  #     - src/features/calculate_spatial_lag.py
-  #     - ${train.path}/${model_res}
-  #   outs:
-  #     - ${train.path}/${model_res}/:
-  #         persist: true
+
+  calculate_spatial_autocorr:
+    cmd: python src/features/calc_spatial_autocorr.py
+    deps:
+      - src/features/calc_spatial_autocorr.py
+      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.features}
+    params:
+      - train.spatial_autocorr
+    outs:
+      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.spatial_autocorr}:
+          persist: true

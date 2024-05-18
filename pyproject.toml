@@ -28,6 +28,8 @@ dask = {extras = ["dataframe"], version = "^2024.4.2"}
 joblib = "^1.4.2"
 tqdm = "^4.66.4"
 h3 = "^3.7.7"
+pykrige = "^1.7.1"
+utm = "^0.7.0"
 
 
 [tool.poetry.group.dev.dependencies]

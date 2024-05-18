@@ -7,6 +7,7 @@ extent: [-180, -60, 180, 90] # Extent of the final dataset
 raw: data/raw
 interim: data/interim
 processed: data/processed
+dask_dashboard: ":39143"
 
 mask:
   path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
@@ -115,3 +116,4 @@ trydb:
 train:
   dir: data/features
   features: features.parquet
+  spatial_autocorr: spatial_autocorr.parquet
