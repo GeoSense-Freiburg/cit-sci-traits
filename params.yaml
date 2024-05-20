@@ -117,3 +117,8 @@ train:
   dir: data/features
   features: features.parquet
   spatial_autocorr: spatial_autocorr.parquet
+  cv_splits:
+    range_stat: "median"
+    n_splits: 10
+    n_sims: 100
+    dir: skcv_splits
