@@ -54,3 +54,20 @@ def setup_file_logger(
 
     l.setLevel(level)
     l.addHandler(file_handler)
+
+
+def get_loggers_starting_with(s: str) -> list[str]:
+    """
+    Returns a list of logger names that start with the specified string.
+
+    Args:
+        s (str): The string to match the logger names with.
+
+    Returns:
+        list[str]: A list of logger names that start with the specified string.
+    """
+    return [
+        name
+        for name, logger in logging.Logger.manager.loggerDict.items()
+        if name.startswith(s)
+    ]
