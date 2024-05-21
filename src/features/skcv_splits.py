@@ -5,7 +5,6 @@ import pickle
 from pathlib import Path
 from typing import Sequence
 
-import dask.bag as db
 import dask.dataframe as dd
 import numpy as np
 import numpy.typing as npt
@@ -36,8 +35,11 @@ def calculate_kg_p_value(
     Returns:
         float: The p-value calculated using the Kolmogorov-Smirnov test.
     """
-    fold_i_values = df[df["fold"] == fold_i][data_col]
-    fold_j_values = df[df["fold"] == fold_j][data_col]
+    folds_df = df[df["fold"].isin([fold_i, fold_j])]
+    folds_values = folds_df[data_col]
+    mask = folds_df["fold"] == fold_i
+    fold_i_values = folds_values[mask]
+    fold_j_values = folds_values[~mask]
     _, p_value = ks_2samp(fold_i_values, fold_j_values)
     return p_value
 
@@ -55,44 +57,37 @@ def calculate_similarity_kg(folds: Sequence, df: pd.DataFrame, data_col: str) ->
     - float: The similarity between the folds based on the Kolmogorov-Smirnov test.
     """
 
-    # Use Dask's delayed function to parallelize the pairwise comparisons
+    # Calculate the pairwise comparisons
     p_values = [
-        delayed(calculate_kg_p_value)(df, data_col, folds[i], folds[j])
+        calculate_kg_p_value(df, data_col, folds[i], folds[j])
         for i in range(len(folds))
         for j in range(i + 1, len(folds))
     ]
 
-    # Compute the p-values in parallel
-    p_values = compute(*p_values)
-
-    similarity = np.min(p_values)
-    return similarity
+    # Return the minimum p-value as the similarity score
+    return min(p_values)
 
 
-def assign_folds_iteration(args):
+def assign_folds_iteration(
+    df: pd.DataFrame, n_folds: int, data_col: str, hexagons: npt.NDArray
+) -> tuple[float, pd.Series]:
     """
     Assigns folds to the hexagons in the given dataframe based on the number of folds
     specified.
 
-    Args:
-        args (tuple): A tuple containing the following elements:
-            - df (pandas.DataFrame): The dataframe containing the hexagons.
-            - n_folds (int): The number of folds to create.
-            - data_col (str): The name of the column in the dataframe containing the data.
-            - hexagons (numpy.ndarray): An array of hexagons.
+    Parameters:
+    - df: The input dataframe containing the hexagon data.
+    - n_folds: The number of folds to assign.
+    - data_col: The column name in the dataframe containing the data.
+    - hexagons: The array of hexagons to assign folds to.
 
     Returns:
-        tuple: A tuple containing the following elements:
-            - similarity (float): The similarity value calculated based on the assigned
-                folds.
-            - folds (pandas.Series): A copy of the "fold" column in the dataframe.
-
+    - A tuple containing the similarity score and a copy of the fold assignments.
     """
-    df, n_folds, data_col, hexagons = args
     np.random.shuffle(hexagons)
     folds = np.array_split(hexagons, n_folds)
-    for j, fold in enumerate(folds):
-        df.loc[df["hex_id"].isin(fold), "fold"] = j
+    hexagon_to_fold = {hexagon: i for i, fold in enumerate(folds) for hexagon in fold}
+    df["fold"] = df["hex_id"].map(hexagon_to_fold)
 
     similarity = calculate_similarity_kg(range(n_folds), df, data_col)
     return similarity, df["fold"].copy()
@@ -105,27 +100,25 @@ def assign_folds(
     Assigns folds to the given DataFrame based on similarity scores.
 
     Args:
-        df (pd.DataFrame): The input DataFrame.
+        df (pd.DataFrame): The DataFrame to assign folds to.
         n_folds (int): The number of folds to assign.
         n_iterations (int): The number of iterations to perform.
-        data_col (str): The column name containing the data.
+        data_col (str): The column name in the DataFrame containing the data.
 
     Returns:
-        pd.DataFrame: The input DataFrame with an additional 'fold' column.
+        pd.DataFrame: The DataFrame with the folds assigned.
 
     """
     hexagons = df["hex_id"].unique()
     best_similarity = None
     best_assignment = pd.Series(dtype=int)
 
-    results = (
-        db.from_sequence(
-            [(df, n_folds, data_col, hexagons) for _ in range(n_iterations)]
-        )
-        .map(assign_folds_iteration)
-        .compute()
+    results = compute(
+        *[
+            delayed(assign_folds_iteration)(df, n_folds, data_col, hexagons)
+            for _ in range(n_iterations)
+        ]
     )
-
     for similarity, assignment in results:
         if best_similarity is None or similarity > best_similarity:
             best_similarity = similarity
@@ -133,6 +126,7 @@ def assign_folds(
 
     log.info("Best similarity: %s", best_similarity)
     df["fold"] = best_assignment.astype(int)
+
     return df
 
 
@@ -166,18 +160,18 @@ def main(cfg: ConfigBox = get_config()) -> None:
         columns=["trait", cfg.train.cv_splits.range_stat],
     )
 
-    feat_cols = dd.read_parquet(train_dir / cfg.train.features).columns
+    feat_cols = dd.read_parquet(train_dir / cfg.train.features).columns.to_list()
 
     # Only select columns starting with "X"
     feat_cols = [col for col in feat_cols if col.startswith("X")]
     feats = dd.read_parquet(
-        train_dir / cfg.train.features, columns=[["x", "y"] + feat_cols]
+        train_dir / cfg.train.features, columns=["x", "y"] + feat_cols
     ).repartition(npartitions=100)
 
     for trait in feat_cols:
         log.info("Processing trait: %s", trait)
 
-        with Client(dashboard_address=cfg.dask_dashboard):
+        with Client(dashboard_address=cfg.dask_dashboard, n_workers=80):
             # Ensure dask loggers don't interfere with the main logger
             dask_loggers = get_loggers_starting_with("distributed")
             for logger in dask_loggers:
@@ -187,18 +181,36 @@ def main(cfg: ConfigBox = get_config()) -> None:
                 cfg.train.cv_splits.range_stat
             ]
             h3_res = acr_to_h3_res(trait_range)
-            df = assign_hexagons(feats[["x", "y", trait]], h3_res, dask=True)
+            df = (
+                assign_hexagons(feats[["x", "y", trait]], h3_res, dask=True)
+                .drop(columns=["x", "y"])
+                .compute()
+                .reset_index(drop=True)
+            )
+            log.info("Assigning the best folds...")
             df = assign_folds(
                 df, cfg.train.cv_splits.n_splits, cfg.train.cv_splits.n_sims, trait
             )
 
+        log.info("Generating splits...")
         splits = get_splits(df)
+
+        # Downcast splits to int32 as we won't be saving them in a very efficient format
+        splits = [
+            (train.astype(np.int32), test.astype(np.int32)) for train, test in splits
+        ]
 
         # Save the splits
         splits_dir = train_dir / cfg.train.cv_splits.dir
         splits_dir.mkdir(parents=True, exist_ok=True)
+        splits_fn = splits_dir / f"{trait}.pkl"
 
-        with open(splits_dir / f"{trait}.pkl", "wb") as f:
+        log.info("Saving splits to %s", splits_fn.absolute())
+        with open(splits_fn, "wb") as f:
             pickle.dump(splits, f)
 
     log.info("Done!")
+
+
+if __name__ == "__main__":
+    main()
