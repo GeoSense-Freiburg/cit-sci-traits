@@ -288,8 +288,8 @@ stages:
       size: 6364
     - path: src/features/skcv_splits.py
       hash: md5
-      md5: 0d870f8d65ecc63d8a4e5f47a5e82dbd
-      size: 6582
+      md5: 27386da6be11e2cb68ac3f05fa5141d8
+      size: 7249
     params:
       params.yaml:
         train.cv_splits:
