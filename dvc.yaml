@@ -151,3 +151,16 @@ stages:
     outs:
       - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.cv_splits.dir}:
           persist: true
+
+  train_models:
+    cmd: python src/models/train_models.py
+    deps:
+      - src/models/train_models.py
+      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.features}
+      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.cv_splits.dir}
+    params:
+      - train.arch
+      - ${train.arch}
+    outs:
+      - ${models.dir}/${PFT}/${model_res}/{datasets.Y.use}/${train.arch}:
+          persist: true
