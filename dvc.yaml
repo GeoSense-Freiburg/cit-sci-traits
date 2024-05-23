@@ -162,5 +162,5 @@ stages:
       - train.arch
       - ${train.arch}
     outs:
-      - ${models.dir}/${PFT}/${model_res}/{datasets.Y.use}/${train.arch}:
+      - ${models.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.arch}:
           persist: true
