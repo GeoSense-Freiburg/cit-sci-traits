@@ -54,6 +54,7 @@ def setup_file_logger(
 
     l.setLevel(level)
     l.addHandler(file_handler)
+    return l
 
 
 def get_loggers_starting_with(s: str) -> list[str]:
