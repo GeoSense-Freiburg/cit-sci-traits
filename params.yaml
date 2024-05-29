@@ -4,9 +4,8 @@ random_seed: 42
 base_resolution: 0.01 # Shared best resolution of all EO datasets (used for masking)
 target_resolution: 0.01 # Target resolution for model training
 extent: [-180, -60, 180, 90] # Extent of the final dataset
-raw: data/raw
-interim: data/interim
-processed: data/processed
+raw_dir: data/raw
+interim_dir: data/interim
 dask_dashboard: ":39143"
 
 mask:
@@ -71,7 +70,7 @@ datasets:
 
 eo_data:
   interim:
-    dir: data/interim/eo_data
+    dir: eo_data
 
 worldclim:
   bio_vars:
@@ -84,9 +83,9 @@ worldclim:
 
 gbif:
   raw:
-    dir: data/raw/all_tracheophyta_non-cult_2024-04-10
+    dir: all_tracheophyta_non-cult_2024-04-10
   interim:
-    dir: data/interim/gbif
+    dir: gbif
     matched: gbif_pfts.parquet
     subsampled: gbif_subsampled.parquet
     subsample_binsize: 4
@@ -95,20 +94,20 @@ gbif:
 
 splot:
   raw:
-    dir: data/raw/splot4-0
+    dir: splot4-0
   interim:
-    dir: data/interim/splot
+    dir: splot
     extracted: extracted
     traits: trait_maps
 
 trydb:
   raw:
-    dir: data/raw/TRY_5_GapFilledData_2020
+    dir: TRY_5_GapFilledData_2020
     zip: TRY_5_GapFilledData_2020.zip
     zipfile_csv: TRY_50_2020_01/gapfilled_data/mean_gap_filled_back_transformed_incl_species_names.csv
-    pfts: data/raw/try_pft_v1.csv
+    pfts: try_pft_v1.csv
   interim:
-    dir: data/interim/try
+    dir: try
     extracted_csv: mean_gf_bt_sp.csv
     quantile_range: [0.005, 0.995]
     filtered: mean_gf_bt_sp_filt.parquet

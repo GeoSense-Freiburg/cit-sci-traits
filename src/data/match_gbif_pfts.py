@@ -20,8 +20,8 @@ def main(cfg: ConfigBox = get_config()):
     client = Client(cluster)
 
     # 01. Load data
-    gbif_raw_dir = Path(cfg.gbif.raw.dir)
-    gbif_prep_dir = Path(cfg.gbif.interim.dir)
+    gbif_raw_dir = Path(cfg.raw_dir, cfg.gbif.raw.dir)
+    gbif_prep_dir = Path(cfg.interim_dir, cfg.gbif.interim.dir)
 
     columns = [
         "species",

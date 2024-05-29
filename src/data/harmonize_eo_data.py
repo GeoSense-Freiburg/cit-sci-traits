@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from src.conf.conf import get_config
 from src.conf.environment import log
-from src.data.get_dataset_filenames import get_dataset_filenames
+from src.utils.dataset_utils import get_eo_fns
 from src.data.mask import get_mask, mask_raster
 from src.utils.raster_utils import (
     create_sample_raster,
@@ -190,9 +190,9 @@ def main(args: argparse.Namespace) -> None:
     cfg = get_config()
 
     log.info("Collecting files...")
-    filenames = get_dataset_filenames(stage="raw")
+    filenames = get_eo_fns(stage="raw")
 
-    out_dir = Path(cfg.eo_data.interim.dir) / cfg.model_res
+    out_dir = Path(cfg.interim_dir) / cfg.eo_data.interim.dir / cfg.model_res
 
     if not filenames:
         log.error("No files to process.")

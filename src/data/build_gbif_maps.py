@@ -26,20 +26,28 @@ def main(cfg: ConfigBox = get_config()) -> None:
     npartitions = 90
 
     out_dir = (
-        Path(cfg.gbif.interim.dir) / cfg.gbif.interim.traits / cfg.PFT / cfg.model_res
+        Path(cfg.interim_dir)
+        / cfg.gbif.interim.dir
+        / cfg.gbif.interim.traits
+        / cfg.PFT
+        / cfg.model_res
     )
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # Load data
     gbif = (
-        dd.read_parquet(Path(cfg.gbif.interim.dir, cfg.gbif.interim.subsampled))
+        dd.read_parquet(
+            Path(cfg.interim_dir, cfg.gbif.interim.dir, cfg.gbif.interim.subsampled)
+        )
         .repartition(npartitions=npartitions)
         .pipe(filter_pft, cfg.PFT)
         .set_index("speciesname")
     )
 
     mn_traits = (
-        dd.read_parquet(Path(cfg.trydb.interim.dir, cfg.trydb.interim.filtered))
+        dd.read_parquet(
+            Path(cfg.interim_dir, cfg.trydb.interim.dir, cfg.trydb.interim.filtered)
+        )
         .repartition(npartitions=npartitions)
         .set_index("speciesname")
     )

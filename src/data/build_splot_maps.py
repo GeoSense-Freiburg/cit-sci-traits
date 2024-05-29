@@ -34,7 +34,9 @@ def main(cfg: ConfigBox = get_config()) -> None:
     """Match sPlot data with filtered trait data, calculate CWMs, and grid it."""
 
     # Setup ################
-    splot_dir = Path(cfg.splot.interim.dir) / cfg.splot.interim.extracted
+    splot_dir = (
+        Path(cfg.interim_dir, cfg.splot.interim.dir) / cfg.splot.interim.extracted
+    )
     npartitions = 60
     cluster = LocalCluster(
         n_workers=40, memory_limit="40GB", dashboard_address=":39143"
@@ -55,7 +57,9 @@ def main(cfg: ConfigBox = get_config()) -> None:
 
     # Load pre-cleaned and filtered TRY traits and set species as index
     traits = (
-        dd.read_parquet(Path(cfg.trydb.interim.dir) / cfg.trydb.interim.filtered)
+        dd.read_parquet(
+            Path(cfg.interim_dir, cfg.trydb.interim.dir) / cfg.trydb.interim.filtered
+        )
         .repartition(npartitions=npartitions)
         .set_index("speciesname")
     )
@@ -95,7 +99,10 @@ def main(cfg: ConfigBox = get_config()) -> None:
     )
 
     out_dir = (
-        Path(cfg.splot.interim.dir) / cfg.splot.interim.traits / cfg.PFT / cfg.model_res
+        Path(cfg.interim_dir, cfg.splot.interim.dir)
+        / cfg.splot.interim.traits
+        / cfg.PFT
+        / cfg.model_res
     )
     out_dir.mkdir(parents=True, exist_ok=True)
 

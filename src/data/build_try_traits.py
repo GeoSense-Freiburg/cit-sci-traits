@@ -15,8 +15,8 @@ from src.utils.trait_utils import clean_species_name
 
 def main(cfg: ConfigBox = get_config()) -> None:
     """Extract, clean, and get species mean trait values from TRY data."""
-    try_raw_dir = Path(cfg.trydb.raw.dir)
-    try_prep_dir = Path(cfg.trydb.interim.dir)
+    try_raw_dir = Path(cfg.raw_dir, cfg.trydb.raw.dir)
+    try_prep_dir = Path(cfg.interim_dir, cfg.trydb.interim.dir)
     ext_traits_fp = try_prep_dir / cfg.trydb.raw.zipfile_csv
     traits_fp = try_prep_dir / cfg.trydb.interim.extracted_csv
 

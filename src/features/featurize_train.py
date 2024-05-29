@@ -165,14 +165,15 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
     y_datasets = cfg.datasets.Y.use.split("_")
     for dataset in y_datasets:
         trait_maps_dir = (
-            Path(cfg[dataset].interim.dir)
+            Path(cfg.interim_dir)
+            / cfg[dataset].interim.dir
             / cfg[dataset].interim.traits
             / cfg.PFT
             / cfg.model_res
         )
         trait_map_fns += list(trait_maps_dir.glob("*.tif"))
 
-    eo_data_dir = Path(cfg.eo_data.interim.dir) / cfg.model_res
+    eo_data_dir = Path(cfg.interim_dir) / cfg.eo_data.interim.dir / cfg.model_res
     eo_fns = sorted(list(eo_data_dir.glob("*/*.tif")))
 
     # Sort trait_map_fns by number in file name (eg. X1, X2, X3)

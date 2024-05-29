@@ -55,7 +55,7 @@ def main(cfg: ConfigBox = get_config()) -> None:
         client = Client(cluster)
 
     # 02. Load GBIF data
-    gbif_prep_dir = Path(cfg.gbif.interim.dir)
+    gbif_prep_dir = Path(cfg.interim_dir, cfg.gbif.interim.dir)
     gbif = (
         dd.read_parquet(gbif_prep_dir / cfg.gbif.interim.matched)
         .repartition(npartitions=64)
