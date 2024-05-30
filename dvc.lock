@@ -336,3 +336,27 @@ stages:
       md5: f820ced4b3d5eaf11acccb99c5941522.dir
       size: 315944023405
       nfiles: 2531
+  build_predict:
+    cmd: python src/features/featurize_predict.py
+    deps:
+    - path: data/interim/eo_data/001
+      hash: md5
+      md5: 33b4751370ba70d27e0b170fa13beb54.dir
+      size: 34856945252
+      nfiles: 150
+    - path: src/features/featurize_predict.py
+      hash: md5
+      md5: 62d7e7683b16351cfccdce3398ccf9e7
+      size: 2285
+    params:
+      params.yaml:
+        eo_data.interim.dir: eo_data
+        eo_data.predict.dir: predict
+        eo_data.predict.filename: eo_predict.parquet
+        model_res: '001'
+        train.dir: data/features
+    outs:
+    - path: data/features/predict/001/eo_predict.parquet
+      hash: md5
+      md5: f062c8ae822c0bb7a3f35eb4a74e65cc
+      size: 28953639160
