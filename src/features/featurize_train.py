@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 from src.conf.conf import get_config
 from src.conf.environment import log
+from src.utils.dataset_utils import get_eo_fns_list
 from src.utils.raster_utils import open_raster
 
 
@@ -173,8 +174,7 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
         )
         trait_map_fns += list(trait_maps_dir.glob("*.tif"))
 
-    eo_data_dir = Path(cfg.interim_dir) / cfg.eo_data.interim.dir / cfg.model_res
-    eo_fns = sorted(list(eo_data_dir.glob("*/*.tif")))
+    eo_fns = sorted(get_eo_fns_list("interim", datasets=cfg.datasets.X.keys()))
 
     # Sort trait_map_fns by number in file name (eg. X1, X2, X3)
     trait_map_fns = sorted(trait_map_fns, key=lambda x: int(x.stem.split("X")[-1]))

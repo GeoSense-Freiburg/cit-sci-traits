@@ -14,8 +14,8 @@ from tqdm import tqdm
 
 from src.conf.conf import get_config
 from src.conf.environment import log
-from src.utils.dataset_utils import get_eo_fns
 from src.data.mask import get_mask, mask_raster
+from src.utils.dataset_utils import get_eo_fns_dict
 from src.utils.raster_utils import (
     create_sample_raster,
     open_raster,
@@ -190,7 +190,7 @@ def main(args: argparse.Namespace) -> None:
     cfg = get_config()
 
     log.info("Collecting files...")
-    filenames = get_eo_fns(stage="raw")
+    filenames = get_eo_fns_dict(stage="raw")
 
     out_dir = Path(cfg.interim_dir) / cfg.eo_data.interim.dir / cfg.model_res
 
