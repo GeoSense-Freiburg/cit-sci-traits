@@ -5,8 +5,8 @@ stages:
     deps:
     - path: src/data/harmonize_eo_data.py
       hash: md5
-      md5: aeb6b1d59eaf92fdc2eb984ab17ed0a9
-      size: 7096
+      md5: ec00bf2319e71387ed0b314f6aa865d8
+      size: 7095
     params:
       params.yaml:
         base_resolution: 0.01
@@ -16,7 +16,7 @@ stages:
           soilgrids: soilgrids_v2-0_1km
           vodca: vodca_mean-p5-p95_1km
           worldclim: wc2-1_30s_bio
-        eo_data.interim.dir: data/interim/eo_data
+        eo_data.interim.dir: eo_data
         mask:
           path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
           keep_classes:
@@ -54,12 +54,12 @@ stages:
       nfiles: 3
     - path: src/data/extract_splot.py
       hash: md5
-      md5: 64e433e13b7557d00ab99bce92e6022f
-      size: 3074
+      md5: 2a89310e584294f1661965d542a50d18
+      size: 3108
     params:
       params.yaml:
         datasets.Y.splot: splot4-0
-        splot.interim.dir: data/interim/splot
+        splot.interim.dir: splot
     outs:
     - path: data/interim/splot/extracted
       hash: md5
@@ -80,14 +80,14 @@ stages:
       size: 3964944
     - path: src/data/match_gbif_pfts.py
       hash: md5
-      md5: 8cfb24496175ab83cc97dc9129b4c7d4
-      size: 2075
+      md5: 72e06889328d99142a3df936a895d793
+      size: 2105
     params:
       params.yaml:
         datasets.Y.gbif: all_tracheophyta_non-cult_2024-04-10
-        gbif.interim.dir: data/interim/gbif
+        gbif.interim.dir: gbif
         gbif.interim.matched: gbif_pfts.parquet
-        gbif.raw.dir: data/raw/all_tracheophyta_non-cult_2024-04-10
+        gbif.raw.dir: all_tracheophyta_non-cult_2024-04-10
     outs:
     - path: data/interim/gbif/gbif_pfts.parquet
       hash: md5
@@ -104,11 +104,11 @@ stages:
       nfiles: 122
     - path: src/data/subsample_gbif.py
       hash: md5
-      md5: 23b055d9c55abcf906a6fd3d647a6e95
-      size: 2965
+      md5: 73f61cc054c4830e6404dab9a5f08f0e
+      size: 2982
     params:
       params.yaml:
-        gbif.interim.dir: data/interim/gbif
+        gbif.interim.dir: gbif
         gbif.interim.matched: gbif_pfts.parquet
         gbif.interim.subsample_binsize: 4
         gbif.interim.subsample_n_max: 10000
@@ -129,18 +129,18 @@ stages:
       size: 452814652
     - path: src/data/build_try_traits.py
       hash: md5
-      md5: 5c621b6fd81c136dd66da7d8c0ecf250
-      size: 2059
+      md5: 0f264e7b766291e81726a062c0858994
+      size: 2089
     params:
       params.yaml:
         trydb.interim:
-          dir: data/interim/try
+          dir: try
           extracted_csv: mean_gf_bt_sp.csv
           quantile_range:
           - 0.005
           - 0.995
           filtered: mean_gf_bt_sp_filt.parquet
-        trydb.raw.dir: data/raw/TRY_5_GapFilledData_2020
+        trydb.raw.dir: TRY_5_GapFilledData_2020
         trydb.raw.zip: TRY_5_GapFilledData_2020.zip
         trydb.raw.zipfile_csv: 
           TRY_50_2020_01/gapfilled_data/mean_gap_filled_back_transformed_incl_species_names.csv
@@ -163,17 +163,17 @@ stages:
       size: 13698859
     - path: src/data/build_gbif_maps.py
       hash: md5
-      md5: 368b8009661fd43e796dc3fba2f502ac
-      size: 2065
+      md5: e613bd8f2cab7496116d52ce60e36077
+      size: 2193
     params:
       params.yaml:
         PFT: Shrub_Tree_Grass
         datasets.Y.gbif: all_tracheophyta_non-cult_2024-04-10
-        gbif.interim.dir: data/interim/gbif
+        gbif.interim.dir: gbif
         gbif.interim.subsampled: gbif_subsampled.parquet
         model_res: '001'
         target_resolution: 0.01
-        trydb.interim.dir: data/interim/try
+        trydb.interim.dir: try
         trydb.interim.filtered: mean_gf_bt_sp_filt.parquet
     outs:
     - path: data/interim/gbif/trait_maps/Shrub_Tree_Grass/001
@@ -199,14 +199,14 @@ stages:
       size: 3964944
     - path: src/data/build_splot_maps.py
       hash: md5
-      md5: abdb8a1d6ee1f71761df29c786131774
-      size: 4369
+      md5: 120dd2ef0cbe3620dbd004be868bf55e
+      size: 4482
     params:
       params.yaml:
         PFT: Shrub_Tree_Grass
         model_res: '001'
         splot.interim:
-          dir: data/interim/splot
+          dir: splot
           extracted: extracted
           traits: trait_maps
         target_resolution: 0.01
@@ -236,18 +236,18 @@ stages:
       nfiles: 33
     - path: src/features/featurize_train.py
       hash: md5
-      md5: 1146a5879bfc9b2ed5158cf2c1765eef
-      size: 7469
+      md5: c7be04973ef90ee0c48182c8a2121c5c
+      size: 7512
     params:
       params.yaml:
         PFT: Shrub_Tree_Grass
         datasets.Y.trait_stat: 1
         datasets.Y.use: splot_gbif
-        eo_data.interim.dir: data/interim/eo_data
-        gbif.interim.dir: data/interim/gbif
+        eo_data.interim.dir: eo_data
+        gbif.interim.dir: gbif
         gbif.interim.traits: trait_maps
         model_res: '001'
-        splot.interim.dir: data/interim/splot
+        splot.interim.dir: splot
         splot.interim.traits: trait_maps
         train.dir: data/features
         train.features: features.parquet
