@@ -5,13 +5,14 @@ from pathlib import Path
 
 from box import ConfigBox
 from dask import config
+import dask.dataframe as dd
 from dask.distributed import Client
+import xarray as xr
 
 from src.conf.conf import get_config
 from src.conf.environment import log
 from src.utils.dataset_utils import (
     compute_partitions,
-    eo_ds_to_ddf,
     get_eo_fns_list,
     load_rasters_parallel,
     map_da_dtypes,
@@ -33,9 +34,38 @@ def cli() -> argparse.Namespace:
         default=5,
         help="Number of chunks to split data into",
     )
-    parser.add_argument("-m", "--memory-limit", type=str, default="80GB")
+    parser.add_argument("-m", "--memory-limit", type=str, default="100GB")
     parser.add_argument("-p", "--num-procs", type=int, default=None)
     return parser.parse_args()
+
+
+def eo_ds_to_ddf(
+    ds: xr.Dataset, dtypes: dict[str, str], sample: float = 1.0
+) -> dd.DataFrame:
+    """
+    Convert an EO dataset to a Dask DataFrame.
+
+    Parameters:
+        ds (xr.Dataset): The input EO dataset.
+        dtypes (dict[str, str]): A dictionary mapping variable names to their data types.
+
+    Returns:
+        dd.DataFrame: The converted Dask DataFrame.
+    """
+    # Get dtypes.keys() that do not start with "vodca"
+    non_vodca = [k for k in dtypes.keys() if not k.startswith("vodca")]
+
+    # Change dtype of vodca variables to float32 since these will need to contain NaNs
+    dtypes = {k: "float32" if k.startswith("vodca") else v for k, v in dtypes.items()}
+
+    return (
+        ds.to_dask_dataframe()
+        .sample(frac=sample)
+        .drop(columns=["band", "spatial_ref"])
+        .dropna(how="all", subset=list(dtypes.keys()))
+        .dropna(how="any", subset=non_vodca)
+        .astype(dtypes)
+    )
 
 
 def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:

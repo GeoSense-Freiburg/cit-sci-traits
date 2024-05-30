@@ -181,28 +181,6 @@ def load_rasters_parallel(fns: list[Path], nchunks: int = 9) -> xr.Dataset:
     return xr.Dataset(das)
 
 
-def eo_ds_to_ddf(
-    ds: xr.Dataset, dtypes: dict[str, str], sample: float = 1.0
-) -> dd.DataFrame:
-    """
-    Convert an EO dataset to a Dask DataFrame.
-
-    Parameters:
-        ds (xr.Dataset): The input EO dataset.
-        dtypes (dict[str, str]): A dictionary mapping variable names to their data types.
-
-    Returns:
-        dd.DataFrame: The converted Dask DataFrame.
-    """
-    return (
-        ds.to_dask_dataframe()
-        .sample(frac=sample)
-        .drop(columns=["band", "spatial_ref"])
-        .dropna(how="any")
-        .astype(dtypes)
-    )
-
-
 def compute_partitions(ddf: dd.DataFrame) -> pd.DataFrame:
     """
     Compute the partitions of a Dask DataFrame and return the result as a Pandas DataFrame.
