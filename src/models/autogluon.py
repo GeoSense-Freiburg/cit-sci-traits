@@ -9,6 +9,7 @@ from box import ConfigBox
 
 from autogluon.tabular import TabularDataset, TabularPredictor
 import dask.dataframe as dd
+import pandas as pd
 
 from src.conf.conf import get_config
 from src.conf.environment import log
@@ -25,6 +26,7 @@ def train(cfg: ConfigBox = get_config(), sample: float = 1.0) -> None:
         / cfg.datasets.Y.use
         / cfg.train.arch
     )
+    model_dir.mkdir(parents=True, exist_ok=True)
     file_logger = setup_file_logger(
         "train.autogluon", model_dir / "log.txt", level=logging.ERROR
     )
@@ -64,10 +66,7 @@ def train(cfg: ConfigBox = get_config(), sample: float = 1.0) -> None:
         if sample < 1.0:
             xy = xy.sample(frac=sample, random_state=cfg.random_seed)
 
-        train_idx = xy.sample(frac=0.9, random_state=cfg.random_seed).index
-        test_idx = xy.index.difference(train_idx)
-        train_data = TabularDataset(xy.loc[train_idx])
-        test_data = TabularDataset(xy.loc[test_idx].drop(columns=["split"]))
+        train_data = TabularDataset(xy)
 
         now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         model_path = model_dir / y_col / f"{cfg.autogluon.quality}_{now}"
@@ -82,13 +81,38 @@ def train(cfg: ConfigBox = get_config(), sample: float = 1.0) -> None:
                 num_cpus=90,  # pyright: ignore[reportArgumentType]
                 presets=f"{cfg.autogluon.quality}_quality",
                 time_limit=cfg.autogluon.time_limit,
+                save_bag_folds=cfg.autogluon.save_bag_folds,
+                refit_full=cfg.autogluon.refit_full,
             )
 
             log.info("Evaluating model...")
-            evaluation = predictor.evaluate(test_data)
+            cv_pred = pd.DataFrame(
+                {
+                    "y_true": xy[y_col],
+                    "y_pred": predictor.predict_oof(train_data=train_data),
+                    "split": xy["split"],
+                }
+            )
+
+            # Group by split and calculate the evaluation metrics
+            cv_eval = cv_pred.groupby("split").apply(
+                lambda x: predictor.evaluate_predictions(  # pylint: disable=cell-var-from-loop
+                    y_true=x["y_true"], y_pred=x["y_pred"]
+                )
+            )
+
+            # Convert the evaluation results to a DataFrame and calculate mean and std
+            evaluation = (
+                pd.DataFrame(cv_eval.tolist())
+                .apply(pd.Series)
+                .agg(["mean", "std"])
+                .to_dict()
+            )
+
             # Save the evaluation results
             with open(model_path / "evaluation_results.pkl", "wb") as f:
                 pickle.dump(evaluation, f)
+
         except ValueError as e:
             file_logger.error("Error training model: %s", e)
             continue
