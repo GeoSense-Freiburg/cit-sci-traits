@@ -164,3 +164,18 @@ stages:
     outs:
       - ${models.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.arch}:
           persist: true
+
+  build_predict:
+    cmd: python src/features/featurize_predict.py
+    deps:
+      - src/features/featurize_predict.py
+      - ${interim_dir}/${eo_data.interim.dir}/${model_res}
+    params:
+      - model_res
+      - train.dir
+      - eo_data.interim.dir
+      - eo_data.predict.dir
+      - eo_data.predict.filename
+    outs:
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}:
+          persist: true

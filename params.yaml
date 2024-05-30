@@ -6,6 +6,7 @@ target_resolution: 0.01 # Target resolution for model training
 extent: [-180, -60, 180, 90] # Extent of the final dataset
 raw_dir: data/raw
 interim_dir: data/interim
+processed_dir: data/processed
 dask_dashboard: ":39143"
 
 mask:
@@ -71,6 +72,9 @@ datasets:
 eo_data:
   interim:
     dir: eo_data
+  predict:
+    dir: predict
+    filename: eo_predict.parquet
 
 worldclim:
   bio_vars:
