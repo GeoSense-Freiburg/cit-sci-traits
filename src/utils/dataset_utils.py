@@ -65,6 +65,36 @@ def get_eo_fns_list(stage: str, datasets: str | list[str] | None = None) -> list
     return [fn for ds_fns in fns.values() for fn in ds_fns]
 
 
+def get_trait_map_fns(stage: str) -> list[Path]:
+    """Get the filenames of trait maps for a given stage."""
+    cfg = get_config()
+
+    stage_map = {
+        "interim": {
+            "path": Path(cfg.interim_dir),
+            "ext": ".tif",
+        },
+    }
+    if stage not in stage_map:
+        raise ValueError(f"Invalid stage. Must be one of {stage_map.keys()}.")
+
+    if stage == "interim":
+        trait_map_fns = []
+        y_datasets = cfg.datasets.Y.use.split("_")
+        for dataset in y_datasets:
+            trait_maps_dir = (
+                Path(cfg.interim_dir)
+                / cfg[dataset].interim.dir
+                / cfg[dataset].interim.traits
+                / cfg.PFT
+                / cfg.model_res
+            )
+            trait_map_fns += list(trait_maps_dir.glob(f"*{stage_map[stage]['ext']}"))
+
+    # Sort trait_map_fns by number in file name (eg. X1, X2, X3)
+    return sorted(trait_map_fns, key=lambda x: int(x.stem.split("X")[-1]))
+
+
 def map_da_dtype(fn: Path, band: int = 1, nchunks: int = 9) -> tuple[str, str]:
     """
     Get the data type map for a given file.
@@ -136,7 +166,7 @@ def get_res(fn: Path) -> int | float:
 
 
 @delayed
-def load_raster(fn: Path, nchunks: int) -> tuple[str, xr.DataArray]:
+def load_x_raster(fn: Path, nchunks: int = 9) -> tuple[str, xr.DataArray]:
     """
     Load a raster dataset using delayed computation.
 
@@ -163,7 +193,65 @@ def load_raster(fn: Path, nchunks: int) -> tuple[str, xr.DataArray]:
     return long_name, xr.DataArray(da)
 
 
-def load_rasters_parallel(fns: list[Path], nchunks: int = 9) -> xr.Dataset:
+def group_y_fns(fns: list[Path]) -> list[list[Path]]:
+    """Group y rasters by trait. I.e. if both sPlot and GBIF files exist for a trait,
+    group them."""
+    unique_traits = sorted(
+        {fn.stem.split("_")[0] for fn in fns},
+        key=lambda x: int(x.split("X")[-1]),
+    )
+    fns_grouped = [[fn for fn in fns if trait == fn.stem] for trait in unique_traits]
+
+    return fns_grouped
+
+
+@delayed
+def load_y_raster(
+    fn_group: list[Path], band: int = 1, nchunks: int = 9
+) -> tuple[str, xr.DataArray]:
+    """Load and process y rasters. If both sPlot and GBIF are present, merge them in
+    favor of sPlot."""
+    # find all matching files in fns
+    if len(fn_group) == 0:
+        raise ValueError("No files found")
+
+    das = []
+    for raster_file in fn_group:
+        da = open_raster(
+            raster_file,
+            chunks={"x": 36000 // nchunks, "y": 18000 // nchunks},
+            mask_and_scale=True,
+        )
+
+        long_name = da.attrs["long_name"]
+        long_name = f"{raster_file.stem}_{long_name[band - 1]}"
+        da.attrs["long_name"] = long_name
+
+        das.append(da.sel(band=band))
+
+    if len(das) == 1:
+        return long_name, das[0]
+
+    # Find the array position of the fn in trait_fns that contains "gbif"
+    gbif_idx = [i for i, fn in enumerate(fn_group) if "gbif" in str(fn)][0]
+    splot_idx = 1 - gbif_idx
+
+    merged = xr.where(
+        das[splot_idx].notnull(), das[splot_idx], das[gbif_idx], keep_attrs=True
+    )
+
+    for da in das:
+        da.close()
+
+    return long_name, merged
+
+
+def load_rasters_parallel(
+    fns: list[Path] | list[list[Path]],
+    band: int = 1,
+    nchunks: int = 9,
+    ml_set: str = "x",
+) -> xr.Dataset:
     """
     Load multiple raster datasets in parallel using delayed computation.
 
@@ -175,9 +263,18 @@ def load_rasters_parallel(fns: list[Path], nchunks: int = 9) -> xr.Dataset:
         dict[str, xr.DataArray]: A dictionary where keys are the long_name attributes of
             the datasets and values are the loaded raster data as DataArrays.
     """
-    das: dict[str, xr.DataArray] = dict(
-        compute(*[load_raster(fn, nchunks) for fn in fns])
-    )
+    if ml_set not in ["x", "y"]:
+        raise ValueError("Invalid ml_set. Must be one of 'x', 'y'.")
+
+    if ml_set == "x":
+        das: dict[str, xr.DataArray] = dict(
+            compute(*[load_x_raster(fn, nchunks) for fn in fns])
+        )
+
+    if ml_set == "y":
+        das: dict[str, xr.DataArray] = dict(
+            compute(*[load_y_raster(fn_group, band, nchunks) for fn_group in fns])
+        )
     return xr.Dataset(das)
 
 
