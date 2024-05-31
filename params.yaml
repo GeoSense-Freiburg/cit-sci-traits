@@ -127,6 +127,12 @@ train:
     dir: skcv_splits
   arch: "autogluon"
 
+processed:
+  dir: data/processed
+  predict_dir: predict
+  aoa_dir: aoa
+  cov_dir: cov
+
 autogluon:
   exclude_models: ["KNN", "RF"]
   quality: "high"
