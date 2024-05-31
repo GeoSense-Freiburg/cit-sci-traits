@@ -83,6 +83,7 @@ def train(cfg: ConfigBox = get_config(), sample: float = 1.0) -> None:
                 time_limit=cfg.autogluon.time_limit,
                 save_bag_folds=cfg.autogluon.save_bag_folds,
                 refit_full=cfg.autogluon.refit_full,
+                set_best_to_refit_full=cfg.autogluon.set_best_to_refit_full,
             )
 
             log.info("Evaluating model...")
@@ -112,6 +113,9 @@ def train(cfg: ConfigBox = get_config(), sample: float = 1.0) -> None:
             # Save the evaluation results
             with open(model_path / "evaluation_results.pkl", "wb") as f:
                 pickle.dump(evaluation, f)
+
+            # Clean up the model directory
+            predictor.save_space(remove_fit_stack=False)
 
         except ValueError as e:
             file_logger.error("Error training model: %s", e)
