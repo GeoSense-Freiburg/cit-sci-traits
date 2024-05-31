@@ -131,8 +131,9 @@ autogluon:
   exclude_models: ["KNN", "RF"]
   quality: "high"
   save_bag_folds: true
-  refit_full: "best"
-  time_limit: 10800
+  refit_full: true
+  set_best_to_refit_full: true
+  time_limit: 7200 # 2 hours per model
 
 models:
   dir: models
