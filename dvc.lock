@@ -236,8 +236,8 @@ stages:
       nfiles: 33
     - path: src/features/featurize_train.py
       hash: md5
-      md5: c7be04973ef90ee0c48182c8a2121c5c
-      size: 7512
+      md5: e5b5131dc64b4efda0afbf743f7fa1a8
+      size: 3483
     params:
       params.yaml:
         PFT: Shrub_Tree_Grass
@@ -254,27 +254,27 @@ stages:
     outs:
     - path: data/features/Shrub_Tree_Grass/001/splot_gbif/features.parquet
       hash: md5
-      md5: dfc20cfba3aebbe19f24241fd520a343
-      size: 2022566089
+      md5: 9c68ccd466c7b3ca116ba1a42abd4d56
+      size: 2279142616
   calculate_spatial_autocorr:
     cmd: python src/features/calc_spatial_autocorr.py
     deps:
     - path: data/features/Shrub_Tree_Grass/001/splot_gbif/features.parquet
       hash: md5
-      md5: dfc20cfba3aebbe19f24241fd520a343
-      size: 2022566089
+      md5: 9c68ccd466c7b3ca116ba1a42abd4d56
+      size: 2279142616
     - path: src/features/calc_spatial_autocorr.py
       hash: md5
-      md5: df3f0e986ada42d29384a08be09a2e47
-      size: 5940
+      md5: d0dcfdded4d59df1a941c0fa8dd7a83f
+      size: 5945
     params:
       params.yaml:
         train.spatial_autocorr: spatial_autocorr.parquet
     outs:
     - path: data/features/Shrub_Tree_Grass/001/splot_gbif/spatial_autocorr.parquet
       hash: md5
-      md5: 1fc778ebdfb86230a708161049a8814e
-      size: 6364
+      md5: 9d2427368cbcc6673f174513ec2a6c5a
+      size: 6388
   build_cv_splits:
     cmd: python src/features/skcv_splits.py
     deps:
