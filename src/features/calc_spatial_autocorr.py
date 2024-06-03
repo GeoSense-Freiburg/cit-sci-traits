@@ -118,7 +118,7 @@ def main(cfg: ConfigBox = get_config()) -> None:
     feats_cols = pd.read_parquet(feats_fn).columns
     trait_cols = [c for c in feats_cols if c.startswith("X")]
 
-    for trait_col in trait_cols:
+    for i, trait_col in enumerate(trait_cols):
         log.info("Calculating spatial autocorrelation for %s...", trait_col)
         trait_df = (
             pd.read_parquet(feats_fn, columns=["x", "y", trait_col])
@@ -159,10 +159,10 @@ def main(cfg: ConfigBox = get_config()) -> None:
             / cfg.train.spatial_autocorr
         )
 
-        # Try to read the existing DataFrame, or create a new one if it doesn't exist
+        # Try to read the existing DataFrame, or create a new one if this is the first trait
         ranges_df = (
             pd.read_parquet(ranges_df_fn)
-            if ranges_df_fn.exists()
+            if i > 0
             else pd.DataFrame(columns=["trait", "mean", "std", "median", "q05", "q95"])
         )
 
