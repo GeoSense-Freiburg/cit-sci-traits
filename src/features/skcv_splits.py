@@ -124,7 +124,7 @@ def assign_folds(
             best_similarity = similarity
             best_assignment = assignment
 
-    log.info("Best similarity: %s", best_similarity)
+    log.info("Best similarity: %e", best_similarity)
     df["fold"] = best_assignment.astype(int)
 
     return df
