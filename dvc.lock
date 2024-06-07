@@ -308,12 +308,12 @@ stages:
     deps:
     - path: data/features/Shrub_Tree_Grass/001/splot_gbif/features.parquet
       hash: md5
-      md5: dfc20cfba3aebbe19f24241fd520a343
-      size: 2022566089
+      md5: 9c68ccd466c7b3ca116ba1a42abd4d56
+      size: 2279142616
     - path: data/features/Shrub_Tree_Grass/001/splot_gbif/skcv_splits
       hash: md5
-      md5: b84c33bead2c29e7f51781904e894526.dir
-      size: 6372677553
+      md5: fb6ddb5c4a9b29c1c827f39bb23189a5.dir
+      size: 7164359433
       nfiles: 33
     - path: src/models/train_models.py
       hash: md5
@@ -325,16 +325,17 @@ stages:
           exclude_models:
           - KNN
           - RF
-          quality: high
+          quality: good
           save_bag_folds: true
-          refit_full: best
+          refit_full: true
+          set_best_to_refit_full: true
           time_limit: 10800
         train.arch: autogluon
     outs:
     - path: models/Shrub_Tree_Grass/001/splot_gbif/autogluon
       hash: md5
-      md5: f820ced4b3d5eaf11acccb99c5941522.dir
-      size: 315944023405
+      md5: 5de5e4d9fafac892487cb0b1dbfb032c.dir
+      size: 315944027065
       nfiles: 2531
   build_predict:
     cmd: python src/features/featurize_predict.py
