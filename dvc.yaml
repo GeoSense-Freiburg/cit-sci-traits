@@ -26,7 +26,8 @@ stages:
       - trydb.raw.zipfile_csv
       - trydb.interim
     outs:
-      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}
+      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}:
+          persist: true
 
   match_gbif_pfts:
     cmd: python src/data/match_gbif_pfts.py
