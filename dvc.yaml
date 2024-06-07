@@ -139,7 +139,7 @@ stages:
       - train.spatial_autocorr
     outs:
       - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.spatial_autocorr}:
-          persist: true
+          persist: false
 
   build_cv_splits:
     cmd: python src/features/skcv_splits.py
