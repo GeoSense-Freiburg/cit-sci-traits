@@ -12,7 +12,7 @@ from src.utils.df_utils import grid_df_to_raster
 
 def get_best_model_ag(models_dir: Path) -> Path:
     """Find the best model in the specified directory."""
-    quality_levels = ["best", "high", "medium", "fastest"]
+    quality_levels = ["best", "high", "medium", "good", "fastest"]
     # Initialize the variables to store the best model and its timestamp
     best_model = None
 
