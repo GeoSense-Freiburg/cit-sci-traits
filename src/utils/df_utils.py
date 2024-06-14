@@ -2,13 +2,13 @@
 
 import gc
 from pathlib import Path
+from typing import Any
 
 import dask.dataframe as dd
 import dask_geopandas as dgpd
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import xarray as xr
 
 from src.utils.log_utils import setup_logger
 from src.utils.raster_utils import create_sample_raster, xr_to_raster
@@ -242,7 +242,9 @@ def global_grid_df(
     return gridded_df
 
 
-def grid_df_to_raster(df: pd.DataFrame, res: int | float, out: Path) -> None:
+def grid_df_to_raster(
+    df: pd.DataFrame, res: int | float, out: Path, *args: Any, **kwargs: Any
+) -> None:
     """
     Converts a grid DataFrame to a raster file.
 
@@ -280,7 +282,7 @@ def grid_df_to_raster(df: pd.DataFrame, res: int | float, out: Path) -> None:
     ds.attrs["long_name"] = list(ds.data_vars)
     ds.attrs["trait"] = out.stem
 
-    xr_to_raster(ds, out)
+    xr_to_raster(ds, out, *args, **kwargs)
 
     ref.close()
     ds.close()

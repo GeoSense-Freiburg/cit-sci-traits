@@ -4,7 +4,7 @@ import gc
 import multiprocessing
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import geopandas as gpd
 import numpy as np
@@ -56,7 +56,7 @@ def xr_to_raster(
     dtype: np.dtype | str | None = None,
     compress: str = "ZSTD",
     num_threads: int = -1,
-    **kwargs
+    **kwargs: dict[str, Any]
 ) -> None:
     """Write a DataArray to a raster file."""
     if isinstance(data, xr.DataArray):
