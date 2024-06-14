@@ -182,7 +182,7 @@ stages:
           persist: true
 
   predict:
-    cmd: python src/models/predict_traits.py
+    cmd: python src/models/predict_traits.py -b 5 -r
     deps:
       - src/models/predict_traits.py
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
