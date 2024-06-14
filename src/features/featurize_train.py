@@ -77,9 +77,6 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
         x_names = [dv for dv in combined_ds.data_vars if not str(dv).startswith("X")]
         y_names = [dv for dv in combined_ds.data_vars if str(dv).startswith("X")]
 
-        # Get dtypes.keys() that do not start with "vodca"
-        non_vodca = [k for k in dtypes.keys() if not k.startswith("vodca")]
-
         # Change dtype of vodca variables to float32 since these will need to contain NaNs
         dtypes = {
             k: "float32" if k.startswith("vodca") else v for k, v in dtypes.items()
@@ -90,9 +87,7 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
             combined_ds.to_dask_dataframe()
             .drop(columns=["band", "spatial_ref"])
             .dropna(how="all", subset=y_names)
-            .dropna(how="all", subset=x_names)
-            .dropna(how="any", subset=non_vodca)
-            .astype(dtypes)
+            .dropna(thresh=len(dtypes) // 7.5, subset=x_names)
         )
 
         log.info("Computing partitions...")
