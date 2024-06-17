@@ -34,6 +34,7 @@ bokeh = "^3.4.1"
 setuptools = "^69.5.1"
 wheel = "^0.43.0"
 autogluon-tabular = {extras = ["all"], version = "^1.1.0"}
+statsmodels = "^0.14.2"
 
 
 [tool.poetry.group.dev.dependencies]
