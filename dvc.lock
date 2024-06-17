@@ -329,14 +329,15 @@ stages:
           save_bag_folds: true
           refit_full: true
           set_best_to_refit_full: true
-          time_limit: 10800
+          time_limit: 12600
+          num_cpus: 120
         train.arch: autogluon
     outs:
     - path: models/Shrub_Tree_Grass/001/splot_gbif/autogluon
       hash: md5
-      md5: 5de5e4d9fafac892487cb0b1dbfb032c.dir
-      size: 315944027065
-      nfiles: 2531
+      md5: 2b7c3758bfd84a89798ee2ffe6d1407a.dir
+      size: 191616279863
+      nfiles: 4334
   build_predict:
     cmd: python src/features/featurize_predict.py
     deps:
@@ -361,3 +362,35 @@ stages:
       hash: md5
       md5: 9ffb3cb56821e07609b9737c04c91a65
       size: 30070290733
+  predict:
+    cmd: python src/models/predict_traits.py -b 5 -r
+    deps:
+    - path: data/features/predict/001/eo_predict.parquet
+      hash: md5
+      md5: 9ffb3cb56821e07609b9737c04c91a65
+      size: 30070290733
+    - path: models/Shrub_Tree_Grass/001/splot_gbif/autogluon
+      hash: md5
+      md5: 2b7c3758bfd84a89798ee2ffe6d1407a.dir
+      size: 191616279863
+      nfiles: 4334
+    - path: src/models/predict_traits.py
+      hash: md5
+      md5: d946a9fb259597ccbdcff5b9e6cd5153
+      size: 5150
+    params:
+      params.yaml:
+        PFT: Shrub_Tree_Grass
+        datasets.Y.use: splot_gbif
+        eo_data.predict.dir: predict
+        eo_data.predict.filename: eo_predict.parquet
+        model_res: '001'
+        processed.dir: data/processed
+        processed.predict_dir: predict
+        train.arch: autogluon
+    outs:
+    - path: data/processed/Shrub_Tree_Grass/001/splot_gbif/predict
+      hash: md5
+      md5: bbbcb063b9edd33fc237e7975d549bab.dir
+      size: 19820035827
+      nfiles: 33

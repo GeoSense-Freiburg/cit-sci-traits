@@ -78,7 +78,7 @@ def train(cfg: ConfigBox = get_config(), sample: float = 1.0) -> None:
                 train_data,
                 num_bag_folds=cfg.train.cv_splits.n_splits,
                 excluded_model_types=cfg.autogluon.exclude_models,
-                num_cpus=90,  # pyright: ignore[reportArgumentType]
+                num_cpus=cfg.autogluon.num_cpus,
                 presets=cfg.autogluon.quality,
                 time_limit=cfg.autogluon.time_limit,
                 save_bag_folds=cfg.autogluon.save_bag_folds,

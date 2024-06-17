@@ -139,7 +139,8 @@ autogluon:
   save_bag_folds: true
   refit_full: true
   set_best_to_refit_full: true
-  time_limit: 10800 # 3 hours per trait
+  time_limit: 12600 # 3.5 hours per trait
+  num_cpus: 120
 
 models:
   dir: models
