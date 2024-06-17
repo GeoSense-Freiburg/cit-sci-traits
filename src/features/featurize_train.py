@@ -77,18 +77,21 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
         x_names = [dv for dv in combined_ds.data_vars if not str(dv).startswith("X")]
         y_names = [dv for dv in combined_ds.data_vars if str(dv).startswith("X")]
 
-    # Get the names of the predictor and trait data_vars. traits start with "X{number}"
-    # and predictors do not
-    x_names = [dv for dv in combined_ds.data_vars if not dv.startswith("X")]
-    y_names = [dv for dv in combined_ds.data_vars if dv.startswith("X")]
+        # Get dtypes.keys() that do not start with "vodca"
+        non_vodca = [k for k in dtypes.keys() if not k.startswith("vodca")]
 
-    with config.set({"array.slicing.split_large_chunks": False}):
+        # Change dtype of vodca variables to float32 since these will need to contain NaNs
+        dtypes = {
+            k: "float32" if k.startswith("vodca") else v for k, v in dtypes.items()
+        }
+
         # Convert to Dask DataFrame and drop missing values
         ddf = (
             combined_ds.to_dask_dataframe()
             .drop(columns=["band", "spatial_ref"])
             .dropna(how="all", subset=y_names)
-            .dropna(how="any", subset=x_names)
+            .dropna(how="all", subset=x_names)
+            .dropna(how="any", subset=non_vodca)
             .astype(dtypes)
         )
 
