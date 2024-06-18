@@ -394,3 +394,25 @@ stages:
       md5: bbbcb063b9edd33fc237e7975d549bab.dir
       size: 19820035827
       nfiles: 33
+  splot_corr:
+    cmd: python src/analysis/splot_correlation.py -n 4
+    deps:
+    - path: data/interim/splot/trait_maps/Shrub_Tree_Grass/001
+      hash: md5
+      md5: ce3392f86249ee2ddb4deac861c0f2b5.dir
+      size: 1050055399
+      nfiles: 33
+    - path: data/processed/Shrub_Tree_Grass/001/splot_gbif/predict
+      hash: md5
+      md5: bbbcb063b9edd33fc237e7975d549bab.dir
+      size: 19820035827
+      nfiles: 33
+    - path: src/analysis/splot_correlation.py
+      hash: md5
+      md5: d56f7a70662c95297e7597837dbaa816
+      size: 5433
+    outs:
+    - path: data/processed/Shrub_Tree_Grass/001/splot_gbif/splot_correlation.csv
+      hash: md5
+      md5: d2b6e1f41c80a3f7f0f438359ad8b5fb
+      size: 958
