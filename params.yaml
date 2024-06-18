@@ -132,6 +132,7 @@ processed:
   predict_dir: predict
   aoa_dir: aoa
   cov_dir: cov
+  splot_corr: splot_correlation.csv
 
 autogluon:
   exclude_models: ["KNN", "RF"]
