@@ -32,7 +32,7 @@ datasets:
   Y:
     splot: splot4-0
     gbif: all_tracheophyta_non-cult_2024-04-10
-    use: "splot_gbif" # Which trait dataset(s) to use for training, separated by "_"
+    use: "gbif" # Which trait dataset(s) to use for training, separated by "_"
     trait_stat: 1 # ('mean', 'std', 'median', 'q05', 'q95', 'count') (bands start at 1)
     traits:
       - 4 # Stem specific density (SSD) or wood density (stem dry mass per stem fresh volume)
@@ -139,7 +139,7 @@ autogluon:
   save_bag_folds: true
   refit_full: true
   set_best_to_refit_full: true
-  time_limit: 12600 # 3.5 hours per trait
+  time_limit: 10800 # 3 hours per trait
   num_cpus: 120
 
 models:
