@@ -3,12 +3,15 @@
 import argparse
 from pathlib import Path
 from typing import Generator
-from box import ConfigBox
-from autogluon.tabular import TabularDataset, TabularPredictor
+
 import pandas as pd
+from autogluon.tabular import TabularDataset, TabularPredictor
+from box import ConfigBox
 from tqdm import trange
+
 from src.conf.conf import get_config
 from src.conf.environment import log
+from src.utils.autogluon_utils import get_best_model_ag
 from src.utils.df_utils import grid_df_to_raster
 
 
@@ -24,36 +27,6 @@ def cli() -> argparse.Namespace:
 
     parser.add_argument("-r", "--resume", action="store_true", help="Resume prediction")
     return parser.parse_args()
-
-
-def get_best_model_ag(models_dir: Path) -> Path:
-    """Find the best model in the specified directory."""
-    quality_levels = ["best", "high", "medium", "good", "fastest"]
-    # Initialize the variables to store the best model and its timestamp
-    best_model = None
-
-    # Loop over the quality levels in descending order
-    for quality in quality_levels:
-        # Get the directories for the current quality level
-        models = sorted(
-            [
-                d
-                for d in models_dir.iterdir()
-                if d.is_dir() and d.name.startswith(quality)
-            ],
-            reverse=True,
-        )
-
-        if not models:
-            continue
-
-        best_model = models[0]
-        break
-
-    if best_model is None:
-        raise ValueError("No models found in the specified directory")
-
-    return best_model
 
 
 def predict_trait_ag(
