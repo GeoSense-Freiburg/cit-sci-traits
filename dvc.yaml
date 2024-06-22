@@ -209,3 +209,15 @@ stages:
     outs:
       - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.splot_corr}:
           persist: true
+
+  cov:
+    cmd: python src/analysis/cov.py -b 1
+    deps:
+      - src/analysis/cov.py
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
+      - ${models.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.arch}
+    params:
+      - target_resolution
+    outs:
+      - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.cov_dir}:
+          persist: true

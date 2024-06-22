@@ -1,15 +1,14 @@
 """Train a set of AutoGluon models using the given configuration."""
 
-import logging
-from pathlib import Path
-import pickle
 import datetime
+import logging
+import pickle
+from pathlib import Path
 
-from box import ConfigBox
-
-from autogluon.tabular import TabularDataset, TabularPredictor
 import dask.dataframe as dd
 import pandas as pd
+from autogluon.tabular import TabularDataset, TabularPredictor
+from box import ConfigBox
 
 from src.conf.conf import get_config
 from src.conf.environment import log
@@ -103,6 +102,7 @@ def train(cfg: ConfigBox = get_config(), sample: float = 1.0) -> None:
             )
 
             # Convert the evaluation results to a DataFrame and calculate mean and std
+            # TODO: #8 Save evaluation results to a CSV file
             evaluation = (
                 pd.DataFrame(cv_eval.tolist())
                 .apply(pd.Series)
