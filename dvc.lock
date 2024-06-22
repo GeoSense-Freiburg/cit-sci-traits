@@ -376,8 +376,8 @@ stages:
       nfiles: 3262
     - path: src/models/predict_traits.py
       hash: md5
-      md5: d946a9fb259597ccbdcff5b9e6cd5153
-      size: 5150
+      md5: b44861fa859516d61589eb9d1e262855
+      size: 4358
     params:
       params.yaml:
         PFT: Shrub_Tree_Grass
