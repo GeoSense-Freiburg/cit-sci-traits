@@ -416,3 +416,28 @@ stages:
       hash: md5
       md5: db69cfe0dd35477a30692f4c20b44ce8
       size: 966
+  cov:
+    cmd: python src/analysis/cov.py -b 1
+    deps:
+    - path: data/features/predict/001/eo_predict.parquet
+      hash: md5
+      md5: 5db9c0fdb9273084cfb3eb8a2d836dce
+      size: 33109964929
+    - path: models/Shrub_Tree_Grass/001/gbif/autogluon
+      hash: md5
+      md5: 9e21dae32284477218e376d503504276.dir
+      size: 243740741391
+      nfiles: 3262
+    - path: src/analysis/cov.py
+      hash: md5
+      md5: 825ffbf64b47947a971857d1842f1639
+      size: 4419
+    params:
+      params.yaml:
+        target_resolution: 0.01
+    outs:
+    - path: data/processed/Shrub_Tree_Grass/001/gbif/cov
+      hash: md5
+      md5: da55a1e76fd6c2d1f9c692e5a75236d5.dir
+      size: 22924624664
+      nfiles: 33
