@@ -1,6 +1,7 @@
 """Get the filenames of datasets based on the specified stage of processing."""
 
 from pathlib import Path
+import pickle
 
 import dask.dataframe as dd
 import pandas as pd
@@ -8,6 +9,7 @@ import xarray as xr
 from box import ConfigBox
 from dask import compute, delayed
 from tqdm import trange
+from autogluon.tabular import TabularPredictor
 
 from src.conf.conf import get_config
 from src.utils.raster_utils import open_raster
@@ -295,6 +297,56 @@ def compute_partitions(ddf: dd.DataFrame) -> pd.DataFrame:
         for i in trange(npartitions, desc="Computing partitions")
     ]
     return pd.concat(dfs)
+
+
+def get_models_dir(cfg: ConfigBox) -> Path:
+    """Get the path to the models directory for a specific configuration."""
+    return (
+        Path(cfg.models.dir)
+        / cfg.PFT
+        / cfg.model_res
+        / cfg.datasets.Y.use
+        / cfg.train.arch
+    )
+
+
+def get_predict_fn(cfg: ConfigBox) -> Path:
+    """Get the path to the predict file for a specific configuration."""
+    return (
+        Path(cfg.train.dir)
+        / cfg.eo_data.predict.dir
+        / cfg.model_res
+        / cfg.eo_data.predict.filename
+    )
+
+
+def get_cv_models_dir(predictor: TabularPredictor) -> Path:
+    """Get the path to the best base model for cross-validation analysis."""
+    # Select the best base model (non-ensemble) to ensure fold-specific models exist
+    best_base_model = (
+        predictor.leaderboard(refit_full=False)
+        .pipe(lambda df: df[df["stack_level"] == 1])
+        .pipe(lambda df: df.loc[df["score_val"].idxmax()])
+        .model
+    )
+
+    return Path(predictor.path, "models", str(best_base_model))
+
+
+def get_train_dir(cfg: ConfigBox) -> Path:
+    """Get the path to the train directory for a specific configuration."""
+    return Path(cfg.train.dir) / cfg.PFT / cfg.model_res / cfg.datasets.Y.use
+
+
+def get_train_fn(cfg: ConfigBox) -> Path:
+    """Get the path to the train file for a specific configuration."""
+    return get_train_dir(cfg) / cfg.train.features
+
+
+def get_cv_splits(cfg: ConfigBox, label: str):
+    """Load the CV splits for a given label."""
+    with open(get_train_dir(cfg) / cfg.train.cv_splits.dir / f"{label}.pkl", "rb") as f:
+        return pickle.load(f)
 
 
 if __name__ == "__main__":
