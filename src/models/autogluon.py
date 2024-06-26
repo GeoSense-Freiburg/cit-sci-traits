@@ -12,6 +12,7 @@ from box import ConfigBox
 
 from src.conf.conf import get_config
 from src.conf.environment import log
+from src.utils.dataset_utils import get_models_dir, get_train_dir
 from src.utils.log_utils import get_loggers_starting_with, setup_file_logger
 
 
@@ -59,18 +60,14 @@ def evaluate_model(
 
 
     """Train a set of AutoGluon models for each  using the given configuration."""
-    train_dir = Path(cfg.train.dir) / cfg.PFT / cfg.model_res / cfg.datasets.Y.use
-    model_dir = (
-        Path(cfg.models.dir)
-        / cfg.PFT
-        / cfg.model_res
-        / cfg.datasets.Y.use
-        / cfg.train.arch
-    )
+    train_dir = get_train_dir(cfg)
+    model_dir = get_models_dir(cfg) / "debug" if debug else get_models_dir(cfg)
     model_dir.mkdir(parents=True, exist_ok=True)
+
     file_logger = setup_file_logger(
         "train.autogluon", model_dir / "log.txt", level=logging.ERROR
     )
+
     dask_loggers = get_loggers_starting_with("distributed")
     for logger_name in dask_loggers:
         logging.getLogger(logger_name).setLevel("WARNING")
