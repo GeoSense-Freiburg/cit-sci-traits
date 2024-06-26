@@ -6,6 +6,7 @@ from pathlib import Path
 import pickle
 
 import dask.dataframe as dd
+import numpy as np
 import pandas as pd
 from autogluon.tabular import TabularDataset, TabularPredictor
 from box import ConfigBox
@@ -59,6 +60,9 @@ def evaluate_model(
     return results
 
 
+def train_models(
+    cfg: ConfigBox = get_config(), sample: float = 1.0, debug: bool = False
+) -> None:
     """Train a set of AutoGluon models for each  using the given configuration."""
     train_dir = get_train_dir(cfg)
     model_dir = get_models_dir(cfg) / "debug" if debug else get_models_dir(cfg)
@@ -104,25 +108,41 @@ def evaluate_model(
         if sample < 1.0:
             xy = xy.sample(frac=sample, random_state=cfg.random_seed)
 
-        train_data = TabularDataset(xy)
+        # Choose a random split ID from the range of split values
+        np.random.seed(cfg.random_seed)
+        val_split_id = np.random.choice(xy["split"].unique())
+
+        # Use the random split ID to split the data into train and validation sets
+        train = TabularDataset(xy[xy["split"] != val_split_id])
+        val = TabularDataset(xy[xy["split"] == val_split_id])
 
         now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        model_path = model_dir / y_col / f"{cfg.autogluon.quality}_{now}"
+        model_path = model_dir / y_col / f"{cfg.autogluon.presets}_{now}"
         model_path.parent.mkdir(parents=True, exist_ok=True)
+
         try:
             predictor = TabularPredictor(
                 label=y_col, groups="split", path=model_path
             ).fit(
-                train_data,
-                num_bag_folds=cfg.train.cv_splits.n_splits,
-                excluded_model_types=cfg.autogluon.exclude_models,
+                train,
+                included_model_types=cfg.autogluon.included_model_types,
                 num_cpus=cfg.autogluon.num_cpus,
-                presets=cfg.autogluon.quality,
+                num_gpus=cfg.autogluon.num_gpus,
+                presets=cfg.autogluon.presets,
                 time_limit=cfg.autogluon.time_limit,
                 save_bag_folds=cfg.autogluon.save_bag_folds,
                 refit_full=cfg.autogluon.refit_full,
                 set_best_to_refit_full=cfg.autogluon.set_best_to_refit_full,
             )
+
+            if cfg.autogluon.feature_importance:
+                log.info("Calculating feature importance...")
+                feature_importance = predictor.feature_importance(
+                    val,
+                    time_limit=cfg.autogluon.FI_time_limit,
+                    num_shuffle_sets=cfg.autogluon.FI_num_shuffle_sets,
+                )
+                feature_importance.to_csv(model_path / cfg.train.feature_importance)
 
             log.info("Evaluating model...")
             _ = evaluate_model(
@@ -132,6 +152,9 @@ def evaluate_model(
                 train["split"],
                 model_path / cfg.train.eval_results,
             )
+
+            log.info("Refitting model on full data...")
+            predictor.refit_full("best", train_data_extra=val)
 
             # Clean up the model directory
             predictor.save_space(remove_fit_stack=False)
