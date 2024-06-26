@@ -15,7 +15,49 @@ from src.conf.environment import log
 from src.utils.log_utils import get_loggers_starting_with, setup_file_logger
 
 
-def train(cfg: ConfigBox = get_config(), sample: float = 1.0) -> None:
+def evaluate_model(
+    predictor: TabularPredictor,
+    y_true: pd.Series,
+    y_pred: pd.Series,
+    split: pd.Series,
+    out_path: Path | None = None,
+) -> pd.DataFrame:
+    """Evaluate the model using the given evaluation metrics and save the results to a CSV."""
+    cv_pred = pd.DataFrame(
+        {
+            "y_true": y_true,
+            "y_pred": y_pred,
+            "split": split,
+        }
+    )
+
+    # Group by split and calculate the evaluation metrics
+    cv_eval = pd.DataFrame(
+        cv_pred.groupby("split")
+        .apply(
+            lambda x: predictor.evaluate_predictions(  # pylint: disable=cell-var-from-loop
+                y_true=x["y_true"], y_pred=x["y_pred"]
+            )
+        )
+        .to_list()
+    )
+
+    # Calculate normalized RMSE for each group
+    y_range = y_true.max() - y_true.min()
+    cv_eval["norm_root_mean_squared_error"] = (
+        cv_eval["root_mean_squared_error"] / y_range
+    )
+
+    # Convert the evaluation results to a DataFrame and calculate mean and std
+    results = cv_eval.apply(pd.Series).agg(["mean", "std"])
+
+    if out_path is not None:
+        log.info("Saving evaluation results to %s...", out_path)
+        results.to_csv(out_path, index=False)
+
+    return results
+
+
     """Train a set of AutoGluon models for each  using the given configuration."""
     train_dir = Path(cfg.train.dir) / cfg.PFT / cfg.model_res / cfg.datasets.Y.use
     model_dir = (
@@ -86,33 +128,13 @@ def train(cfg: ConfigBox = get_config(), sample: float = 1.0) -> None:
             )
 
             log.info("Evaluating model...")
-            cv_pred = pd.DataFrame(
-                {
-                    "y_true": xy[y_col],
-                    "y_pred": predictor.predict_oof(train_data=train_data),
-                    "split": xy["split"],
-                }
+            _ = evaluate_model(
+                predictor,
+                train[y_col],
+                predictor.predict_oof(train_data=train),
+                train["split"],
+                model_path / cfg.train.eval_results,
             )
-
-            # Group by split and calculate the evaluation metrics
-            cv_eval = cv_pred.groupby("split").apply(
-                lambda x: predictor.evaluate_predictions(  # pylint: disable=cell-var-from-loop
-                    y_true=x["y_true"], y_pred=x["y_pred"]
-                )
-            )
-
-            # Convert the evaluation results to a DataFrame and calculate mean and std
-            # TODO: #8 Save evaluation results to a CSV file
-            evaluation = (
-                pd.DataFrame(cv_eval.tolist())
-                .apply(pd.Series)
-                .agg(["mean", "std"])
-                .to_dict()
-            )
-
-            # Save the evaluation results
-            with open(model_path / "evaluation_results.pkl", "wb") as f:
-                pickle.dump(evaluation, f)
 
             # Clean up the model directory
             predictor.save_space(remove_fit_stack=False)
