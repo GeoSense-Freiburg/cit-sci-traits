@@ -137,7 +137,7 @@ processed:
   splot_corr: splot_correlation.csv
 
 autogluon:
-  included_model_types: ["FASTAI", "GBM", "NN_TORCH", "XT", "XGB"]
+  included_model_types: ["FASTAI", "GBM", "NN_TORCH"]
   presets: "high"
   save_bag_folds: true
   refit_full: false
