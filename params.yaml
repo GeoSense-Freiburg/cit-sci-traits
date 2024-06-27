@@ -143,7 +143,6 @@ autogluon:
   refit_full: false
   set_best_to_refit_full: false
   time_limit: 12600 # 3.5 hours per trait
-  num_cpus: 110
   num_gpus: 4
   feature_importance: true
   FI_time_limit: 3600

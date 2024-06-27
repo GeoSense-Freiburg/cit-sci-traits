@@ -129,7 +129,6 @@ def train_models(
             ).fit(
                 train,
                 included_model_types=cfg.autogluon.included_model_types,
-                num_cpus=cfg.autogluon.num_cpus,
                 num_gpus=cfg.autogluon.num_gpus,
                 presets=cfg.autogluon.presets,
                 time_limit=cfg.autogluon.time_limit,
