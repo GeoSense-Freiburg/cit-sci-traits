@@ -52,8 +52,6 @@ def eo_ds_to_ddf(
     Returns:
         dd.DataFrame: The converted Dask DataFrame.
     """
-    # Get dtypes.keys() that do not start with "vodca"
-    non_vodca = [k for k in dtypes.keys() if not k.startswith("vodca")]
 
     # Change dtype of vodca variables to float32 since these will need to contain NaNs
     dtypes = {k: "float32" if k.startswith("vodca") else v for k, v in dtypes.items()}
@@ -62,9 +60,7 @@ def eo_ds_to_ddf(
         ds.to_dask_dataframe()
         .sample(frac=sample)
         .drop(columns=["band", "spatial_ref"])
-        .dropna(how="all", subset=list(dtypes.keys()))
-        .dropna(how="any", subset=non_vodca)
-        .astype(dtypes)
+        .dropna(thresh=len(dtypes) // 7.5, subset=list(dtypes.keys()))
     )
 
 

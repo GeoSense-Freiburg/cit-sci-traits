@@ -9,6 +9,7 @@ from src.models import autogluon
 def cli() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="Train AutoGluon model")
+    parser.add_argument("-d", "--debug", action="store_true", help="Debug mode")
     parser.add_argument("-s", "--sample", type=float, default=1.0, help="Sample size")
     return parser.parse_args()
 
@@ -16,7 +17,7 @@ def cli() -> argparse.Namespace:
 def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
     """Train a set of models using the given configuration."""
     if cfg.train.arch == "autogluon":
-        autogluon.train(cfg, args.sample)
+        autogluon.train_models(cfg, args.sample, args.debug)
     else:
         raise ValueError(f"Unknown architecture: {cfg.train.arch}")
 
