@@ -38,7 +38,10 @@ def evaluate_model(
         cv_pred.groupby("split")
         .apply(
             lambda x: predictor.evaluate_predictions(  # pylint: disable=cell-var-from-loop
-                y_true=x["y_true"], y_pred=x["y_pred"]
+                y_true=x["y_true"],
+                y_pred=x["y_pred"],
+                auxiliary_metrics=True,
+                detailed_report=True,
             )
         )
         .to_list()
@@ -151,6 +154,11 @@ def train_models(
                 predictor.predict_oof(train_data=train),
                 train["split"],
                 model_path / cfg.train.eval_results,
+            )
+
+            log.info("Producing and saving leaderboard...")
+            predictor.leaderboard(data=val, extra_metrics=["r2"]).to_csv(
+                model_path / cfg.autogluon.leaderboard
             )
 
             log.info("Refitting model on full data...")
