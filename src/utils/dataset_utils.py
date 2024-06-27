@@ -349,5 +349,10 @@ def get_cv_splits(cfg: ConfigBox, label: str):
         return pickle.load(f)
 
 
+def get_processed_dir(cfg: ConfigBox) -> Path:
+    """Get the path to the processed directory for a specific configuration."""
+    return Path(cfg.processed.dir) / cfg.PFT / cfg.model_res / cfg.datasets.Y.use
+
+
 if __name__ == "__main__":
     print(get_eo_fns_dict("interim"))
