@@ -2,8 +2,8 @@
 
 import datetime
 import logging
-from pathlib import Path
 import pickle
+from pathlib import Path
 
 import dask.dataframe as dd
 import numpy as np
