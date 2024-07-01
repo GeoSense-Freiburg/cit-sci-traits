@@ -4,6 +4,7 @@ from pathlib import Path
 import pickle
 
 import dask.dataframe as dd
+import numpy as np
 import pandas as pd
 import xarray as xr
 from box import ConfigBox
@@ -343,10 +344,19 @@ def get_train_fn(cfg: ConfigBox) -> Path:
     return get_train_dir(cfg) / cfg.train.features
 
 
-def get_cv_splits(cfg: ConfigBox, label: str):
+def get_cv_splits(cfg: ConfigBox, label: str) -> list[tuple[np.ndarray, np.ndarray]]:
     """Load the CV splits for a given label."""
     with open(get_train_dir(cfg) / cfg.train.cv_splits.dir / f"{label}.pkl", "rb") as f:
         return pickle.load(f)
+
+
+def add_cv_splits_to_column(
+    df: pd.DataFrame, splits: list[tuple[np.ndarray, np.ndarray]]
+) -> pd.DataFrame:
+    """Add the CV splits to the DataFrame as a new column."""
+    for i, (_, test_idx) in enumerate(splits):
+        df.loc[test_idx, "cv_split"] = i
+    return df
 
 
 if __name__ == "__main__":
