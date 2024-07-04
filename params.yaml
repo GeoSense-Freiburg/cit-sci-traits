@@ -75,6 +75,9 @@ eo_data:
   predict:
     dir: predict
     filename: eo_predict.parquet
+  imputed:
+    dir: imputed
+    filename: eo_predict_imputed.parquet
 
 worldclim:
   bio_vars:
