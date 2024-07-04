@@ -11,13 +11,15 @@ def cli() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train AutoGluon model")
     parser.add_argument("-d", "--debug", action="store_true", help="Debug mode")
     parser.add_argument("-s", "--sample", type=float, default=1.0, help="Sample size")
+    parser.add_argument("-r", "--resume", action="store_true", help="Resume training")
+    parser.add_argument("-n", "--dry-run", action="store_true", help="Dry run")
     return parser.parse_args()
 
 
 def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
     """Train a set of models using the given configuration."""
     if cfg.train.arch == "autogluon":
-        autogluon.train_models(cfg, args.sample, args.debug)
+        autogluon.train_models(cfg, args.sample, args.debug, args.resume, args.dry_run)
     else:
         raise ValueError(f"Unknown architecture: {cfg.train.arch}")
 

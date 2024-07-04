@@ -154,7 +154,7 @@ stages:
           persist: true
 
   train_models:
-    cmd: python src/models/train_models.py
+    cmd: python src/models/train_models.py -r
     deps:
       - src/models/train_models.py
       - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.features}
