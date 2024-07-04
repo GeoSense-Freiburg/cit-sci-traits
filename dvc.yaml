@@ -128,7 +128,7 @@ stages:
       - train.features
     outs:
       - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.features}:
-          persist: true
+          persist: false
 
   calculate_spatial_autocorr:
     cmd: python src/features/calc_spatial_autocorr.py
@@ -151,7 +151,7 @@ stages:
       - train.cv_splits
     outs:
       - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.cv_splits.dir}:
-          persist: true
+          persist: false
 
   train_models:
     cmd: python src/models/train_models.py -r
