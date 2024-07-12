@@ -223,7 +223,7 @@ stages:
           persist: true
 
   impute_missing:
-    cmd: python src/data/impute_missing.py
+    cmd: python src/data/impute_missing.py -c 2
     deps:
       - src/data/impute_missing.py
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
