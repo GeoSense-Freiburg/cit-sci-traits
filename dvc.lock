@@ -353,8 +353,8 @@ stages:
       nfiles: 150
     - path: src/features/featurize_predict.py
       hash: md5
-      md5: 03903f95289afd8bb0f039e2e1f5635f
-      size: 3255
+      md5: c5a9c068d0bec420d5c78e4f5fd13230
+      size: 3075
     params:
       params.yaml:
         eo_data.interim.dir: eo_data
@@ -365,8 +365,8 @@ stages:
     outs:
     - path: data/features/predict/001/eo_predict.parquet
       hash: md5
-      md5: 9ffb3cb56821e07609b9737c04c91a65
-      size: 30070290733
+      md5: 51b833f7798c2ac29fab54cb10b6cce3
+      size: 33109670422
   predict:
     cmd: python src/models/predict_traits.py -b 5 -r
     deps:
