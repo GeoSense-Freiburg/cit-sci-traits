@@ -182,7 +182,7 @@ stages:
           persist: true
 
   predict:
-    cmd: python src/models/predict_traits.py -b 5 -r
+    cmd: python src/models/predict_traits.py -b 2 -r
     deps:
       - src/models/predict_traits.py
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
@@ -211,11 +211,10 @@ stages:
           persist: true
 
   cov:
-    cmd: python src/analysis/cov.py -b 1
+    cmd: python src/analysis/cov.py -b 2 -r
     deps:
       - src/analysis/cov.py
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
-      - ${models.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.arch}
     params:
       - target_resolution
     outs:
