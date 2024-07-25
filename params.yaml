@@ -155,3 +155,6 @@ autogluon:
 
 models:
   dir: models
+
+public:
+  dir: PANOPS/cit-sci-traits/trait_maps
