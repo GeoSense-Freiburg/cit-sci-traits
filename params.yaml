@@ -76,6 +76,9 @@ eo_data:
   predict:
     dir: predict
     filename: eo_predict.parquet
+  imputed:
+    dir: imputed
+    filename: eo_predict_imputed.parquet
 
 worldclim:
   bio_vars:
@@ -138,17 +141,17 @@ processed:
   splot_corr: splot_correlation.csv
 
 autogluon:
-  included_model_types: ["FASTAI", "GBM", "NN_TORCH", "XT", "XGB"]
+  included_model_types: ["FASTAI", "GBM", "NN_TORCH"]
   presets: "high"
   save_bag_folds: true
   refit_full: false
   set_best_to_refit_full: false
   time_limit: 12600 # 3.5 hours per trait
-  num_cpus: 110
   num_gpus: 4
   feature_importance: true
   FI_time_limit: 3600
-  FI_num_shuffle_sets: 5
+  FI_num_shuffle_sets: 10
+  leaderboard: leaderboard.csv
 
 models:
   dir: models

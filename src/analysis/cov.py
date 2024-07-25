@@ -1,12 +1,14 @@
 """Calculate coefficient of variation for predictions from AutoGluon models."""
 
 import argparse
+import tempfile
 from pathlib import Path
 
-from box import ConfigBox
+import dask.dataframe as dd
 import joblib
 import pandas as pd
-from autogluon.tabular import TabularDataset, TabularPredictor
+from autogluon.tabular import TabularPredictor
+from box import ConfigBox
 from tqdm import trange
 
 from src.conf.conf import get_config
@@ -26,51 +28,63 @@ def cli() -> argparse.Namespace:
 
 
 def calculate_cov_ag(
-    data: pd.DataFrame | TabularDataset,
-    xy: pd.DataFrame,
+    data: pd.DataFrame,
     base_model_dir: str | Path,
     batches: int = 1,
 ) -> pd.DataFrame:
-    """Calculate coefficient of variation for predictions from AutoGluon models."""
-    fold_predictions = []
+    """Calculate coefficient of variation for predictions from AutoGluon models using Dask."""
+    xy = data[["x", "y"]]
+    data = data.drop(columns=["x", "y"])
 
-    for fold_model in Path(base_model_dir).iterdir():
-        if not fold_model.stem.startswith("S1") or not fold_model.is_dir():
-            continue
+    with tempfile.TemporaryDirectory() as temp_dir:
+        prediction_files = []
 
-        log.info("Predicting with %s", fold_model.stem)
-        fold_predictor = joblib.load(str(fold_model / "model.pkl"))
+        for fold_model in Path(base_model_dir).iterdir():
+            if not fold_model.stem.startswith("S1") or not fold_model.is_dir():
+                continue
 
-        if batches > 1:
-            batch_size = len(data) // batches + (len(data) % batches > 0)
-            batch_predictions = []
+            log.info(f"Predicting with {fold_model.stem}")
+            fold_predictor = joblib.load(str(fold_model / "model.pkl"))
 
-            for i in trange(batches):
-                batch_data = data.iloc[i * batch_size : (i + 1) * batch_size]
-                batch_predictions.append(
-                    pd.DataFrame(
-                        fold_predictor.predict(batch_data),
-                        columns=[f"{fold_model.stem}"],
+            if batches > 1:
+                batch_predictions = []
+                batch_size = len(data) // batches + (len(data) % batches > 0)
+
+                for i in trange(batches):
+                    batch_data = data.iloc[i * batch_size : (i + 1) * batch_size]
+                    batch_predictions.append(
+                        pd.DataFrame(
+                            fold_predictor.predict(batch_data),
+                            columns=[f"{fold_model.stem}"],
+                            index=batch_data.index,
+                        )
                     )
+
+                fold_predictions = pd.concat(batch_predictions)
+            else:
+                fold_predictions = pd.DataFrame(
+                    fold_predictor.predict(data),
+                    columns=[f"{fold_model.stem}"],
+                    index=data.index,
                 )
 
-            batch_predictions = pd.concat(batch_predictions, axis=0, ignore_index=True)
-            fold_predictions.append(batch_predictions)
+            prediction_file = Path(temp_dir) / f"{fold_model.stem}.parquet"
+            fold_predictions.to_parquet(prediction_file, index=True)
+            prediction_files.append(prediction_file)
 
-        else:
-            fold_predictions.append(
-                pd.DataFrame(
-                    fold_predictor.predict(data), columns=[f"{fold_model.stem}"]
-                )
-            )
+        log.info("Loading fold predictions...")
+        dfs = [pd.read_parquet(f) for f in prediction_files]
 
-    all_predictions = pd.concat(fold_predictions, axis=1)
-    cov = all_predictions.std(axis=1) / all_predictions.mean(axis=1)
-    cov.name = "cov"
+        log.info("Calculating CoV...")
+        cov = (
+            pd.concat(dfs, axis=1)
+            .pipe(lambda _df: _df.std(axis=1) / _df.mean(axis=1))  # CoV calculation
+            .rename("cov")
+            .pipe(lambda _df: pd.concat([xy, _df], axis=1))
+            .set_index(["y", "x"])
+        )
 
-    # Concatenate xy DataFrame with predictions and set index
-    result = pd.concat([xy.reset_index(drop=True), cov.reset_index(drop=True)], axis=1)
-    return result.set_index(["y", "x"])
+        return cov
 
 
 def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> None:
@@ -101,9 +115,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
     out_dir.mkdir(parents=True, exist_ok=True)
 
     log.info("Loading predict data...")
-    data = pd.read_parquet(predict_fn)
-    xy = data[["x", "y"]]
-    data = data.drop(columns=["x", "y"])
+    data = dd.read_parquet(predict_fn).compute().reset_index(drop=True)
 
     for model_dir in models_dir.iterdir():
         if not model_dir.is_dir():
@@ -116,9 +128,13 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
 
         best_predictor = TabularPredictor.load(str(get_best_model_ag(model_dir)))
 
+        # Get the best base model, excluding NN models as they don't seem to work the
+        # same way as bagged models...
+        log.info("Getting the best base model for %s...", model_dir.stem)
         best_base_model = (
             best_predictor.leaderboard(refit_full=False)
             .pipe(lambda df: df[df["stack_level"] == 1])
+            .pipe(lambda df: df[~df["model"].str.contains("Neural")])
             .pipe(lambda df: df.loc[df["score_val"].idxmax()])
             .model
         )
@@ -130,7 +146,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
             model_dir.stem,
             best_base_model,
         )
-        cov = calculate_cov_ag(data, xy, cv_models_dir, args.batches)
+        cov = calculate_cov_ag(data, cv_models_dir, args.batches)
 
         log.info("Writing predictions to raster...")
         grid_df_to_raster(cov, cfg.target_resolution, out_fn)
