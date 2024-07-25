@@ -94,7 +94,7 @@ def add_overviews(
 ) -> None:
     """Add overviews to a raster file."""
     if levels is None:
-        levels = [2, 4, 8, 16, 32]
+        levels = [2, 4, 8, 16]
 
     with rasterio.open(raster_file, "r+") as raster:
         raster.build_overviews(levels, Resampling.average)
