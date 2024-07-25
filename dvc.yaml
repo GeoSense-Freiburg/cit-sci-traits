@@ -237,7 +237,7 @@ stages:
     deps:
       - src/data/build_final_product.py
       - reference/trait_mapping.json
-      - reference/trait_stats_mapping.json
+      - reference/trait_stat_mapping.json
       - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.predict_dir}
       - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.cov_dir}
     params:
