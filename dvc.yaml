@@ -232,10 +232,10 @@ stages:
       - ${interim_dir}/${eo_data.interim.dir}/${eo_data.imputed.dir}/${eo_data.imputed.filename}:
           persist: true
 
-  build_final_products:
-    cmd: python src/data/build_final_products.py
+  build_final_product:
+    cmd: python src/data/build_final_product.py
     deps:
-      - src/data/build_final_products.py
+      - src/data/build_final_product.py
       - reference/trait_mapping.json
       - reference/trait_stats_mapping.json
       - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.predict_dir}
