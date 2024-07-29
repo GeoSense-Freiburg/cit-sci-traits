@@ -469,3 +469,24 @@ stages:
     params:
       params.yaml:
         public.dir: PANOPS/cit-sci-traits/trait_maps
+  impute_missing:
+    cmd: python src/data/impute_missing.py -c 2
+    deps:
+    - path: data/features/predict/001/eo_predict.parquet
+      hash: md5
+      md5: 51b833f7798c2ac29fab54cb10b6cce3
+      size: 33109670422
+    - path: src/data/impute_missing.py
+      hash: md5
+      md5: aac28bd1f704e560d965b1e75abac4f3
+      size: 1934
+    params:
+      params.yaml:
+        eo_data.imputed:
+          dir: imputed
+          filename: eo_predict_imputed.parquet
+    outs:
+    - path: data/interim/eo_data/imputed/eo_predict_imputed.parquet
+      hash: md5
+      md5: 23ffaa62b5f1a26bcaac6f1244c3d856
+      size: 36213051786
