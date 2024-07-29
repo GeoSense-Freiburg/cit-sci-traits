@@ -353,6 +353,10 @@ def get_processed_dir(cfg: ConfigBox) -> Path:
     """Get the path to the processed directory for a specific configuration."""
     return Path(cfg.processed.dir) / cfg.PFT / cfg.model_res / cfg.datasets.Y.use
 
+def get_splot_corr_fn(cfg: ConfigBox) -> Path:
+    """Get the path to the sPlot correlation file for a specific configuration."""
+    return get_processed_dir(cfg) / cfg.processed.splot_corr
+
 
 if __name__ == "__main__":
     print(get_eo_fns_dict("interim"))
