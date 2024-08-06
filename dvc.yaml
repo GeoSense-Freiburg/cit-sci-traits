@@ -174,8 +174,7 @@ stages:
       - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.weights.fn}
     params:
       - train.arch
-      - ${train.arch}
-      - ${datasets.Y.traits}
+      - datasets.Y.traits
     outs:
       - ${models.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.arch}:
           persist: true
