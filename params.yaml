@@ -10,6 +10,18 @@ interim_dir: data/interim
 processed_dir: data/processed
 dask_dashboard: ":39143"
 
+system: pylos
+pylos:
+  featurize_train:
+    n_chunks: 9
+    n_workers: null
+    memory_limit: null
+geos:
+  featurize_train:
+    n_chunks: 9
+    n_workers: 55
+    memory_limit: 150GB
+
 mask:
   path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
   keep_classes:

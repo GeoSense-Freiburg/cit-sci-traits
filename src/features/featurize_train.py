@@ -1,7 +1,6 @@
 """Featurize training data."""
 
 import argparse
-from pathlib import Path
 
 import xarray as xr
 from box import ConfigBox
@@ -50,8 +49,12 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
     Returns:
         None
     """
+    system = cfg[cfg.system]
+
     with Client(
-        dashboard_address=cfg.dask_dashboard, n_workers=55, memory_limit="150GB"
+        dashboard_address=cfg.dask_dashboard,
+        n_workers=system.featurize_train.n_workers,
+        memory_limit=system.featurize_train.memory_limit,
     ), config.set({"array.slicing.split_large_chunks": False}):
         # Get trait map and EO data filenames
         trait_map_fns = get_trait_map_fns("interim")
