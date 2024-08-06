@@ -68,7 +68,7 @@ def evaluate_model(
 
     if out_path is not None:
         log.info("Saving evaluation results to %s...", out_path)
-        results.to_csv(out_path, index=False)
+        results.to_csv(out_path, index=True)
 
     return results
 
