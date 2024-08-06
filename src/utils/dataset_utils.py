@@ -207,45 +207,80 @@ def group_y_fns(fns: list[Path]) -> list[list[Path]]:
     return fns_grouped
 
 
-@delayed
-def load_y_raster(
+def load_y_rasters(
     fn_group: list[Path], band: int = 1, nchunks: int = 9
-) -> tuple[str, xr.DataArray]:
-    """Load and process y rasters. If both sPlot and GBIF are present, merge them in
-    favor of sPlot."""
-    # find all matching files in fns
+) -> tuple[str, list[xr.DataArray]]:
+    """
+    Load raster files and return a tuple containing the long name and a list of
+        DataArrays.
+
+    Args:
+        fn_group (list[Path]): A list of file paths.
+        band (int, optional): The band number to select. Defaults to 1.
+        nchunks (int, optional): The number of chunks to divide the raster into.
+            Defaults to 9.
+
+    Returns:
+        tuple[str, list[xr.DataArray]]: A tuple containing the long name and a list of
+            DataArrays.
+    """
     if len(fn_group) == 0:
         raise ValueError("No files found")
-
-    das = []
+    dax = []
     for raster_file in fn_group:
-        da = open_raster(
+        result = open_raster(
             raster_file,
             chunks={"x": 36000 // nchunks, "y": 18000 // nchunks},
             mask_and_scale=True,
         )
 
-        long_name = da.attrs["long_name"]
-        long_name = f"{raster_file.stem}_{long_name[band - 1]}"
-        da.attrs["long_name"] = long_name
+        bands = result.attrs["long_name"]
+        long_name = f"{raster_file.stem}_{bands[band - 1]}"
+        result.attrs["long_name"] = long_name
 
-        das.append(da.sel(band=band))
+        dax.append(result.sel(band=band))
+    return long_name, dax
 
-    if len(das) == 1:
-        return long_name, das[0]
 
-    # Find the array position of the fn in trait_fns that contains "gbif"
+def get_dataset_idx(fn_group: list[Path]) -> tuple[int, int]:
+    """Get the array position of the sPlot and GBIF trait maps in a pair of trait maps."""
     gbif_idx = [i for i, fn in enumerate(fn_group) if "gbif" in str(fn)][0]
     splot_idx = 1 - gbif_idx
 
-    merged = xr.where(
-        das[splot_idx].notnull(), das[splot_idx], das[gbif_idx], keep_attrs=True
+    return splot_idx, gbif_idx
+
+
+def merge_splot_gbif(
+    splot_id: int, gbif_id: int, dax: list[xr.DataArray]
+) -> xr.DataArray:
+    """Merge sPlot and GBIF trait maps in favor of sPlot."""
+    return xr.where(
+        dax[splot_id].notnull(), dax[splot_id], dax[gbif_id], keep_attrs=True
     )
 
-    for da in das:
+
+@delayed
+def load_y_raster(
+    fn_group: list[Path], band: int = 1, nchunks: int = 9
+) -> tuple[str, xr.DataArray]:
+    """Load and process y rasters. If both sPlot and GBIF are present, merge them in
+    favor of sPlot. If only one is present, use that one. Returns two tuples: one with
+    the trait name and corresponding trait values, and another with trait name (with
+    '_source' appended) and the source of the trait values."""
+    long_name, dax = load_y_rasters(fn_group, band, nchunks)
+
+    if len(dax) == 1:
+        return long_name, dax[0]
+
+    splot_id, gbif_id = get_dataset_idx(fn_group)
+
+    y_vals = merge_splot_gbif(splot_id, gbif_id, dax)
+
+    for da in dax:
         da.close()
 
-    return long_name, merged
+    return long_name, y_vals
+
 
 
 def load_rasters_parallel(
