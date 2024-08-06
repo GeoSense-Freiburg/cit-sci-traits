@@ -13,6 +13,7 @@ from dask.diagnostics import ProgressBar
 from src.conf.conf import get_config
 from src.conf.environment import log
 from src.utils.autogluon_utils import get_best_model_ag
+from src.utils.dataset_utils import get_models_dir, get_predict_fn
 from src.utils.df_utils import grid_df_to_raster
 
 
@@ -129,20 +130,9 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
     Predict the traits for the given model.
     """
 
-    predict_fn: Path = (
-        Path(cfg.train.dir)
-        / cfg.eo_data.predict.dir
-        / cfg.model_res
-        / cfg.eo_data.predict.filename
-    )
+    predict_fn: Path = get_predict_fn(cfg)
 
-    models_dir: Path = (
-        Path(cfg.models.dir)
-        / cfg.PFT
-        / cfg.model_res
-        / cfg.datasets.Y.use
-        / cfg.train.arch
-    )
+    models_dir: Path = get_models_dir(cfg)
 
     # E.g. ./data/processed/Shrub_Tree_Grass/001/splot_gbif/predict
     out_dir = (

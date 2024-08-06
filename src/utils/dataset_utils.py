@@ -358,5 +358,37 @@ def get_splot_corr_fn(cfg: ConfigBox) -> Path:
     return get_processed_dir(cfg) / cfg.processed.splot_corr
 
 
+def get_weights_fn(cfg: ConfigBox) -> Path:
+    """Get the path to the weights file."""
+    return get_train_dir(cfg) / cfg.train.weights.fn
+
+
+def get_trait_maps_dir(cfg: ConfigBox, dataset: str) -> Path:
+    """Get the path to the trait maps directory for a specific dataset (e.g. GBIF or sPlot)."""
+    if dataset not in cfg.datasets.Y.keys():
+        raise ValueError(
+            f"Invalid dataset. Must be one of {cfg.datasets.Y.keys()[:2]}."
+        )
+
+    return (
+        Path(cfg.interim_dir)
+        / cfg[dataset].interim.dir
+        / cfg[dataset].interim.traits
+        / cfg.PFT
+        / cfg.model_res
+    )
+
+
+def get_predict_dir(cfg: ConfigBox) -> Path:
+    """Get the path to the predicted trait directory for a specific configuration."""
+    return (
+        Path(cfg.processed.dir)
+        / cfg.PFT
+        / cfg.model_res
+        / cfg.datasets.Y.use
+        / cfg.processed.predict_dir
+    )
+
+
 if __name__ == "__main__":
     print(get_eo_fns_dict("interim"))

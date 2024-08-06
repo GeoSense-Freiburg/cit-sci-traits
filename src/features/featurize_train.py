@@ -13,6 +13,7 @@ from src.conf.environment import log
 from src.utils.dataset_utils import (
     compute_partitions,
     get_eo_fns_list,
+    get_train_fn,
     get_trait_map_fns,
     group_y_fns,
     load_rasters_parallel,
@@ -95,10 +96,10 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
 
     # Concatenate the chunks
     log.info("Writing to disk...")
-    out_dir = Path(cfg.train.dir) / cfg.PFT / cfg.model_res / cfg.datasets.Y.use
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = get_train_fn(cfg)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    df.to_parquet(out_dir / cfg.train.features, compression="zstd", index=False)
+    df.to_parquet(out_path, compression="zstd", index=False)
 
 
 if __name__ == "__main__":
