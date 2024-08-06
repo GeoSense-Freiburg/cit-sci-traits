@@ -28,6 +28,6 @@ def get_best_model_ag(models_dir: Path) -> Path:
         break
 
     if best_model is None:
-        raise ValueError("No models found in the specified directory")
+        raise ValueError(f"No models found in the specified directory: {models_dir}")
 
     return best_model
