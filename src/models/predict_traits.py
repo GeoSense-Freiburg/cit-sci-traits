@@ -26,6 +26,7 @@ def cli() -> argparse.Namespace:
     parser.add_argument(
         "-b", "--batches", type=int, default=1, help="Number of batches for prediction"
     )
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
 
     parser.add_argument("-r", "--resume", action="store_true", help="Resume prediction")
     return parser.parse_args()
@@ -142,6 +143,13 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
         / cfg.datasets.Y.use
         / cfg.processed.predict_dir
     )
+
+    if args.debug:
+        models_dir = models_dir / "debug"
+        models_dir.mkdir(parents=True, exist_ok=True)
+
+        out_dir = out_dir / "debug"
+
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if cfg.train.arch == "autogluon":
