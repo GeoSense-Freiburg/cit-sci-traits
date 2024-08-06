@@ -15,6 +15,32 @@ stages:
       - ${interim_dir}/${eo_data.interim.dir}/${model_res}:
           persist: false
 
+  build_predict:
+    cmd: python src/features/featurize_predict.py
+    deps:
+      - src/features/featurize_predict.py
+      - ${interim_dir}/${eo_data.interim.dir}/${model_res}
+    params:
+      - model_res
+      - train.dir
+      - eo_data.interim.dir
+      - eo_data.predict.dir
+      - eo_data.predict.filename
+    outs:
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}:
+          persist: true
+
+  impute_missing:
+    cmd: python src/data/impute_missing.py -c 2
+    deps:
+      - src/data/impute_missing.py
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
+    params:
+      - eo_data.imputed
+    outs:
+      - ${interim_dir}/${eo_data.interim.dir}/${eo_data.imputed.dir}/${eo_data.imputed.filename}:
+          persist: true
+
   get_TRY_mean_traits:
     cmd: python src/data/build_try_traits.py
     deps:
@@ -179,21 +205,6 @@ stages:
       - ${models.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.arch}:
           persist: true
 
-  build_predict:
-    cmd: python src/features/featurize_predict.py
-    deps:
-      - src/features/featurize_predict.py
-      - ${interim_dir}/${eo_data.interim.dir}/${model_res}
-    params:
-      - model_res
-      - train.dir
-      - eo_data.interim.dir
-      - eo_data.predict.dir
-      - eo_data.predict.filename
-    outs:
-      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}:
-          persist: true
-
   predict:
     cmd: python src/models/predict_traits.py -b 2 -r
     deps:
@@ -232,17 +243,6 @@ stages:
       - target_resolution
     outs:
       - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.cov_dir}:
-          persist: true
-
-  impute_missing:
-    cmd: python src/data/impute_missing.py -c 2
-    deps:
-      - src/data/impute_missing.py
-      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
-    params:
-      - eo_data.imputed
-    outs:
-      - ${interim_dir}/${eo_data.interim.dir}/${eo_data.imputed.dir}/${eo_data.imputed.filename}:
           persist: true
 
   build_final_product:
