@@ -1,6 +1,7 @@
 """Featurize training data."""
 
 import argparse
+import math
 
 import xarray as xr
 from box import ConfigBox
@@ -92,18 +93,19 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
             k: "float32" if k.startswith("vodca") else v for k, v in dtypes.items()
         }
 
-        # Convert to Dask DataFrame and drop missing values
         ddf = (
             combined_ds.to_dask_dataframe()
             .drop(columns=["band", "spatial_ref"])
             .dropna(how="all", subset=y_names)
-            .dropna(thresh=len(dtypes) // 7.5, subset=x_names)
+            .dropna(
+                thresh=math.ceil(len(dtypes) * 1 - cfg.train.missing_val_thresh),
+                subset=x_names,
+            )
         )
 
         log.info("Computing partitions...")
         df = compute_partitions(ddf).reset_index(drop=True)
 
-    # Concatenate the chunks
     log.info("Writing to disk...")
     out_path = get_train_fn(cfg)
     out_path.parent.mkdir(parents=True, exist_ok=True)

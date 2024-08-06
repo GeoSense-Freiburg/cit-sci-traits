@@ -135,6 +135,7 @@ trydb:
 train:
   dir: data/features
   features: features.parquet
+  missing_val_thresh: 0.15 # Drop features with more than this fraction of missing values
   spatial_autocorr: spatial_autocorr.parquet
   cv_splits:
     range_stat: "median"
