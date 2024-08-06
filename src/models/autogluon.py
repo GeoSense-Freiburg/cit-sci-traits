@@ -7,7 +7,6 @@ from pathlib import Path
 
 import dask.dataframe as dd
 import numpy as np
-import numpy as np
 import pandas as pd
 from autogluon.tabular import TabularDataset, TabularPredictor
 from box import ConfigBox
@@ -15,7 +14,7 @@ from box import ConfigBox
 from src.conf.conf import get_config
 from src.conf.environment import log
 from src.utils.autogluon_utils import get_best_model_ag
-from src.utils.dataset_utils import get_models_dir, get_train_dir
+from src.utils.dataset_utils import get_models_dir, get_train_dir, get_weights_fn
 from src.utils.log_utils import get_loggers_starting_with, setup_file_logger
 
 
@@ -24,6 +23,7 @@ def evaluate_model(
     y_true: pd.Series,
     y_pred: pd.Series,
     split: pd.Series,
+    sample_weights: pd.Series | None = None,
     out_path: Path | None = None,
 ) -> pd.DataFrame:
     """Evaluate the model using the given evaluation metrics and save the results to a CSV."""
@@ -32,7 +32,12 @@ def evaluate_model(
             "y_true": y_true,
             "y_pred": y_pred,
             "split": split,
+            "sample_weights": sample_weights,
         }
+    ).pipe(
+        lambda _df: (
+            _df[_df["sample_weights"] == 1.0] if sample_weights is not None else _df
+        )
     )
 
     # Group by split and calculate the evaluation metrics
@@ -42,6 +47,9 @@ def evaluate_model(
             lambda x: predictor.evaluate_predictions(  # pylint: disable=cell-var-from-loop
                 y_true=x["y_true"],
                 y_pred=x["y_pred"],
+                sample_weight=(
+                    x["sample_weights"] if sample_weights is not None else None
+                ),
                 auxiliary_metrics=True,
                 detailed_report=True,
             )
@@ -106,7 +114,7 @@ def train_models(
         logging.getLogger(logger_name).setLevel("WARNING")
 
     log.info("Loading data...%s", dry_run_text)
-    feats = dd.read_parquet(train_dir / cfg.train.features).drop(columns=["x", "y"])
+    feats = dd.read_parquet(train_dir / cfg.train.features)
     y_cols = feats.columns[feats.columns.str.startswith("X")].to_list()
     x_cols = feats.columns[~feats.columns.str.startswith("X")].to_list()
 
@@ -141,17 +149,23 @@ def train_models(
             for i, (_, valid_idx) in enumerate(cv_splits):
                 xy.loc[valid_idx, "split"] = i
 
+            log.info("Assigning weights...")
+            weights = pd.read_parquet(get_weights_fn(cfg))
+            xy = (
+                xy.set_index(["y", "x"])
+                .pipe(lambda _df: pd.concat([_df, weights], axis=1, join="inner"))
+                .astype({"weights": np.float32})
+                .reset_index(drop=True)
+            )
+
             log.info("Training model...")
             if sample < 1.0:
                 xy = xy.sample(frac=sample, random_state=cfg.random_seed)
 
-            # Choose a random split ID from the range of split values
-            np.random.seed(cfg.random_seed)
-            val_split_id = np.random.choice(xy["split"].unique())
-
-            # Use the random split ID to split the data into train and validation sets
-            train = TabularDataset(xy[xy["split"] != val_split_id])
-            val = TabularDataset(xy[xy["split"] == val_split_id])
+            # split xy into train and val (99% and 1% random selection for feature
+            # importance calculation)
+            train = TabularDataset(xy.sample(frac=0.99, random_state=cfg.random_seed))
+            fi_val = TabularDataset(xy.drop(train.index))
 
             now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             model_path = model_dir / y_col / f"{cfg.autogluon.presets}_{now}"
@@ -159,7 +173,10 @@ def train_models(
 
             try:
                 predictor = TabularPredictor(
-                    label=y_col, groups="split", path=model_path
+                    label=y_col,
+                    groups="split",
+                    sample_weight="weights",
+                    path=model_path,
                 ).fit(
                     train,
                     included_model_types=cfg.autogluon.included_model_types,
@@ -174,7 +191,7 @@ def train_models(
                 if cfg.autogluon.feature_importance:
                     log.info("Calculating feature importance...")
                     feature_importance = predictor.feature_importance(
-                        val,
+                        fi_val,
                         time_limit=cfg.autogluon.FI_time_limit,
                         num_shuffle_sets=cfg.autogluon.FI_num_shuffle_sets,
                     )
@@ -182,20 +199,18 @@ def train_models(
 
                 log.info("Evaluating model...")
                 _ = evaluate_model(
-                    predictor,
-                    train[y_col],
-                    predictor.predict_oof(train_data=train),
-                    train["split"],
-                    model_path / cfg.train.eval_results,
+                    predictor=predictor,
+                    y_true=train[y_col],
+                    y_pred=predictor.predict_oof(train_data=train),
+                    split=train["split"],
+                    sample_weights=train["weights"],
+                    out_path=model_path / cfg.train.eval_results,
                 )
 
                 log.info("Producing and saving leaderboard...")
-                predictor.leaderboard(data=val, extra_metrics=["r2"]).to_csv(
+                predictor.leaderboard(data=fi_val, extra_metrics=["r2"]).to_csv(
                     model_path / cfg.autogluon.leaderboard
                 )
-
-                log.info("Refitting model on full data...")
-                predictor.refit_full("best", train_data_extra=val)
 
                 # Clean up the model directory
                 predictor.save_space(remove_fit_stack=False)

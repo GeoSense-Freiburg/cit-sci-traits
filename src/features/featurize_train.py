@@ -69,9 +69,15 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
         y_ds = load_rasters_parallel(
             trait_map_fns_grouped, cfg.datasets.Y.trait_stat, args.nchunks, ml_set="y"
         )
+        y_source_ds = load_rasters_parallel(
+            trait_map_fns_grouped,
+            cfg.datasets.Y.trait_stat,
+            args.nchunks,
+            ml_set="y_source",
+        )
 
         log.info("Combining data...")
-        combined_ds = xr.merge([x_ds, y_ds])
+        combined_ds = xr.merge([x_ds, y_ds, y_source_ds])
 
         # Get the names of the predictor and trait data_vars. traits start with "X{number}"
         # and predictors do not

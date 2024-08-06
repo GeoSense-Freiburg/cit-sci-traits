@@ -259,6 +259,15 @@ def merge_splot_gbif(
     )
 
 
+def merge_splot_gbif_sources(
+    splot_id: int, gbif_id: int, dax: list[xr.DataArray]
+) -> xr.DataArray:
+    """Merge sPlot and GBIF source maps in favor of sPlot."""
+    return xr.where(
+        dax[splot_id].notnull(), "s", xr.where(dax[gbif_id].notnull(), "g", None)
+    )
+
+
 @delayed
 def load_y_raster(
     fn_group: list[Path], band: int = 1, nchunks: int = 9
@@ -282,6 +291,37 @@ def load_y_raster(
     return long_name, y_vals
 
 
+@delayed
+def load_y_source_raster(
+    fn_group: list[Path], band: int = 1, nchunks: int = 9
+) -> tuple[str, xr.DataArray]:
+    """
+    Load the source raster data for the given file group.
+
+    Args:
+        fn_group (list[Path]): A list of file paths representing the available trait
+            maps for a given trait.
+        band (int, optional): The band number to load. Defaults to 1.
+        nchunks (int, optional): The number of chunks to split the data into. Defaults
+            to 9.
+
+    Returns:
+        tuple[str, xr.DataArray]: A tuple containing the source name and the loaded
+            source raster data.
+    """
+    _, dax = load_y_rasters(fn_group, band, nchunks)
+
+    if len(dax) == 1:
+        source = "s" if "splot" in str(fn_group[0]) else "g"
+        da = xr.where(dax[0].notnull(), source, None, keep_attrs=True)
+        return "source", da
+
+    splot_id, gbif_id = get_dataset_idx(fn_group)
+
+    y_source = merge_splot_gbif_sources(splot_id, gbif_id, dax)
+
+    return "source", y_source
+
 
 def load_rasters_parallel(
     fns: list[Path] | list[list[Path]],
@@ -300,8 +340,13 @@ def load_rasters_parallel(
         dict[str, xr.DataArray]: A dictionary where keys are the long_name attributes of
             the datasets and values are the loaded raster data as DataArrays.
     """
-    if ml_set not in ["x", "y"]:
-        raise ValueError("Invalid ml_set. Must be one of 'x', 'y'.")
+
+    def _check_y_fns(fns: list[Path] | list[list[Path]], ml_set: str) -> None:
+        if not isinstance(fns[0], list):
+            raise ValueError(f"fns must be a list of lists for ml_set '{ml_set}'.")
+
+    if ml_set not in ["x", "y", "y_source"]:
+        raise ValueError("Invalid ml_set. Must be one of 'x', 'y', 'y_source'.")
 
     if ml_set == "x":
         das: dict[str, xr.DataArray] = dict(
@@ -309,9 +354,20 @@ def load_rasters_parallel(
         )
 
     if ml_set == "y":
+        _check_y_fns(fns, ml_set)
         das: dict[str, xr.DataArray] = dict(
             compute(*[load_y_raster(fn_group, band, nchunks) for fn_group in fns])
         )
+
+    if ml_set == "y_source":
+        _check_y_fns(fns, ml_set)
+        # Only need the first trait maps to determine source
+        das: dict[str, xr.DataArray] = dict(
+            compute(
+                *[load_y_source_raster(fn_group, band, nchunks) for fn_group in fns[:1]]
+            )
+        )
+
     return xr.Dataset(das)
 
 
@@ -346,7 +402,7 @@ def get_models_dir(cfg: ConfigBox) -> Path:
 
 
 def get_predict_fn(cfg: ConfigBox) -> Path:
-    """Get the path to the predict file for a specific configuration."""
+    """Get the path to the predict features file for a specific configuration."""
     return (
         Path(cfg.train.dir)
         / cfg.eo_data.predict.dir
@@ -387,6 +443,7 @@ def get_cv_splits(cfg: ConfigBox, label: str):
 def get_processed_dir(cfg: ConfigBox) -> Path:
     """Get the path to the processed directory for a specific configuration."""
     return Path(cfg.processed.dir) / cfg.PFT / cfg.model_res / cfg.datasets.Y.use
+
 
 def get_splot_corr_fn(cfg: ConfigBox) -> Path:
     """Get the path to the sPlot correlation file for a specific configuration."""
