@@ -139,7 +139,7 @@ train:
   spatial_autocorr: spatial_autocorr.parquet
   cv_splits:
     range_stat: "median"
-    n_splits: 10
+    n_splits: 7
     n_sims: 100
     dir: skcv_splits
   weights:
