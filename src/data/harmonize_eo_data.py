@@ -107,7 +107,11 @@ def process_file(
 
     if not dry_run:
         xr_to_raster(
-            rast_masked, out_path, compression_level=18, num_threads=1, dtype=dtype
+            rast_masked,
+            out_path,
+            compression_level=18,  # pyright: ignore[reportArgumentType]
+            num_threads=1,
+            dtype=dtype,
         )
 
     rast_masked.close()
