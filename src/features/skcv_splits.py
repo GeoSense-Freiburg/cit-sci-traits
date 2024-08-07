@@ -1,7 +1,6 @@
 """Split the data into train and test sets using spatial k-fold cross-validation."""
 
 import logging
-import pickle
 from pathlib import Path
 from typing import Sequence
 
@@ -181,33 +180,26 @@ def main(cfg: ConfigBox = get_config()) -> None:
                 cfg.train.cv_splits.range_stat
             ]
             h3_res = acr_to_h3_res(trait_range)
+
             df = (
                 assign_hexagons(feats[["x", "y", trait]], h3_res, dask=True)
-                .drop(columns=["x", "y"])
                 .compute()
                 .reset_index(drop=True)
+                .set_index(["y", "x"])
             )
+
             log.info("Assigning the best folds...")
             df = assign_folds(
                 df, cfg.train.cv_splits.n_splits, cfg.train.cv_splits.n_sims, trait
             )
 
-        log.info("Generating splits...")
-        splits = get_splits(df)
-
-        # Downcast splits to int32 as we won't be saving them in a very efficient format
-        splits = [
-            (train.astype(np.int32), test.astype(np.int32)) for train, test in splits
-        ]
-
-        # Save the splits
-        splits_dir = train_dir / cfg.train.cv_splits.dir
-        splits_dir.mkdir(parents=True, exist_ok=True)
-        splits_fn = splits_dir / f"{trait}.pkl"
+        splits = df[["fold"]]
 
         log.info("Saving splits to %s", splits_fn.absolute())
-        with open(splits_fn, "wb") as f:
-            pickle.dump(splits, f)
+        splits_dir = train_dir / cfg.train.cv_splits.dir
+        splits_dir.mkdir(parents=True, exist_ok=True)
+        splits_fn = splits_dir / f"{trait}.parquet"
+        splits.to_parquet(splits_fn, compression="zstd", index=True)
 
     log.info("Done!")
 
