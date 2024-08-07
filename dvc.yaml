@@ -1,4 +1,8 @@
 stages:
+  ######################################################################################
+  # BASE STAGES (ALL PFTs) -------------------------------------------------------------
+  ######################################################################################
+
   harmonize_eo_data:
     cmd: python src/data/harmonize_eo_data.py -n 12 # 12 is max procs w/ 250 GB RAM
     deps:
@@ -40,6 +44,10 @@ stages:
     outs:
       - ${interim_dir}/${eo_data.interim.dir}/${eo_data.imputed.dir}/${eo_data.imputed.filename}:
           persist: true
+
+  ######################################################################################
+  # END BASE STAGES (ALL PFTs) ---------------------------------------------------------
+  ######################################################################################
 
   get_TRY_mean_traits:
     cmd: python src/data/build_try_traits.py
@@ -179,17 +187,17 @@ stages:
       - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.cv_splits.dir}:
           persist: false
 
-  generate_feature_weights:
-    cmd: python src/features/training_weights.py
-    deps:
-      - src/features/training_weights.py
-      - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
-      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}
-    params:
-      - train.weights
-    outs:
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.weights.fn}:
-          persist: true
+  # generate_feature_weights:
+  #   cmd: python src/features/training_weights.py
+  #   deps:
+  #     - src/features/training_weights.py
+  #     - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
+  #     - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}
+  #   params:
+  #     - train.weights
+  #   outs:
+  #     - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.weights.fn}:
+  #         persist: true
 
   train_models:
     cmd: python src/models/train_models.py -r
