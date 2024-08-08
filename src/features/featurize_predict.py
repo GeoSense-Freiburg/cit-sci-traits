@@ -39,9 +39,7 @@ def cli() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def eo_ds_to_ddf(
-    ds: xr.Dataset, dtypes: dict[str, str], sample: float = 1.0
-) -> dd.DataFrame:
+def eo_ds_to_ddf(ds: xr.Dataset, thresh: float, sample: float = 1.0) -> dd.DataFrame:
     """
     Convert an EO dataset to a Dask DataFrame.
 
@@ -53,14 +51,14 @@ def eo_ds_to_ddf(
         dd.DataFrame: The converted Dask DataFrame.
     """
 
-    # Change dtype of vodca variables to float32 since these will need to contain NaNs
-    dtypes = {k: "float32" if k.startswith("vodca") else v for k, v in dtypes.items()}
-
     return (
         ds.to_dask_dataframe()
         .sample(frac=sample)
         .drop(columns=["band", "spatial_ref"])
-        .dropna(thresh=len(dtypes) // 7.5, subset=list(dtypes.keys()))
+        .dropna(
+            thresh=math.ceil(len(ds.data_vars) * (1 - thresh)),
+            subset=list(ds.data_vars),
+        )
     )
 
 
@@ -82,7 +80,7 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
         ds = load_rasters_parallel(eo_fns, nchunks=args.nchunks)
 
         log.info("Converting to Dask DataFrame...")
-        ddf = eo_ds_to_ddf(ds, dtypes)
+        ddf = eo_ds_to_ddf(ds, thresh=cfg.train.missing_val_thresh)
 
         log.info("Computing partitions...")
         df = compute_partitions(ddf).reset_index(drop=True)
