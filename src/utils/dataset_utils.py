@@ -67,36 +67,6 @@ def get_eo_fns_list(stage: str, datasets: str | list[str] | None = None) -> list
     return [fn for ds_fns in fns.values() for fn in ds_fns]
 
 
-def get_trait_map_fns(stage: str) -> list[Path]:
-    """Get the filenames of trait maps for a given stage."""
-    cfg = get_config()
-
-    stage_map = {
-        "interim": {
-            "path": Path(cfg.interim_dir),
-            "ext": ".tif",
-        },
-    }
-    if stage not in stage_map:
-        raise ValueError(f"Invalid stage. Must be one of {stage_map.keys()}.")
-
-    if stage == "interim":
-        trait_map_fns = []
-        y_datasets = cfg.datasets.Y.use.split("_")
-        for dataset in y_datasets:
-            trait_maps_dir = (
-                Path(cfg.interim_dir)
-                / cfg[dataset].interim.dir
-                / cfg[dataset].interim.traits
-                / cfg.PFT
-                / cfg.model_res
-            )
-            trait_map_fns += list(trait_maps_dir.glob(f"*{stage_map[stage]['ext']}"))
-
-    # Sort trait_map_fns by number in file name (eg. X1, X2, X3)
-    return sorted(trait_map_fns, key=lambda x: int(x.stem.split("X")[-1]))
-
-
 def map_da_dtype(fn: Path, band: int = 1, nchunks: int = 9) -> tuple[str, str]:
     """
     Get the data type map for a given file.
@@ -168,7 +138,9 @@ def get_res(fn: Path) -> int | float:
 
 
 @delayed
-def load_x_raster(fn: Path, nchunks: int = 9) -> tuple[str, xr.DataArray]:
+def load_x_raster(
+    fn: Path, band: int = 1, nchunks: int = 9
+) -> tuple[str, xr.DataArray]:
     """
     Load a raster dataset using delayed computation.
 
@@ -188,9 +160,15 @@ def load_x_raster(fn: Path, nchunks: int = 9) -> tuple[str, xr.DataArray]:
         fn,
         chunks={"x": (360 / res) // nchunks, "y": (180 / res) // nchunks},
         mask_and_scale=True,
-    ).sel(band=1)
+    ).sel(band=band)
 
     long_name = da.attrs["long_name"]
+
+    # If the file is a trait map, append the band stat to the dataarray name
+    if fn.stem.startswith("X"):
+        bands = da.attrs["long_name"]
+        long_name = f"{fn.stem}_{bands[band - 1]}"
+        da.attrs["long_name"] = long_name
 
     return long_name, xr.DataArray(da)
 
@@ -350,13 +328,12 @@ def load_rasters_parallel(
 
     if ml_set == "x":
         das: dict[str, xr.DataArray] = dict(
-            compute(*[load_x_raster(fn, nchunks) for fn in fns])
+            compute(*[load_x_raster(fn, nchunks=nchunks) for fn in fns])
         )
 
     if ml_set == "y":
-        _check_y_fns(fns, ml_set)
         das: dict[str, xr.DataArray] = dict(
-            compute(*[load_y_raster(fn_group, band, nchunks) for fn_group in fns])
+            compute(*[load_x_raster(fn, band, nchunks=nchunks) for fn in fns])
         )
 
     if ml_set == "y_source":
@@ -388,6 +365,12 @@ def compute_partitions(ddf: dd.DataFrame) -> pd.DataFrame:
         for i in trange(npartitions, desc="Computing partitions")
     ]
     return pd.concat(dfs)
+
+
+def check_y_set(cfg: ConfigBox, y_set: str) -> None:
+    """Check if the specified y_set is valid."""
+    if y_set not in cfg.datasets.Y.keys()[:2]:
+        raise ValueError(f"Invalid y_set. Must be one of {cfg.datasets.Y.keys()[:2]}.")
 
 
 def get_models_dir(cfg: ConfigBox) -> Path:
@@ -457,10 +440,7 @@ def get_weights_fn(cfg: ConfigBox) -> Path:
 
 def get_trait_maps_dir(cfg: ConfigBox, dataset: str) -> Path:
     """Get the path to the trait maps directory for a specific dataset (e.g. GBIF or sPlot)."""
-    if dataset not in cfg.datasets.Y.keys():
-        raise ValueError(
-            f"Invalid dataset. Must be one of {cfg.datasets.Y.keys()[:2]}."
-        )
+    check_y_set(cfg, dataset)
 
     return (
         Path(cfg.interim_dir)
@@ -469,6 +449,13 @@ def get_trait_maps_dir(cfg: ConfigBox, dataset: str) -> Path:
         / cfg.PFT
         / cfg.model_res
     )
+
+
+def get_trait_map_fns(cfg: ConfigBox, trait_set: str) -> list[Path]:
+    """Get the filenames of trait maps."""
+    trait_maps_dir = get_trait_maps_dir(cfg, trait_set)
+
+    return sorted(list(trait_maps_dir.glob("*.tif")))
 
 
 def get_predict_dir(cfg: ConfigBox) -> Path:
