@@ -133,30 +133,17 @@ stages:
       - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}:
           persist: true
 
-  # build_features:
-  #   cmd: python src/features/featurize_train.py --nchunks 13
-  #   deps:
-  #     - src/features/featurize_train.py
-  #     - ${interim_dir}/${eo_data.interim.dir}/${model_res}
-  #     - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}
-  #     - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
-  #   params:
-  #     - PFT
-  #     - model_res
-  #     - eo_data.interim.dir
-  #     - datasets.Y.trait_stat
-  #     - datasets.Y.use
-  #     - gbif.interim.dir
-  #     - gbif.interim.traits
-  #     - splot.interim.dir
-  #     - splot.interim.traits
-  #     - train.dir
-  #     - train.features
-  #   outs:
-  #     - ${train.dir}/${PFT}/${model_res}/${gbif.train.fn}:
-  #         persist: false
-  #     - ${train.dir}/${PFT}/${model_res}/${splot.train.fn}:
-  #         persist: false
+  build_y:
+    cmd: python src/features/build_y.py
+    deps:
+      - src/features/build_y.py
+      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}
+      - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
+    params:
+      - datasets.Y.trait_stat
+
+    outs:
+      - ${train.dir}/${PFT}/${model_res}/${train.Y.fn}
 
   # calculate_spatial_autocorr:
   #   cmd: python src/features/calc_spatial_autocorr.py
