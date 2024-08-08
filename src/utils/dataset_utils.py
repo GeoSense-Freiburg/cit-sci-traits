@@ -243,8 +243,9 @@ def compute_partitions(ddf: dd.DataFrame) -> pd.DataFrame:
 
 def check_y_set(cfg: ConfigBox, y_set: str) -> None:
     """Check if the specified y_set is valid."""
-    if y_set not in cfg.datasets.Y.keys()[:2]:
-        raise ValueError(f"Invalid y_set. Must be one of {cfg.datasets.Y.keys()[:2]}.")
+    y_sets = list(cfg.datasets.Y.keys())[:2]
+    if y_set not in y_sets:
+        raise ValueError(f"Invalid y_set. Must be one of {y_sets}.")
 
 
 def get_models_dir(cfg: ConfigBox) -> Path:
