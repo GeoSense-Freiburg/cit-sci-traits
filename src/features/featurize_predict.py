@@ -64,10 +64,12 @@ def eo_ds_to_ddf(ds: xr.Dataset, thresh: float, sample: float = 1.0) -> dd.DataF
 
 def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
     """Main function for featurizing EO data for prediction and AoA calculation."""
+    syscfg = cfg[detect_system()]
+
     with Client(
         dashboard_address=cfg.dask_dashboard,
-        memory_limit=args.memory_limit,
-        n_workers=args.num_procs,
+        memory_limit=syscfg.build_predict.memory_limit,
+        n_workers=syscfg.build_predict.n_workers,
     ), config.set({"array.slicing.split_large_chunks": False}):
 
         log.info("Getting filenames...")
@@ -100,4 +102,4 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
 
 
 if __name__ == "__main__":
-    main(cli())
+    main()
