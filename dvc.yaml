@@ -29,21 +29,13 @@ stages:
       - train.dir
       - eo_data.interim.dir
       - eo_data.predict.dir
-      - eo_data.predict.filename
+      - eo_data.predict.mask_fn
+      - eo_data.predict.imputed_fn
     outs:
-      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}:
-          persist: true
-
-  impute_missing:
-    cmd: python src/data/impute_missing.py -c 2
-    deps:
-      - src/data/impute_missing.py
-      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
-    params:
-      - eo_data.imputed
-    outs:
-      - ${interim_dir}/${eo_data.interim.dir}/${eo_data.imputed.dir}/${eo_data.imputed.filename}:
-          persist: true
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.mask_fn}:
+          persist: false
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}:
+          persist: false
 
   ######################################################################################
   # END BASE STAGES (ALL PFTs) ---------------------------------------------------------

@@ -384,13 +384,23 @@ def get_models_dir(cfg: ConfigBox) -> Path:
     )
 
 
-def get_predict_fn(cfg: ConfigBox) -> Path:
-    """Get the path to the predict features file for a specific configuration."""
+def get_predict_mask_fn(cfg: ConfigBox) -> Path:
+    """Get the path to the predict features mask file for a specific configuration."""
     return (
         Path(cfg.train.dir)
         / cfg.eo_data.predict.dir
         / cfg.model_res
-        / cfg.eo_data.predict.filename
+        / cfg.eo_data.predict.mask_fn
+    )
+
+
+def get_predict_imputed_fn(cfg: ConfigBox) -> Path:
+    """Get the path to the imputed predict features file for a specific configuration."""
+    return (
+        Path(cfg.train.dir)
+        / cfg.eo_data.predict.dir
+        / cfg.model_res
+        / cfg.eo_data.predict.imputed_fn
     )
 
 

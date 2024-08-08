@@ -96,10 +96,8 @@ eo_data:
     dir: eo_data
   predict:
     dir: predict
-    filename: eo_predict.parquet
-  imputed:
-    dir: imputed
-    filename: eo_predict_imputed.parquet
+    mask_fn: eo_predict_mask.parquet
+    imputed_fn: eo_predict_imputed.parquet
 
 worldclim:
   bio_vars:
@@ -144,7 +142,7 @@ trydb:
 train:
   dir: data/features
   features: features.parquet
-  missing_val_thresh: 0.15 # Drop features with more than this fraction of missing values
+  missing_val_thresh: 0.4 # Drop features with more than this fraction of missing values
   spatial_autocorr: spatial_autocorr.parquet
   cv_splits:
     range_stat: "median"

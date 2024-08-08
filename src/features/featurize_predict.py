@@ -1,42 +1,36 @@
 """Featurize EO data for prediction and AoA calculation."""
 
-import argparse
-from pathlib import Path
+import math
 
+import dask.dataframe as dd
+import numpy as np
+import pandas as pd
+import xarray as xr
 from box import ConfigBox
 from dask import config
-import dask.dataframe as dd
 from dask.distributed import Client
-import xarray as xr
+from verstack import NaNImputer
 
 from src.conf.conf import get_config
-from src.conf.environment import log
+from src.conf.environment import detect_system, log
 from src.utils.dataset_utils import (
     compute_partitions,
     get_eo_fns_list,
+    get_predict_imputed_fn,
+    get_predict_mask_fn,
     load_rasters_parallel,
-    map_da_dtypes,
 )
 
 
-def cli() -> argparse.Namespace:
-    """
-    Parse command line arguments for featurizing training data.
-
-    Returns:
-        argparse.Namespace: Parsed command line arguments.
-    """
-    parser = argparse.ArgumentParser(description="Featurize training data")
-    parser.add_argument(
-        "-n",
-        "--nchunks",
-        type=int,
-        default=5,
-        help="Number of chunks to split data into",
-    )
-    parser.add_argument("-m", "--memory-limit", type=str, default="100GB")
-    parser.add_argument("-p", "--num-procs", type=int, default=None)
-    return parser.parse_args()
+def impute_missing(df: pd.DataFrame, chunks: int | None = None) -> pd.DataFrame:
+    """Impute missing values in a dataset using Verstack NaNImputer."""
+    imputer = NaNImputer()
+    if chunks is not None:
+        df_chunks = np.array_split(df, chunks)
+        df_imputed = pd.concat([imputer.impute(chunk) for chunk in df_chunks])
+    else:
+        df_imputed = imputer.impute(df)
+    return df_imputed
 
 
 def eo_ds_to_ddf(ds: xr.Dataset, thresh: float, sample: float = 1.0) -> dd.DataFrame:
@@ -62,7 +56,7 @@ def eo_ds_to_ddf(ds: xr.Dataset, thresh: float, sample: float = 1.0) -> dd.DataF
     )
 
 
-def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
+def main(cfg: ConfigBox = get_config()) -> None:
     """Main function for featurizing EO data for prediction and AoA calculation."""
     syscfg = cfg[detect_system()]
 
@@ -75,28 +69,31 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
         log.info("Getting filenames...")
         eo_fns = get_eo_fns_list(stage="interim")
 
-        log.info("Mapping data types...")
-        dtypes = map_da_dtypes(eo_fns, dask=True, nchunks=args.nchunks)
-
         log.info("Loading rasters...")
-        ds = load_rasters_parallel(eo_fns, nchunks=args.nchunks)
+        ds = load_rasters_parallel(eo_fns, nchunks=syscfg.build_predict.n_chunks)
 
         log.info("Converting to Dask DataFrame...")
         ddf = eo_ds_to_ddf(ds, thresh=cfg.train.missing_val_thresh)
 
         log.info("Computing partitions...")
-        df = compute_partitions(ddf).reset_index(drop=True)
+        df = compute_partitions(ddf).reset_index(drop=True).set_index(["y", "x"])
 
-    out_path = (
-        Path(cfg.train.dir)
-        / cfg.eo_data.predict.dir
-        / cfg.model_res
-        / cfg.eo_data.predict.filename
+    log.info("Creating mask for missing values...")
+    mask = df.isna().reset_index(drop=False)
+
+    mask_path = get_predict_mask_fn(cfg)
+    mask_path.parent.mkdir(parents=True, exist_ok=True)
+    log.info("Saving Mask to %s...", mask_path)
+    mask.to_parquet(mask_path, compression="zstd", index=False, compression_level=19)
+
+    log.info("Imputing missing values...")
+    df_imputed = impute_missing(df, chunks=syscfg.build_predict.impute_chunks)
+
+    log.info("Writing imputed predict DataFrame to disk...")
+    pred_imputed_path = get_predict_imputed_fn(cfg)
+    df_imputed.to_parquet(
+        pred_imputed_path, compression="zstd", index=False, compression_level=19
     )
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-
-    log.info("Saving DataFrame to %s...", out_path)
-    df.to_parquet(out_path, compression="zstd", index=False, compression_level=19)
 
     log.info("Done!")
 
