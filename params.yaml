@@ -22,8 +22,8 @@ pylos:
     impute_chunks: 3
 geos:
   featurize_train:
-    n_chunks: 9
-    n_workers: 55
+    n_chunks: 2
+    n_workers: 100
     memory_limit: 150GB
   build_predict:
     n_chunks: 3
@@ -141,7 +141,8 @@ trydb:
 
 train:
   dir: data/features
-  features: features.parquet
+  Y:
+    fn: Y.parquet
   missing_val_thresh: 0.4 # Drop features with more than this fraction of missing values
   spatial_autocorr: spatial_autocorr.parquet
   cv_splits:

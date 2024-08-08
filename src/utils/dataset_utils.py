@@ -419,12 +419,12 @@ def get_cv_models_dir(predictor: TabularPredictor) -> Path:
 
 def get_train_dir(cfg: ConfigBox) -> Path:
     """Get the path to the train directory for a specific configuration."""
-    return Path(cfg.train.dir) / cfg.PFT / cfg.model_res / cfg.datasets.Y.use
+    return Path(cfg.train.dir) / cfg.PFT / cfg.model_res
 
 
 def get_train_fn(cfg: ConfigBox) -> Path:
     """Get the path to the train file for a specific configuration."""
-    return get_train_dir(cfg) / cfg.train.features
+    return get_train_dir(cfg) / cfg.train.Y.fn
 
 
 def get_cv_splits(cfg: ConfigBox, label: str):
