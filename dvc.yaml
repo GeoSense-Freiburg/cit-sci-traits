@@ -41,97 +41,97 @@ stages:
   # END BASE STAGES (ALL PFTs) ---------------------------------------------------------
   ######################################################################################
 
-  # get_TRY_mean_traits:
-  #   cmd: python src/data/build_try_traits.py
-  #   deps:
-  #     - src/data/build_try_traits.py
-  #     - ${raw_dir}/${trydb.raw.dir}/${trydb.raw.zip}
-  #   params:
-  #     - trydb.raw.dir
-  #     - trydb.raw.zip
-  #     - trydb.raw.zipfile_csv
-  #     - trydb.interim
-  #   outs:
-  #     - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}:
-  #         persist: true
+  get_TRY_mean_traits:
+    cmd: python src/data/build_try_traits.py
+    deps:
+      - src/data/build_try_traits.py
+      - ${raw_dir}/${trydb.raw.dir}/${trydb.raw.zip}
+    params:
+      - trydb.raw.dir
+      - trydb.raw.zip
+      - trydb.raw.zipfile_csv
+      - trydb.interim
+    outs:
+      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}:
+          persist: true
 
-  # match_gbif_pfts:
-  #   cmd: python src/data/match_gbif_pfts.py
-  #   deps:
-  #     - src/data/match_gbif_pfts.py
-  #     - ${raw_dir}/${gbif.raw.dir}
-  #     - ${raw_dir}/${trydb.raw.pfts}
-  #   params:
-  #     - datasets.Y.gbif
-  #     - gbif.raw.dir
-  #     - gbif.interim.dir
-  #     - gbif.interim.matched
-  #   outs:
-  #     - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.matched}:
-  #         persist: true
+  match_gbif_pfts:
+    cmd: python src/data/match_gbif_pfts.py
+    deps:
+      - src/data/match_gbif_pfts.py
+      - ${raw_dir}/${gbif.raw.dir}
+      - ${raw_dir}/${trydb.raw.pfts}
+    params:
+      - datasets.Y.gbif
+      - gbif.raw.dir
+      - gbif.interim.dir
+      - gbif.interim.matched
+    outs:
+      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.matched}:
+          persist: true
 
-  # subsample_gbif:
-  #   cmd: python src/data/subsample_gbif.py
-  #   deps:
-  #     - src/data/subsample_gbif.py
-  #     - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.matched}
-  #   params:
-  #     - gbif.interim.dir
-  #     - gbif.interim.matched
-  #     - gbif.interim.subsampled
-  #     - gbif.interim.subsample_binsize
-  #     - gbif.interim.subsample_n_max
-  #     - random_seed
-  #   outs:
-  #     - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.subsampled}:
-  #         persist: true
+  subsample_gbif:
+    cmd: python src/data/subsample_gbif.py
+    deps:
+      - src/data/subsample_gbif.py
+      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.matched}
+    params:
+      - gbif.interim.dir
+      - gbif.interim.matched
+      - gbif.interim.subsampled
+      - gbif.interim.subsample_binsize
+      - gbif.interim.subsample_n_max
+      - random_seed
+    outs:
+      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.subsampled}:
+          persist: true
 
-  # build_gbif_maps:
-  #   cmd: python src/data/build_gbif_maps.py
-  #   deps:
-  #     - src/data/build_gbif_maps.py
-  #     - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.subsampled}
-  #     - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}
-  #   params:
-  #     - gbif.interim.dir
-  #     - gbif.interim.subsampled
-  #     - trydb.interim.dir
-  #     - trydb.interim.filtered
-  #     - datasets.Y.gbif
-  #     - PFT
-  #     - model_res
-  #     - target_resolution
-  #   outs:
-  #     - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}:
-  #         persist: true
+  build_gbif_maps:
+    cmd: python src/data/build_gbif_maps.py
+    deps:
+      - src/data/build_gbif_maps.py
+      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.subsampled}
+      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}
+    params:
+      - gbif.interim.dir
+      - gbif.interim.subsampled
+      - trydb.interim.dir
+      - trydb.interim.filtered
+      - datasets.Y.gbif
+      - PFT
+      - model_res
+      - target_resolution
+    outs:
+      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}:
+          persist: true
 
-  # extract_splot:
-  #   cmd: python src/data/extract_splot.py
-  #   deps:
-  #     - src/data/extract_splot.py
-  #     - ${raw_dir}/${datasets.Y.splot}
-  #   params:
-  #     - datasets.Y.splot
-  #     - splot.interim.dir
-  #   outs:
-  #     - ${interim_dir}/${splot.interim.dir}/${splot.interim.extracted}:
-  #         persist: true
+  extract_splot:
+    cmd: python src/data/extract_splot.py
+    deps:
+      - src/data/extract_splot.py
+      - ${raw_dir}/${datasets.Y.splot}
+    params:
+      - datasets.Y.splot
+      - splot.interim.dir
+    outs:
+      - ${interim_dir}/${splot.interim.dir}/${splot.interim.extracted}:
+          persist: true
 
-  # build_splot_maps:
-  #   cmd: python src/data/build_splot_maps.py
-  #   deps:
-  #     - src/data/build_splot_maps.py
-  #     - ${interim_dir}/${splot.interim.dir}/${splot.interim.extracted}
-  #     - ${raw_dir}/${trydb.raw.pfts}
-  #     - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}
-  #   params:
-  #     - splot.interim
-  #     - model_res
-  #     - PFT
-  #     - target_resolution
-  #   outs:
-  #     - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}:
-  #         persist: true
+  build_splot_maps:
+    cmd: python src/data/build_splot_maps.py
+    deps:
+      - src/data/build_splot_maps.py
+      - ${interim_dir}/${splot.interim.dir}/${splot.interim.extracted}
+      - ${raw_dir}/${trydb.raw.pfts}
+      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}
+    params:
+      - splot.interim
+      - model_res
+      - PFT
+      - target_resolution
+    outs:
+      - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}:
+          persist: true
 
   # build_features:
   #   cmd: python src/features/featurize_train.py --nchunks 13
