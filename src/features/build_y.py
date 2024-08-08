@@ -13,6 +13,7 @@ from src.conf.conf import get_config
 from src.conf.environment import detect_system, log
 from src.utils.dataset_utils import (
     check_y_set,
+    compute_partitions,
     get_train_fn,
     get_trait_map_fns,
     load_rasters_parallel,
@@ -43,7 +44,8 @@ def build_y_df(
     )
 
     log.info("Computing Y data (%s)...", trait_set)
-    y_df = ds_to_ddf(y_ds).compute().reset_index(drop=True).assign(source=trait_set[0])
+    y_ddf = ds_to_ddf(y_ds)
+    y_df = compute_partitions(y_ddf).reset_index(drop=True).assign(source=trait_set[0])
 
     y_ds.close()
     return y_df

@@ -12,8 +12,8 @@ dask_dashboard: ":39143"
 
 pylos:
   featurize_train:
-    n_chunks: 9
-    n_workers: null
+    n_chunks: 6
+    n_workers: 30
     memory_limit: null
   build_predict:
     n_chunks: 5
