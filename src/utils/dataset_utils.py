@@ -138,7 +138,7 @@ def get_res(fn: Path) -> int | float:
 
 
 @delayed
-def load_x_raster(
+def load_x_or_y_raster(
     fn: Path, band: int = 1, nchunks: int = 9
 ) -> tuple[str, xr.DataArray]:
     """
@@ -173,53 +173,6 @@ def load_x_raster(
     return long_name, xr.DataArray(da)
 
 
-def group_y_fns(fns: list[Path]) -> list[list[Path]]:
-    """Group y rasters by trait. I.e. if both sPlot and GBIF files exist for a trait,
-    group them."""
-    unique_traits = sorted(
-        {fn.stem.split("_")[0] for fn in fns},
-        key=lambda x: int(x.split("X")[-1]),
-    )
-    fns_grouped = [[fn for fn in fns if trait == fn.stem] for trait in unique_traits]
-
-    return fns_grouped
-
-
-def load_y_rasters(
-    fn_group: list[Path], band: int = 1, nchunks: int = 9
-) -> tuple[str, list[xr.DataArray]]:
-    """
-    Load raster files and return a tuple containing the long name and a list of
-        DataArrays.
-
-    Args:
-        fn_group (list[Path]): A list of file paths.
-        band (int, optional): The band number to select. Defaults to 1.
-        nchunks (int, optional): The number of chunks to divide the raster into.
-            Defaults to 9.
-
-    Returns:
-        tuple[str, list[xr.DataArray]]: A tuple containing the long name and a list of
-            DataArrays.
-    """
-    if len(fn_group) == 0:
-        raise ValueError("No files found")
-    dax = []
-    for raster_file in fn_group:
-        result = open_raster(
-            raster_file,
-            chunks={"x": 36000 // nchunks, "y": 18000 // nchunks},
-            mask_and_scale=True,
-        )
-
-        bands = result.attrs["long_name"]
-        long_name = f"{raster_file.stem}_{bands[band - 1]}"
-        result.attrs["long_name"] = long_name
-
-        dax.append(result.sel(band=band))
-    return long_name, dax
-
-
 def get_dataset_idx(fn_group: list[Path]) -> tuple[int, int]:
     """Get the array position of the sPlot and GBIF trait maps in a pair of trait maps."""
     gbif_idx = [i for i, fn in enumerate(fn_group) if "gbif" in str(fn)][0]
@@ -246,66 +199,10 @@ def merge_splot_gbif_sources(
     )
 
 
-@delayed
-def load_y_raster(
-    fn_group: list[Path], band: int = 1, nchunks: int = 9
-) -> tuple[str, xr.DataArray]:
-    """Load and process y rasters. If both sPlot and GBIF are present, merge them in
-    favor of sPlot. If only one is present, use that one. Returns two tuples: one with
-    the trait name and corresponding trait values, and another with trait name (with
-    '_source' appended) and the source of the trait values."""
-    long_name, dax = load_y_rasters(fn_group, band, nchunks)
-
-    if len(dax) == 1:
-        return long_name, dax[0]
-
-    splot_id, gbif_id = get_dataset_idx(fn_group)
-
-    y_vals = merge_splot_gbif(splot_id, gbif_id, dax)
-
-    for da in dax:
-        da.close()
-
-    return long_name, y_vals
-
-
-@delayed
-def load_y_source_raster(
-    fn_group: list[Path], band: int = 1, nchunks: int = 9
-) -> tuple[str, xr.DataArray]:
-    """
-    Load the source raster data for the given file group.
-
-    Args:
-        fn_group (list[Path]): A list of file paths representing the available trait
-            maps for a given trait.
-        band (int, optional): The band number to load. Defaults to 1.
-        nchunks (int, optional): The number of chunks to split the data into. Defaults
-            to 9.
-
-    Returns:
-        tuple[str, xr.DataArray]: A tuple containing the source name and the loaded
-            source raster data.
-    """
-    _, dax = load_y_rasters(fn_group, band, nchunks)
-
-    if len(dax) == 1:
-        source = "s" if "splot" in str(fn_group[0]) else "g"
-        da = xr.where(dax[0].notnull(), source, None, keep_attrs=True)
-        return "source", da
-
-    splot_id, gbif_id = get_dataset_idx(fn_group)
-
-    y_source = merge_splot_gbif_sources(splot_id, gbif_id, dax)
-
-    return "source", y_source
-
-
 def load_rasters_parallel(
     fns: list[Path] | list[list[Path]],
     band: int = 1,
     nchunks: int = 9,
-    ml_set: str = "x",
 ) -> xr.Dataset:
     """
     Load multiple raster datasets in parallel using delayed computation.
@@ -318,32 +215,9 @@ def load_rasters_parallel(
         dict[str, xr.DataArray]: A dictionary where keys are the long_name attributes of
             the datasets and values are the loaded raster data as DataArrays.
     """
-
-    def _check_y_fns(fns: list[Path] | list[list[Path]], ml_set: str) -> None:
-        if not isinstance(fns[0], list):
-            raise ValueError(f"fns must be a list of lists for ml_set '{ml_set}'.")
-
-    if ml_set not in ["x", "y", "y_source"]:
-        raise ValueError("Invalid ml_set. Must be one of 'x', 'y', 'y_source'.")
-
-    if ml_set == "x":
-        das: dict[str, xr.DataArray] = dict(
-            compute(*[load_x_raster(fn, nchunks=nchunks) for fn in fns])
-        )
-
-    if ml_set == "y":
-        das: dict[str, xr.DataArray] = dict(
-            compute(*[load_x_raster(fn, band, nchunks=nchunks) for fn in fns])
-        )
-
-    if ml_set == "y_source":
-        _check_y_fns(fns, ml_set)
-        # Only need the first trait maps to determine source
-        das: dict[str, xr.DataArray] = dict(
-            compute(
-                *[load_y_source_raster(fn_group, band, nchunks) for fn_group in fns[:1]]
-            )
-        )
+    das: dict[str, xr.DataArray] = dict(
+        compute(*[load_x_or_y_raster(fn, band=band, nchunks=nchunks) for fn in fns])
+    )
 
     return xr.Dataset(das)
 
