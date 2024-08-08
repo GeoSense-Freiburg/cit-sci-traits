@@ -41,217 +41,220 @@ stages:
   # END BASE STAGES (ALL PFTs) ---------------------------------------------------------
   ######################################################################################
 
-  get_TRY_mean_traits:
-    cmd: python src/data/build_try_traits.py
-    deps:
-      - src/data/build_try_traits.py
-      - ${raw_dir}/${trydb.raw.dir}/${trydb.raw.zip}
-    params:
-      - trydb.raw.dir
-      - trydb.raw.zip
-      - trydb.raw.zipfile_csv
-      - trydb.interim
-    outs:
-      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}:
-          persist: true
-
-  match_gbif_pfts:
-    cmd: python src/data/match_gbif_pfts.py
-    deps:
-      - src/data/match_gbif_pfts.py
-      - ${raw_dir}/${gbif.raw.dir}
-      - ${raw_dir}/${trydb.raw.pfts}
-    params:
-      - datasets.Y.gbif
-      - gbif.raw.dir
-      - gbif.interim.dir
-      - gbif.interim.matched
-    outs:
-      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.matched}:
-          persist: true
-
-  subsample_gbif:
-    cmd: python src/data/subsample_gbif.py
-    deps:
-      - src/data/subsample_gbif.py
-      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.matched}
-    params:
-      - gbif.interim.dir
-      - gbif.interim.matched
-      - gbif.interim.subsampled
-      - gbif.interim.subsample_binsize
-      - gbif.interim.subsample_n_max
-      - random_seed
-    outs:
-      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.subsampled}:
-          persist: true
-
-  build_gbif_maps:
-    cmd: python src/data/build_gbif_maps.py
-    deps:
-      - src/data/build_gbif_maps.py
-      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.subsampled}
-      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}
-    params:
-      - gbif.interim.dir
-      - gbif.interim.subsampled
-      - trydb.interim.dir
-      - trydb.interim.filtered
-      - datasets.Y.gbif
-      - PFT
-      - model_res
-      - target_resolution
-    outs:
-      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}:
-          persist: true
-
-  extract_splot:
-    cmd: python src/data/extract_splot.py
-    deps:
-      - src/data/extract_splot.py
-      - ${raw_dir}/${datasets.Y.splot}
-    params:
-      - datasets.Y.splot
-      - splot.interim.dir
-    outs:
-      - ${interim_dir}/${splot.interim.dir}/${splot.interim.extracted}:
-          persist: true
-
-  build_splot_maps:
-    cmd: python src/data/build_splot_maps.py
-    deps:
-      - src/data/build_splot_maps.py
-      - ${interim_dir}/${splot.interim.dir}/${splot.interim.extracted}
-      - ${raw_dir}/${trydb.raw.pfts}
-      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}
-    params:
-      - splot.interim
-      - model_res
-      - PFT
-      - target_resolution
-    outs:
-      - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}:
-          persist: true
-
-  build_features:
-    cmd: python src/features/featurize_train.py --nchunks 13
-    deps:
-      - src/features/featurize_train.py
-      - ${interim_dir}/${eo_data.interim.dir}/${model_res}
-      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}
-      - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
-    params:
-      - PFT
-      - model_res
-      - eo_data.interim.dir
-      - datasets.Y.trait_stat
-      - datasets.Y.use
-      - gbif.interim.dir
-      - gbif.interim.traits
-      - splot.interim.dir
-      - splot.interim.traits
-      - train.dir
-      - train.features
-    outs:
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.features}:
-          persist: false
-
-  calculate_spatial_autocorr:
-    cmd: python src/features/calc_spatial_autocorr.py
-    deps:
-      - src/features/calc_spatial_autocorr.py
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.features}
-    params:
-      - train.spatial_autocorr
-    outs:
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.spatial_autocorr}:
-          persist: false
-
-  build_cv_splits:
-    cmd: python src/features/skcv_splits.py
-    deps:
-      - src/features/skcv_splits.py
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.features}
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.spatial_autocorr}
-    params:
-      - train.cv_splits
-    outs:
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.cv_splits.dir}:
-          persist: false
-
-  # generate_feature_weights:
-  #   cmd: python src/features/training_weights.py
+  # get_TRY_mean_traits:
+  #   cmd: python src/data/build_try_traits.py
   #   deps:
-  #     - src/features/training_weights.py
-  #     - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
-  #     - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}
+  #     - src/data/build_try_traits.py
+  #     - ${raw_dir}/${trydb.raw.dir}/${trydb.raw.zip}
   #   params:
-  #     - train.weights
+  #     - trydb.raw.dir
+  #     - trydb.raw.zip
+  #     - trydb.raw.zipfile_csv
+  #     - trydb.interim
   #   outs:
-  #     - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.weights.fn}:
+  #     - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}:
   #         persist: true
 
-  train_models:
-    cmd: python src/models/train_models.py -r
-    deps:
-      - src/models/train_models.py
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.features}
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.cv_splits.dir}
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.weights.fn}
-    params:
-      - train.arch
-      - datasets.Y.traits
-    outs:
-      - ${models.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.arch}:
-          persist: true
+  # match_gbif_pfts:
+  #   cmd: python src/data/match_gbif_pfts.py
+  #   deps:
+  #     - src/data/match_gbif_pfts.py
+  #     - ${raw_dir}/${gbif.raw.dir}
+  #     - ${raw_dir}/${trydb.raw.pfts}
+  #   params:
+  #     - datasets.Y.gbif
+  #     - gbif.raw.dir
+  #     - gbif.interim.dir
+  #     - gbif.interim.matched
+  #   outs:
+  #     - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.matched}:
+  #         persist: true
 
-  predict:
-    cmd: python src/models/predict_traits.py -b 2 -r
-    deps:
-      - src/models/predict_traits.py
-      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
-      - ${models.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.arch}
-    params:
-      - model_res
-      - PFT
-      - datasets.Y.use
-      - eo_data.predict.dir
-      - eo_data.predict.filename
-      - train.arch
-      - processed.dir
-      - processed.predict_dir
-    outs:
-      - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.predict_dir}:
-          persist: true
+  # subsample_gbif:
+  #   cmd: python src/data/subsample_gbif.py
+  #   deps:
+  #     - src/data/subsample_gbif.py
+  #     - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.matched}
+  #   params:
+  #     - gbif.interim.dir
+  #     - gbif.interim.matched
+  #     - gbif.interim.subsampled
+  #     - gbif.interim.subsample_binsize
+  #     - gbif.interim.subsample_n_max
+  #     - random_seed
+  #   outs:
+  #     - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.subsampled}:
+  #         persist: true
 
-  splot_corr:
-    cmd: python src/analysis/splot_correlation.py -n 4
-    deps:
-      - src/analysis/splot_correlation.py
-      - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
-      - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.predict_dir}
-    outs:
-      - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.splot_corr}:
-          persist: true
+  # build_gbif_maps:
+  #   cmd: python src/data/build_gbif_maps.py
+  #   deps:
+  #     - src/data/build_gbif_maps.py
+  #     - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.subsampled}
+  #     - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}
+  #   params:
+  #     - gbif.interim.dir
+  #     - gbif.interim.subsampled
+  #     - trydb.interim.dir
+  #     - trydb.interim.filtered
+  #     - datasets.Y.gbif
+  #     - PFT
+  #     - model_res
+  #     - target_resolution
+  #   outs:
+  #     - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}:
+  #         persist: true
 
-  cov:
-    cmd: python src/analysis/cov.py -b 2 -r
-    deps:
-      - src/analysis/cov.py
-      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
-    params:
-      - target_resolution
-    outs:
-      - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.cov_dir}:
-          persist: true
+  # extract_splot:
+  #   cmd: python src/data/extract_splot.py
+  #   deps:
+  #     - src/data/extract_splot.py
+  #     - ${raw_dir}/${datasets.Y.splot}
+  #   params:
+  #     - datasets.Y.splot
+  #     - splot.interim.dir
+  #   outs:
+  #     - ${interim_dir}/${splot.interim.dir}/${splot.interim.extracted}:
+  #         persist: true
 
-  build_final_product:
-    cmd: python src/data/build_final_product.py
-    deps:
-      - src/data/build_final_product.py
-      - reference/trait_mapping.json
-      - reference/trait_stat_mapping.json
-      - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.predict_dir}
-      - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.cov_dir}
-    params:
-      - public.dir
+  # build_splot_maps:
+  #   cmd: python src/data/build_splot_maps.py
+  #   deps:
+  #     - src/data/build_splot_maps.py
+  #     - ${interim_dir}/${splot.interim.dir}/${splot.interim.extracted}
+  #     - ${raw_dir}/${trydb.raw.pfts}
+  #     - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}
+  #   params:
+  #     - splot.interim
+  #     - model_res
+  #     - PFT
+  #     - target_resolution
+  #   outs:
+  #     - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}:
+  #         persist: true
+
+  # build_features:
+  #   cmd: python src/features/featurize_train.py --nchunks 13
+  #   deps:
+  #     - src/features/featurize_train.py
+  #     - ${interim_dir}/${eo_data.interim.dir}/${model_res}
+  #     - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}
+  #     - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
+  #   params:
+  #     - PFT
+  #     - model_res
+  #     - eo_data.interim.dir
+  #     - datasets.Y.trait_stat
+  #     - datasets.Y.use
+  #     - gbif.interim.dir
+  #     - gbif.interim.traits
+  #     - splot.interim.dir
+  #     - splot.interim.traits
+  #     - train.dir
+  #     - train.features
+  #   outs:
+  #     - ${train.dir}/${PFT}/${model_res}/${gbif.train.fn}:
+  #         persist: false
+  #     - ${train.dir}/${PFT}/${model_res}/${splot.train.fn}:
+  #         persist: false
+
+  # calculate_spatial_autocorr:
+  #   cmd: python src/features/calc_spatial_autocorr.py
+  #   deps:
+  #     - src/features/calc_spatial_autocorr.py
+  #     - ${train.dir}/${PFT}/${model_res}/${gbif.train.fn}
+  #     - ${train.dir}/${PFT}/${model_res}/${splot.train.fn}
+  #   params:
+  #     - train.spatial_autocorr
+  #   outs:
+  #     - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.spatial_autocorr}:
+  #         persist: false
+
+  # build_cv_splits:
+  #   cmd: python src/features/skcv_splits.py
+  #   deps:
+  #     - src/features/skcv_splits.py
+  #     - ${train.dir}/${PFT}/${model_res}/
+  #     - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.spatial_autocorr}
+  #   params:
+  #     - train.cv_splits
+  #   outs:
+  #     - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.cv_splits.dir}:
+  #         persist: false
+
+  # # generate_feature_weights:
+  # #   cmd: python src/features/training_weights.py
+  # #   deps:
+  # #     - src/features/training_weights.py
+  # #     - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
+  # #     - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}
+  # #   params:
+  # #     - train.weights
+  # #   outs:
+  # #     - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.weights.fn}:
+  # #         persist: true
+
+  # train_models:
+  #   cmd: python src/models/train_models.py -r
+  #   deps:
+  #     - src/models/train_models.py
+  #     - ${train.dir}/${PFT}/${model_res}/
+  #     - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.cv_splits.dir}
+  #     - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.weights.fn}
+  #   params:
+  #     - train.arch
+  #     - datasets.Y.traits
+  #   outs:
+  #     - ${models.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.arch}:
+  #         persist: true
+
+  # predict:
+  #   cmd: python src/models/predict_traits.py -b 2 -r
+  #   deps:
+  #     - src/models/predict_traits.py
+  #     - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
+  #     - ${models.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.arch}
+  #   params:
+  #     - model_res
+  #     - PFT
+  #     - datasets.Y.use
+  #     - eo_data.predict.dir
+  #     - eo_data.predict.filename
+  #     - train.arch
+  #     - processed.dir
+  #     - processed.predict_dir
+  #   outs:
+  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.predict_dir}:
+  #         persist: true
+
+  # splot_corr:
+  #   cmd: python src/analysis/splot_correlation.py -n 4
+  #   deps:
+  #     - src/analysis/splot_correlation.py
+  #     - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
+  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.predict_dir}
+  #   outs:
+  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.splot_corr}:
+  #         persist: true
+
+  # cov:
+  #   cmd: python src/analysis/cov.py -b 2 -r
+  #   deps:
+  #     - src/analysis/cov.py
+  #     - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
+  #   params:
+  #     - target_resolution
+  #   outs:
+  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.cov_dir}:
+  #         persist: true
+
+  # build_final_product:
+  #   cmd: python src/data/build_final_product.py
+  #   deps:
+  #     - src/data/build_final_product.py
+  #     - reference/trait_mapping.json
+  #     - reference/trait_stat_mapping.json
+  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.predict_dir}
+  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.cov_dir}
+  #   params:
+  #     - public.dir
