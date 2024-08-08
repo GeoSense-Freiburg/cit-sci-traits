@@ -54,7 +54,6 @@ datasets:
   Y:
     splot: splot4-0
     gbif: all_tracheophyta_non-cult_2024-04-10
-    use: "splot_gbif" # Which trait dataset(s) to use for training, separated by "_"
     trait_stat: 1 # ('mean', 'std', 'median', 'q05', 'q95', 'count') (bands start at 1)
     traits:
       - 4 # Stem specific density (SSD) or wood density (stem dry mass per stem fresh volume)
