@@ -302,6 +302,11 @@ def get_y_fn(cfg: ConfigBox) -> Path:
     return get_train_dir(cfg) / cfg.train.Y.fn
 
 
+def get_autocorr_ranges_fn(cfg: ConfigBox) -> Path:
+    """Get the path to the autocorrelation ranges file for a specific configuration."""
+    return get_train_dir(cfg) / cfg.train.spatial_autocorr
+
+
 def get_cv_splits(cfg: ConfigBox, label: str):
     """Load the CV splits for a given label."""
     with open(get_train_dir(cfg) / cfg.train.cv_splits.dir / f"{label}.pkl", "rb") as f:
