@@ -1,5 +1,6 @@
 """Featurize EO data for prediction and AoA calculation."""
 
+import argparse
 import math
 
 import dask.dataframe as dd
@@ -20,6 +21,15 @@ from src.utils.dataset_utils import (
     get_predict_mask_fn,
     load_rasters_parallel,
 )
+
+
+def cli() -> argparse.Namespace:
+    """Command line interface for featurizing EO data for prediction and AoA calculation."""
+    parser = argparse.ArgumentParser(
+        description="Featurize EO data for prediction and AoA calculation."
+    )
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode.")
+    return parser.parse_args()
 
 
 def impute_missing(df: pd.DataFrame, chunks: int | None = None) -> pd.DataFrame:
@@ -56,9 +66,12 @@ def eo_ds_to_ddf(ds: xr.Dataset, thresh: float, sample: float = 1.0) -> dd.DataF
     )
 
 
-def main(cfg: ConfigBox = get_config()) -> None:
+def main(cfg: ConfigBox = get_config(), args: argparse.Namespace = cli()) -> None:
     """Main function for featurizing EO data for prediction and AoA calculation."""
     syscfg = cfg[detect_system()]
+
+    if args.debug:
+        log.info("Running in debug mode...")
 
     with Client(
         dashboard_address=cfg.dask_dashboard,
@@ -68,6 +81,9 @@ def main(cfg: ConfigBox = get_config()) -> None:
 
         log.info("Getting filenames...")
         eo_fns = get_eo_fns_list(stage="interim")
+
+        if args.debug:
+            eo_fns = eo_fns[:2]
 
         log.info("Loading rasters...")
         ds = load_rasters_parallel(eo_fns, nchunks=syscfg.build_predict.n_chunks)
@@ -82,6 +98,12 @@ def main(cfg: ConfigBox = get_config()) -> None:
     mask = df.isna().reset_index(drop=False)
 
     mask_path = get_predict_mask_fn(cfg)
+
+    if args.debug:
+        mask = mask.head(5000)
+        df = df.head(5000)
+        mask_path = mask_path.parent / "debug" / mask_path.name
+
     mask_path.parent.mkdir(parents=True, exist_ok=True)
     log.info("Saving Mask to %s...", mask_path)
     mask.to_parquet(mask_path, compression="zstd", index=False, compression_level=19)
@@ -91,8 +113,10 @@ def main(cfg: ConfigBox = get_config()) -> None:
 
     log.info("Writing imputed predict DataFrame to disk...")
     pred_imputed_path = get_predict_imputed_fn(cfg)
-    df_imputed.to_parquet(
-        pred_imputed_path, compression="zstd", index=False, compression_level=19
+
+    if args.debug:
+        pred_imputed_path = pred_imputed_path.parent / "debug" / pred_imputed_path.name
+
     )
 
     log.info("Done!")
