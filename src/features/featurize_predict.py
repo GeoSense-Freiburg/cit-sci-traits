@@ -2,6 +2,7 @@
 
 import argparse
 import math
+import pickle
 
 import dask.dataframe as dd
 import numpy as np
@@ -106,10 +107,22 @@ def main(cfg: ConfigBox = get_config(), args: argparse.Namespace = cli()) -> Non
 
     mask_path.parent.mkdir(parents=True, exist_ok=True)
     log.info("Saving Mask to %s...", mask_path)
-    mask.to_parquet(mask_path, compression="zstd", index=False, compression_level=19)
+    mask.to_parquet(mask_path, compression="zstd", compression_level=19)
 
     log.info("Imputing missing values...")
     df_imputed = impute_missing(df, chunks=syscfg.build_predict.impute_chunks)
+
+    log.info("Casting dtypes of imputed data to conserve efficiency...")
+    with open("reference/eo_data_dtypes.pkl", "rb") as f:
+        dtypes = pickle.load(f)
+
+    int_cols = [
+        col for col, dtype in dtypes.items() if np.issubdtype(dtype, np.integer)
+    ]
+
+    # Round up the integer columns as imputing sometimes results in float values
+    df_imputed[int_cols] = np.ceil(df_imputed[int_cols])
+    df_imputed = df_imputed.astype(dtypes)
 
     log.info("Writing imputed predict DataFrame to disk...")
     pred_imputed_path = get_predict_imputed_fn(cfg)
@@ -117,6 +130,8 @@ def main(cfg: ConfigBox = get_config(), args: argparse.Namespace = cli()) -> Non
     if args.debug:
         pred_imputed_path = pred_imputed_path.parent / "debug" / pred_imputed_path.name
 
+    df_imputed.reset_index(drop=False).to_parquet(
+        pred_imputed_path, compression="zstd", compression_level=19
     )
 
     log.info("Done!")
