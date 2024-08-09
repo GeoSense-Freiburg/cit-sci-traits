@@ -20,6 +20,9 @@ pylos:
     n_workers: null
     memory_limit: 100GB
     impute_chunks: 3
+  calc_spatial_autocorr:
+    n_workers: 60
+    n_workers_variogram: 5
 geos:
   featurize_train:
     n_chunks: 2
@@ -30,6 +33,9 @@ geos:
     n_workers: 100
     memory_limit: 500GB
     impute_chunks: 2
+  calc_spatial_autocorr:
+    n_workers: 100
+    n_workers_variogram: 20
 
 mask:
   path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif

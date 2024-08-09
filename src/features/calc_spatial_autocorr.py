@@ -1,7 +1,6 @@
 """Calculates spatial autocorrelation for each trait in a feature set."""
 
-from pathlib import Path
-
+import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 import utm
@@ -11,7 +10,8 @@ from dask.distributed import Client
 from pykrige.ok import OrdinaryKriging
 
 from src.conf.conf import get_config
-from src.conf.environment import log
+from src.conf.environment import detect_system, log
+from src.utils.dataset_utils import get_autocorr_ranges_fn, get_y_fn
 
 
 @delayed
@@ -106,32 +106,39 @@ def calculate_variogram(group: pd.DataFrame, data_col: str, **kwargs) -> float |
 
 def main(cfg: ConfigBox = get_config()) -> None:
     """Main function for calculating spatial autocorrelation."""
-    feats_fn = (
-        Path(cfg.train.dir)
-        / cfg.PFT
-        / cfg.model_res
-        / cfg.datasets.Y.use
-        / cfg.train.features
+    syscfg = cfg[detect_system()]
+
+    y_fn = get_y_fn(cfg)
+
+    log.info("Reading sPlot features from %s...", y_fn)
+    y_ddf = (
+        dd.read_parquet(y_fn)
+        .pipe(lambda _ddf: _ddf[_ddf["source"] == "s"])
+        .drop(columns=["source"])
     )
+    y_cols = y_ddf.columns.difference(["x", "y"]).to_list()
 
-    log.info("Reading features from %s...", feats_fn)
-    feats_cols = pd.read_parquet(feats_fn).columns
-    trait_cols = [c for c in feats_cols if c.startswith("X")]
-
-    for i, trait_col in enumerate(trait_cols):
+    for i, trait_col in enumerate(y_cols):
         log.info("Calculating spatial autocorrelation for %s...", trait_col)
         trait_df = (
-            pd.read_parquet(feats_fn, columns=["x", "y", trait_col])
+            y_ddf[["x", "y", trait_col]]
             .astype(np.float32)
-            .dropna()
+            .compute()
+            .reset_index(drop=True)
         )
 
         log.info("Adding UTM coordinates...")
-        with Client(dashboard_address=cfg.dask_dashboard, n_workers=60):
+        with Client(
+            dashboard_address=cfg.dask_dashboard,
+            n_workers=syscfg.calc_spatial_autocorr.n_workers,
+        ):
             trait_df = add_utm(trait_df).drop(columns=["x", "y"])
 
         log.info("Calculating variogram ranges...")
-        with Client(dashboard_address=cfg.dask_dashboard, n_workers=5):
+        with Client(
+            dashboard_address=cfg.dask_dashboard,
+            n_workers=syscfg.calc_spatial_autocorr.n_workers_variogram,
+        ):
             kwargs = {
                 "n_max": 18000,
                 "variogram_model": "spherical",
@@ -151,17 +158,11 @@ def main(cfg: ConfigBox = get_config()) -> None:
 
         log.info("Saving range statistics to DataFrame...")
         # Define the file path
-        ranges_df_fn = (
-            Path(cfg.train.dir)
-            / cfg.PFT
-            / cfg.model_res
-            / cfg.datasets.Y.use
-            / cfg.train.spatial_autocorr
-        )
+        ranges_fn = get_autocorr_ranges_fn(cfg)
 
         # Try to read the existing DataFrame, or create a new one if this is the first trait
         ranges_df = (
-            pd.read_parquet(ranges_df_fn)
+            pd.read_parquet(ranges_fn)
             if i > 0
             else pd.DataFrame(columns=["trait", "mean", "std", "median", "q05", "q95"])
         )
@@ -187,7 +188,7 @@ def main(cfg: ConfigBox = get_config()) -> None:
         )
 
         # Write the DataFrame back to disk
-        ranges_df.to_parquet(ranges_df_fn)
+        ranges_df.to_parquet(ranges_fn)
 
 
 if __name__ == "__main__":

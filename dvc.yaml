@@ -145,17 +145,15 @@ stages:
     outs:
       - ${train.dir}/${PFT}/${model_res}/${train.Y.fn}
 
-  # calculate_spatial_autocorr:
-  #   cmd: python src/features/calc_spatial_autocorr.py
-  #   deps:
-  #     - src/features/calc_spatial_autocorr.py
-  #     - ${train.dir}/${PFT}/${model_res}/${gbif.train.fn}
-  #     - ${train.dir}/${PFT}/${model_res}/${splot.train.fn}
-  #   params:
-  #     - train.spatial_autocorr
-  #   outs:
-  #     - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.spatial_autocorr}:
-  #         persist: false
+  calculate_spatial_autocorr:
+    cmd: python src/features/calc_spatial_autocorr.py
+    deps:
+      - src/features/calc_spatial_autocorr.py
+      - ${train.dir}/${PFT}/${model_res}/${train.Y.fn}
+    params:
+      - train.spatial_autocorr
+    outs:
+      - ${train.dir}/${PFT}/${model_res}/${train.spatial_autocorr}
 
   # build_cv_splits:
   #   cmd: python src/features/skcv_splits.py
