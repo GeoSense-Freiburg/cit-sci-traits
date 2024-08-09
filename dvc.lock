@@ -216,46 +216,6 @@ stages:
       md5: ce3392f86249ee2ddb4deac861c0f2b5.dir
       size: 1050055399
       nfiles: 33
-  build_features:
-    cmd: python src/features/featurize_train.py --nchunks 13
-    deps:
-    - path: data/interim/eo_data/001
-      hash: md5
-      md5: 33b4751370ba70d27e0b170fa13beb54.dir
-      size: 34856945252
-      nfiles: 150
-    - path: data/interim/gbif/trait_maps/Shrub_Tree_Grass/001
-      hash: md5
-      md5: 499003834d29c5cebcdc7ba44081be40.dir
-      size: 7609417391
-      nfiles: 33
-    - path: data/interim/splot/trait_maps/Shrub_Tree_Grass/001
-      hash: md5
-      md5: ce3392f86249ee2ddb4deac861c0f2b5.dir
-      size: 1050055399
-      nfiles: 33
-    - path: src/features/featurize_train.py
-      hash: md5
-      md5: a2e61cd2faec6000e10f112e128d7211
-      size: 3286
-    params:
-      params.yaml:
-        PFT: Shrub_Tree_Grass
-        datasets.Y.trait_stat: 1
-        datasets.Y.use: splot_gbif
-        eo_data.interim.dir: eo_data
-        gbif.interim.dir: gbif
-        gbif.interim.traits: trait_maps
-        model_res: '001'
-        splot.interim.dir: splot
-        splot.interim.traits: trait_maps
-        train.dir: data/features
-        train.features: features.parquet
-    outs:
-    - path: data/features/Shrub_Tree_Grass/001/splot_gbif/features.parquet
-      hash: md5
-      md5: 3ef87f8894e960287439bb2f1bba04e9
-      size: 2354976319
   calculate_spatial_autocorr:
     cmd: python src/features/calc_spatial_autocorr.py
     deps:
