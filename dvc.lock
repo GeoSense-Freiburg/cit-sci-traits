@@ -219,22 +219,22 @@ stages:
   calculate_spatial_autocorr:
     cmd: python src/features/calc_spatial_autocorr.py
     deps:
-    - path: data/features/Shrub_Tree_Grass/001/splot_gbif/features.parquet
+    - path: data/features/Shrub_Tree_Grass/001/Y.parquet
       hash: md5
-      md5: 3ef87f8894e960287439bb2f1bba04e9
-      size: 2354976319
+      md5: 443e6753fa2ed895e5f16b61bd6df385
+      size: 1316913887
     - path: src/features/calc_spatial_autocorr.py
       hash: md5
-      md5: d0dcfdded4d59df1a941c0fa8dd7a83f
-      size: 5945
+      md5: 24a50475871d60a1fa284add2aa126f3
+      size: 6038
     params:
       params.yaml:
         train.spatial_autocorr: spatial_autocorr.parquet
     outs:
-    - path: data/features/Shrub_Tree_Grass/001/splot_gbif/spatial_autocorr.parquet
+    - path: data/features/Shrub_Tree_Grass/001/spatial_autocorr.parquet
       hash: md5
-      md5: 143291d13322aa7f45a1bb0f9f184b56
-      size: 6364
+      md5: a4be75634474fa8aa26d2774ca108cc0
+      size: 6351
   build_cv_splits:
     cmd: python src/features/skcv_splits.py
     deps:
