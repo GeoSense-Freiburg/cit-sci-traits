@@ -14,8 +14,8 @@ from src.conf.environment import detect_system, log
 from src.utils.dataset_utils import (
     check_y_set,
     compute_partitions,
-    get_train_fn,
     get_trait_map_fns,
+    get_y_fn,
     load_rasters_parallel,
 )
 
@@ -83,7 +83,7 @@ def main(cfg: ConfigBox = get_config()) -> None:
             ignore_index=True,
         )
 
-        out_path = get_train_fn(cfg)
+        out_path = get_y_fn(cfg)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         log.info("Writing Y data to %s...", str(out_path))
         y_df.to_parquet(out_path, compression="zstd")

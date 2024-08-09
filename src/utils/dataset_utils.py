@@ -297,7 +297,7 @@ def get_train_dir(cfg: ConfigBox) -> Path:
     return Path(cfg.train.dir) / cfg.PFT / cfg.model_res
 
 
-def get_train_fn(cfg: ConfigBox) -> Path:
+def get_y_fn(cfg: ConfigBox) -> Path:
     """Get the path to the train file for a specific configuration."""
     return get_train_dir(cfg) / cfg.train.Y.fn
 
