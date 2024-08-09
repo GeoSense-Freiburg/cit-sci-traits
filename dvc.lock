@@ -470,8 +470,8 @@ stages:
       nfiles: 33
     - path: src/features/build_y.py
       hash: md5
-      md5: 0e1d33c1976284748cab11ce911e01ac
-      size: 2576
+      md5: 32e5f638dae1b5300a9847d13c9e01db
+      size: 2568
     params:
       params.yaml:
         datasets.Y.trait_stat: 1
