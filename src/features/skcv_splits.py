@@ -14,7 +14,7 @@ from dask.distributed import Client
 from scipy.stats import ks_2samp
 
 from src.conf.conf import get_config
-from src.conf.environment import log
+from src.conf.environment import detect_system, log
 from src.utils.log_utils import get_loggers_starting_with
 from src.utils.spatial_utils import acr_to_h3_res, assign_hexagons
 
@@ -154,6 +154,8 @@ def get_splits(
 
 def main(cfg: ConfigBox = get_config()) -> None:
     """Main function to generate spatial k-fold cross-validation splits."""
+    syscfg = cfg[detect_system()]
+
     # Ignore warnings
     warnings.simplefilter(action="ignore", category=UserWarning)
 
@@ -173,7 +175,9 @@ def main(cfg: ConfigBox = get_config()) -> None:
     for trait in feat_cols:
         log.info("Processing trait: %s", trait)
 
-        with Client(dashboard_address=cfg.dask_dashboard, n_workers=80):
+        with Client(
+            dashboard_address=cfg.dask_dashboard, n_workers=syscfg.skcv_splits.n_workers
+        ):
             # Ensure dask loggers don't interfere with the main logger
             dask_loggers = get_loggers_starting_with("distributed")
             for logger in dask_loggers:
