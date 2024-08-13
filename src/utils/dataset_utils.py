@@ -1,6 +1,5 @@
 """Get the filenames of datasets based on the specified stage of processing."""
 
-import pickle
 from pathlib import Path
 
 import dask.dataframe as dd
@@ -14,6 +13,8 @@ from tqdm import trange
 from src.conf.conf import get_config
 from src.utils.raster_utils import open_raster
 
+cfg = get_config()
+
 
 def get_eo_fns_dict(
     stage: str, datasets: str | list[str] | None = None
@@ -21,8 +22,6 @@ def get_eo_fns_dict(
     """
     Get the filenames of EO datasets for a given stage.
     """
-    cfg: ConfigBox = get_config()
-
     if isinstance(datasets, str):
         datasets = [datasets]
 
@@ -241,41 +240,42 @@ def compute_partitions(ddf: dd.DataFrame) -> pd.DataFrame:
     return pd.concat(dfs)
 
 
-def check_y_set(cfg: ConfigBox, y_set: str) -> None:
+def check_y_set(y_set: str, config: ConfigBox = cfg) -> None:
     """Check if the specified y_set is valid."""
-    y_sets = list(cfg.datasets.Y.keys())[:2]
+    y_sets = list(config.datasets.Y.keys())[:2]
     if y_set not in y_sets:
         raise ValueError(f"Invalid y_set. Must be one of {y_sets}.")
 
 
-def get_models_dir(cfg: ConfigBox) -> Path:
+def get_models_dir(y_set: str, config: ConfigBox = cfg) -> Path:
     """Get the path to the models directory for a specific configuration."""
+    check_y_set(y_set, config)
     return (
-        Path(cfg.models.dir)
-        / cfg.PFT
-        / cfg.model_res
-        / cfg.datasets.Y.use
-        / cfg.train.arch
+        Path(config.models.dir)
+        / config.PFT
+        / config.model_res
+        / y_set
+        / config.train.arch
     )
 
 
-def get_predict_mask_fn(cfg: ConfigBox) -> Path:
+def get_predict_mask_fn(config: ConfigBox = cfg) -> Path:
     """Get the path to the predict features mask file for a specific configuration."""
     return (
-        Path(cfg.train.dir)
-        / cfg.eo_data.predict.dir
-        / cfg.model_res
-        / cfg.eo_data.predict.mask_fn
+        Path(config.train.dir)
+        / config.eo_data.predict.dir
+        / config.model_res
+        / config.eo_data.predict.mask_fn
     )
 
 
-def get_predict_imputed_fn(cfg: ConfigBox) -> Path:
+def get_predict_imputed_fn(config: ConfigBox = cfg) -> Path:
     """Get the path to the imputed predict features file for a specific configuration."""
     return (
-        Path(cfg.train.dir)
-        / cfg.eo_data.predict.dir
-        / cfg.model_res
-        / cfg.eo_data.predict.imputed_fn
+        Path(config.train.dir)
+        / config.eo_data.predict.dir
+        / config.model_res
+        / config.eo_data.predict.imputed_fn
     )
 
 
@@ -292,69 +292,74 @@ def get_cv_models_dir(predictor: TabularPredictor) -> Path:
     return Path(predictor.path, "models", str(best_base_model))
 
 
-def get_train_dir(cfg: ConfigBox) -> Path:
+def get_train_dir(config: ConfigBox = cfg) -> Path:
     """Get the path to the train directory for a specific configuration."""
-    return Path(cfg.train.dir) / cfg.PFT / cfg.model_res
+    return Path(config.train.dir) / config.PFT / config.model_res
 
 
-def get_y_fn(cfg: ConfigBox) -> Path:
+def get_y_fn(config: ConfigBox = cfg) -> Path:
     """Get the path to the train file for a specific configuration."""
-    return get_train_dir(cfg) / cfg.train.Y.fn
+    return get_train_dir(config) / config.train.Y.fn
 
 
-def get_autocorr_ranges_fn(cfg: ConfigBox) -> Path:
+def get_autocorr_ranges_fn(config: ConfigBox = cfg) -> Path:
     """Get the path to the autocorrelation ranges file for a specific configuration."""
-    return get_train_dir(cfg) / cfg.train.spatial_autocorr
+    return get_train_dir(config) / config.train.spatial_autocorr
 
 
-def get_cv_splits_dir(cfg: ConfigBox) -> Path:
+def get_cv_splits_dir(config: ConfigBox = cfg) -> Path:
     """Get the path to the CV splits directory for a specific configuration."""
-    return get_train_dir(cfg) / cfg.train.cv_splits.dir
+    return get_train_dir(config) / config.train.cv_splits.dir
 
 
-def get_processed_dir(cfg: ConfigBox) -> Path:
+def get_processed_dir(config: ConfigBox = cfg) -> Path:
     """Get the path to the processed directory for a specific configuration."""
-    return Path(cfg.processed.dir) / cfg.PFT / cfg.model_res / cfg.datasets.Y.use
-
-
-def get_splot_corr_fn(cfg: ConfigBox) -> Path:
-    """Get the path to the sPlot correlation file for a specific configuration."""
-    return get_processed_dir(cfg) / cfg.processed.splot_corr
-
-
-def get_weights_fn(cfg: ConfigBox) -> Path:
-    """Get the path to the weights file."""
-    return get_train_dir(cfg) / cfg.train.weights.fn
-
-
-def get_trait_maps_dir(cfg: ConfigBox, dataset: str) -> Path:
-    """Get the path to the trait maps directory for a specific dataset (e.g. GBIF or sPlot)."""
-    check_y_set(cfg, dataset)
-
     return (
-        Path(cfg.interim_dir)
-        / cfg[dataset].interim.dir
-        / cfg[dataset].interim.traits
-        / cfg.PFT
-        / cfg.model_res
+        Path(config.processed.dir)
+        / config.PFT
+        / config.model_res
+        / config.datasets.Y.use
     )
 
 
-def get_trait_map_fns(cfg: ConfigBox, trait_set: str) -> list[Path]:
+def get_splot_corr_fn(config: ConfigBox = cfg) -> Path:
+    """Get the path to the sPlot correlation file for a specific configuration."""
+    return get_processed_dir(config) / config.processed.splot_corr
+
+
+def get_weights_fn(config: ConfigBox = cfg) -> Path:
+    """Get the path to the weights file."""
+    return get_train_dir(config) / config.train.weights.fn
+
+
+def get_trait_maps_dir(y_set: str, config: ConfigBox = cfg) -> Path:
+    """Get the path to the trait maps directory for a specific dataset (e.g. GBIF or sPlot)."""
+    check_y_set(y_set, config)
+
+    return (
+        Path(config.interim_dir)
+        / config[y_set].interim.dir
+        / config[y_set].interim.traits
+        / config.PFT
+        / config.model_res
+    )
+
+
+def get_trait_map_fns(y_set: str, config: ConfigBox = cfg) -> list[Path]:
     """Get the filenames of trait maps."""
-    trait_maps_dir = get_trait_maps_dir(cfg, trait_set)
+    trait_maps_dir = get_trait_maps_dir(y_set, config)
 
     return sorted(list(trait_maps_dir.glob("*.tif")))
 
 
-def get_predict_dir(cfg: ConfigBox) -> Path:
+def get_predict_dir(config: ConfigBox = cfg) -> Path:
     """Get the path to the predicted trait directory for a specific configuration."""
     return (
-        Path(cfg.processed.dir)
-        / cfg.PFT
-        / cfg.model_res
-        / cfg.datasets.Y.use
-        / cfg.processed.predict_dir
+        Path(config.processed.dir)
+        / config.PFT
+        / config.model_res
+        / config.datasets.Y.use
+        / config.processed.predict_dir
     )
 
 
