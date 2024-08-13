@@ -23,6 +23,8 @@ pylos:
   calc_spatial_autocorr:
     n_workers: 60
     n_workers_variogram: 5
+  skcv_splits:
+    n_workers: 60
 geos:
   featurize_train:
     n_chunks: 2
@@ -36,6 +38,8 @@ geos:
   calc_spatial_autocorr:
     n_workers: 100
     n_workers_variogram: 20
+  skcv_splits:
+    n_workers: 80
 
 mask:
   path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
