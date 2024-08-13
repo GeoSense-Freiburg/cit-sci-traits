@@ -119,6 +119,7 @@ def assign_folds(
         ]
     )
     for similarity, assignment in results:
+        log.info("Similarity: %e. Current best: %e", similarity, best_similarity)
         if best_similarity is None or similarity > best_similarity:
             best_similarity = similarity
             best_assignment = assignment
