@@ -104,8 +104,9 @@ def assign_hexagons(
     """
 
     def _assign_hex_to_df(_df: pd.DataFrame) -> pd.DataFrame:
+        _df = _df.copy()
         geo_to_h3_vectorized = np.vectorize(h3.geo_to_h3)
-        _df["hex_id"] = geo_to_h3_vectorized(_df[lat], _df[lon], resolution)
+        _df.loc[:, "hex_id"] = geo_to_h3_vectorized(_df[lat], _df[lon], resolution)
         return _df
 
     if dask:
