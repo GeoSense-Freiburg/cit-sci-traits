@@ -1,7 +1,7 @@
 """Split the data into train and test sets using spatial k-fold cross-validation."""
 
 import logging
-from pathlib import Path
+import warnings
 from typing import Sequence
 
 import dask.dataframe as dd
@@ -40,7 +40,7 @@ def calculate_kg_p_value(
     fold_i_values = folds_values[mask]
     fold_j_values = folds_values[~mask]
     _, p_value = ks_2samp(fold_i_values, fold_j_values)
-    return p_value
+    return p_value  # pyright: ignore[reportReturnType]
 
 
 def calculate_similarity_kg(folds: Sequence, df: pd.DataFrame, data_col: str) -> float:
@@ -64,7 +64,7 @@ def calculate_similarity_kg(folds: Sequence, df: pd.DataFrame, data_col: str) ->
     ]
 
     # Return the minimum p-value as the similarity score
-    return min(p_values)
+    return float(np.mean(p_values))
 
 
 def assign_folds_iteration(
@@ -154,7 +154,9 @@ def get_splits(
 
 def main(cfg: ConfigBox = get_config()) -> None:
     """Main function to generate spatial k-fold cross-validation splits."""
-    train_dir = Path(cfg.train.dir) / cfg.PFT / cfg.model_res / cfg.datasets.Y.use
+    # Ignore warnings
+    warnings.simplefilter(action="ignore", category=UserWarning)
+
     ranges = pd.read_parquet(
         train_dir / cfg.train.spatial_autocorr,
         columns=["trait", cfg.train.cv_splits.range_stat],
