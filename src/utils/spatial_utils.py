@@ -1,12 +1,13 @@
 """Spatial utility functions."""
 
 from typing import Iterable
+
 import h3
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
 from pyproj import Proj
 from shapely.geometry import shape
-import statsmodels.api as sm
 
 
 def get_h3_resolution(edge_length: float) -> int | float:

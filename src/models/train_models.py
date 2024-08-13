@@ -1,7 +1,9 @@
 """Train trait models using the given configuration."""
 
 import argparse
+
 from box import ConfigBox
+
 from src.conf.conf import get_config
 from src.models import autogluon
 
