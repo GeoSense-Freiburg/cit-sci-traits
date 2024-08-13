@@ -15,6 +15,7 @@ from scipy.stats import ks_2samp
 
 from src.conf.conf import get_config
 from src.conf.environment import detect_system, log
+from src.utils.dataset_utils import get_autocorr_ranges_fn, get_cv_splits_dir, get_y_fn
 from src.utils.log_utils import get_loggers_starting_with
 from src.utils.spatial_utils import acr_to_h3_res, assign_hexagons
 
@@ -160,20 +161,19 @@ def main(cfg: ConfigBox = get_config()) -> None:
     warnings.simplefilter(action="ignore", category=UserWarning)
 
     ranges = pd.read_parquet(
-        train_dir / cfg.train.spatial_autocorr,
+        get_autocorr_ranges_fn(),
         columns=["trait", cfg.train.cv_splits.range_stat],
     )
 
-    feat_cols = dd.read_parquet(train_dir / cfg.train.features).columns.to_list()
+    target_cols: pd.Index = dd.read_parquet(get_y_fn()).columns.difference(["source"])
+    trait_cols: pd.Index = target_cols.difference(["x", "y"])
 
-    # Only select columns starting with "X"
-    feat_cols = [col for col in feat_cols if col.startswith("X")]
-    feats = dd.read_parquet(
-        train_dir / cfg.train.features, columns=["x", "y"] + feat_cols
-    ).repartition(npartitions=100)
+    traits = dd.read_parquet(get_y_fn(), columns=target_cols).repartition(
+        npartitions=100
+    )
 
-    for trait in feat_cols:
-        log.info("Processing trait: %s", trait)
+    for trait_col in trait_cols:
+        log.info("Processing trait: %s", trait_col)
 
         with Client(
             dashboard_address=cfg.dask_dashboard, n_workers=syscfg.skcv_splits.n_workers
@@ -183,30 +183,30 @@ def main(cfg: ConfigBox = get_config()) -> None:
             for logger in dask_loggers:
                 logging.getLogger(logger).setLevel(logging.WARNING)
 
-            trait_range = ranges[ranges["trait"] == trait][
+            trait_range = ranges[ranges["trait"] == trait_col][
                 cfg.train.cv_splits.range_stat
             ]
             h3_res = acr_to_h3_res(trait_range)
 
             df = (
-                assign_hexagons(feats[["x", "y", trait]], h3_res, dask=True)
+                assign_hexagons(traits[["x", "y", trait_col]], h3_res, dask=True)
                 .compute()
                 .reset_index(drop=True)
-                .set_index(["y", "x"])
             )
 
-            log.info("Assigning the best folds...")
-            df = assign_folds(
-                df, cfg.train.cv_splits.n_splits, cfg.train.cv_splits.n_sims, trait
-            )
+        log.info("Assigning the best folds...")
+        df = assign_folds(
+            df, cfg.train.cv_splits.n_splits, cfg.train.cv_splits.n_sims, trait_col
+        )
 
-        splits = df[["fold"]]
+        splits = df[["x", "y", "fold"]]
+
+        splits_dir = get_cv_splits_dir()
+        splits_dir.mkdir(parents=True, exist_ok=True)
+        splits_fn = splits_dir / f"{trait_col}.parquet"
 
         log.info("Saving splits to %s", splits_fn.absolute())
-        splits_dir = train_dir / cfg.train.cv_splits.dir
-        splits_dir.mkdir(parents=True, exist_ok=True)
-        splits_fn = splits_dir / f"{trait}.parquet"
-        splits.to_parquet(splits_fn, compression="zstd", index=True)
+        splits.to_parquet(splits_fn, compression="zstd")
 
     log.info("Done!")
 
