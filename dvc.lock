@@ -248,8 +248,8 @@ stages:
       size: 6351
     - path: src/features/skcv_splits.py
       hash: md5
-      md5: 123d613680799f4914f9cb9d25c2b3a8
-      size: 7135
+      md5: f1b6b13f4256d7f5093ef845207fc20b
+      size: 7176
     params:
       params.yaml:
         train.cv_splits:
@@ -260,8 +260,8 @@ stages:
     outs:
     - path: data/features/Shrub_Tree_Grass/001/skcv_splits
       hash: md5
-      md5: 03644ac6449ced8b4f9f4ecd58f8de3a.dir
-      size: 362008464
+      md5: 770e1ff5537987e2c799941feb8c708a.dir
+      size: 347508676
       nfiles: 33
   train_models:
     cmd: python src/models/train_models.py -r

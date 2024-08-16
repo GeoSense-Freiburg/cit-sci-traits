@@ -199,7 +199,7 @@ def main(cfg: ConfigBox = get_config()) -> None:
             df, cfg.train.cv_splits.n_splits, cfg.train.cv_splits.n_sims, trait_col
         )
 
-        splits = df[["x", "y", "fold"]]
+        splits = df[["x", "y", "fold"]].drop_duplicates().reset_index(drop=True)
 
         splits_dir = get_cv_splits_dir()
         splits_dir.mkdir(parents=True, exist_ok=True)
