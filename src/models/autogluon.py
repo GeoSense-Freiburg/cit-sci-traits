@@ -261,7 +261,7 @@ class TraitTrainer:
             included_model_types=self.opts.cfg.autogluon.included_model_types,
             num_gpus=self.opts.cfg.autogluon.num_gpus,
             presets=self.opts.cfg.autogluon.presets,
-            time_limit=self.opts.cfg.autogluon.time_limit,
+            time_limit=self.opts.cfg.autogluon.full_fit_time_limit,
         )
 
         ts_info.mark_full_model_complete()
@@ -298,7 +298,7 @@ class TraitTrainer:
                 included_model_types=self.opts.cfg.autogluon.included_model_types,
                 num_gpus=self.opts.cfg.autogluon.num_gpus,
                 presets=self.opts.cfg.autogluon.presets,
-                time_limit=self.opts.cfg.autogluon.time_limit,
+                time_limit=self.opts.cfg.autogluon.cv_fit_time_limit,
             )
 
             if self.opts.cfg.autogluon.feature_importance:
