@@ -230,16 +230,16 @@ class TraitTrainer:
 
     @staticmethod
     def _aggregate_results(cv_dir: Path, target: str) -> pd.DataFrame:
-        log.info("Aggregating evaluation results...")
         return (
             pd.concat(
                 [
-                    pd.read_csv(fold_model_path / target)
+                    pd.read_csv(fold_model_path / target, index_col=0)
                     for fold_model_path in cv_dir.glob("fold_*")
                 ],
-                ignore_index=True,
             )
-            .groupby("fold")
+            .drop(columns=["fold"])
+            .reset_index(names="index")
+            .groupby("index")
             .agg(["mean", "std"])
         )
 
@@ -321,9 +321,9 @@ class TraitTrainer:
             eval_results = predictor.evaluate(
                 val, auxiliary_metrics=True, detailed_report=True
             )
-            pd.DataFrame(eval_results).assign(fold=fold_id).to_csv(
-                fold_model_path / self.opts.cfg.train.eval_results
-            )
+            pd.DataFrame({col: [val] for col, val in eval_results.items()}).assign(
+                fold=fold_id
+            ).to_csv(fold_model_path / self.opts.cfg.train.eval_results)
 
         except ValueError as e:
             log.error("Error training model: %s", e)
