@@ -21,7 +21,7 @@ def cli() -> argparse.Namespace:
 def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
     """Train a set of models using the given configuration."""
     if cfg.train.arch == "autogluon":
-        autogluon.train_models(cfg, args.sample, args.debug, args.resume, args.dry_run)
+        autogluon.train_models(args.sample, args.debug, args.resume, args.dry_run)
     else:
         raise ValueError(f"Unknown architecture: {cfg.train.arch}")
 

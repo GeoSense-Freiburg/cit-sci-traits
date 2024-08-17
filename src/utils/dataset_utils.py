@@ -247,16 +247,14 @@ def check_y_set(y_set: str, config: ConfigBox = cfg) -> None:
         raise ValueError(f"Invalid y_set. Must be one of {y_sets}.")
 
 
-def get_models_dir(y_set: str, config: ConfigBox = cfg) -> Path:
+def get_models_dir(config: ConfigBox = cfg) -> Path:
     """Get the path to the models directory for a specific configuration."""
-    check_y_set(y_set, config)
-    return (
-        Path(config.models.dir)
-        / config.PFT
-        / config.model_res
-        / y_set
-        / config.train.arch
-    )
+    return Path(config.models.dir) / config.PFT / config.model_res
+
+
+def get_trait_models_dir(trait: str, config: ConfigBox = cfg) -> Path:
+    """Get the path to the models directory for a specific trait and ML architecture."""
+    return get_models_dir(config) / trait / config.train.arch
 
 
 def get_predict_mask_fn(config: ConfigBox = cfg) -> Path:

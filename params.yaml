@@ -187,7 +187,6 @@ autogluon:
   feature_importance: true
   FI_time_limit: 3600
   FI_num_shuffle_sets: 10
-  leaderboard: leaderboard.csv
 
 models:
   dir: models
