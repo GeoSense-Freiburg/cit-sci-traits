@@ -252,9 +252,7 @@ class TraitTrainer:
 
         TabularPredictor(
             label=ts_info.trait_name,
-            sample_weight=(
-                "weights" if "weights" in self.xy.columns else None
-            ),  # pyright: ignore[reportArgumentType]
+            sample_weight="weights",  # pyright: ignore[reportArgumentType]
             path=str(ts_info.full_model),
         ).fit(
             train_full,
@@ -289,9 +287,7 @@ class TraitTrainer:
         try:
             predictor = TabularPredictor(
                 label=self.trait_name,
-                sample_weight=(
-                    "weights" if "weights" in self.xy.columns else None
-                ),  # pyright: ignore[reportArgumentType]
+                sample_weight="weights",  # pyright: ignore[reportArgumentType]
                 path=str(fold_model_path),
             ).fit(
                 train,
