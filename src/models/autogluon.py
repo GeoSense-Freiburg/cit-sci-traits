@@ -218,6 +218,14 @@ class TraitTrainer:
             .agg(["mean", "std"])
         )
 
+    # We set this to avoid a bug in LightGBM when used with GPU.
+    # See https://github.com/microsoft/LightGBM/issues/3679
+    GBM_HYPERPARAMS: dict = {
+        "GBM": {
+            "min_child_weight": 1,
+        }
+    }
+
     def _train_full_model(self, ts_info: TraitSetInfo):
         train_full = TabularDataset(
             self.xy.pipe(filter_trait_set, ts_info.trait_set)
@@ -235,6 +243,7 @@ class TraitTrainer:
             num_gpus=self.opts.cfg.autogluon.num_gpus,
             presets=self.opts.cfg.autogluon.presets,
             time_limit=self.opts.cfg.autogluon.full_fit_time_limit,
+            hyperparameters=self.GBM_HYPERPARAMS,
         )
 
         ts_info.mark_full_model_complete()
@@ -269,6 +278,7 @@ class TraitTrainer:
                 num_gpus=self.opts.cfg.autogluon.num_gpus,
                 presets=self.opts.cfg.autogluon.presets,
                 time_limit=self.opts.cfg.autogluon.cv_fit_time_limit,
+                hyperparameters=self.GBM_HYPERPARAMS,
             )
 
             if self.opts.cfg.autogluon.feature_importance:
