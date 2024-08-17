@@ -267,7 +267,6 @@ class TraitTrainer:
     def _train_fold(self, fold_id: int, cv_dir: Path, trait_set: str) -> None:
         log.info("Training model for fold %d...", fold_id)
         fold_model_path = cv_dir / f"fold_{fold_id}"
-        fold_model_path.mkdir(parents=True, exist_ok=True)
 
         train = TabularDataset(
             self.xy[self.xy["fold"] != fold_id]
