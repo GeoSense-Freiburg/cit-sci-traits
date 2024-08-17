@@ -1,6 +1,7 @@
 """Train a set of AutoGluon models using the given configuration."""
 
 import datetime
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -478,11 +479,33 @@ def train_models(
 
     for label_col in labels.columns.difference(["x", "y", "source"]):
         log.info("Preparing data for %s training...%s", label_col, dry_run_text)
-        xy = prep_full_xy(feats, feats_mask, labels, label_col)
+
+        tmp_xy_path = get_trait_models_dir(label_col) / "tmp" / "xy.parquet"
+        if not tmp_xy_path.exists() or not resume:
+
+            def _to_ddf(df: pd.DataFrame) -> dd.DataFrame:
+                return dd.from_pandas(df, npartitions=100)
+
+            if not dry_run:
+                tmp_xy_path.parent.mkdir(parents=True, exist_ok=True)
+                xy = prep_full_xy(feats, feats_mask, labels, label_col)
+                xy.pipe(_to_ddf).to_parquet(
+                    tmp_xy_path, compression="zstd", overwrite=True
+                )
+        else:
+            log.info(
+                "Found existing xy data for %s. Loading...%s", label_col, dry_run_text
+            )
+            if not dry_run:
+                xy = dd.read_parquet(tmp_xy_path).compute().reset_index(drop=True)
 
         trait_trainer = TraitTrainer(xy, label_col, train_opts)
         trait_trainer.train_splot()
         trait_trainer.train_gbif()
         trait_trainer.train_splot_gbif()
+
+        log.info("Cleaning up...%s", dry_run_text)
+        if not dry_run:
+            shutil.rmtree(tmp_xy_path.parent)
 
     log.info("Done! \U00002705")
