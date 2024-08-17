@@ -309,7 +309,7 @@ class TraitTrainer:
                 )
 
             log.info(
-                "Evaluating model (Fold %s/%s)...",
+                "Evaluating fold model (%s/%s)...",
                 fold_id + 1,
                 self.opts.cfg.train.cv_splits.n_splits,
             )
