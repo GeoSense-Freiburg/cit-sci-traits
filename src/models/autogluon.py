@@ -243,14 +243,14 @@ class TraitTrainer:
             .agg(["mean", "std"])
         )
 
-    def _train_full_model(self, ts_info: TraitSetInfo) -> TabularPredictor:
+    def _train_full_model(self, ts_info: TraitSetInfo):
         train_full = TabularDataset(
             self.xy.pipe(filter_trait_set, ts_info.trait_set)
             .pipe(assign_weights)
-            .drop(columns=["fold"])
+            .drop(columns=["x", "y", "source", "fold"])
         )
 
-        return TabularPredictor(
+        TabularPredictor(
             label=ts_info.trait_name,
             sample_weight=(
                 "weights" if "weights" in self.xy.columns else None
@@ -275,11 +275,14 @@ class TraitTrainer:
             self.xy[self.xy["fold"] != fold_id]
             .pipe(filter_trait_set, trait_set)
             .pipe(assign_weights)
+            .drop(columns=["x", "y", "source", "fold"])
             .reset_index(drop=True)
         )
         val = TabularDataset(
             self.xy[self.xy["fold"] == fold_id]
             .query("source == 's'")
+            .assign(weights=1.0)
+            .drop(columns=["x", "y", "source", "fold"])
             .reset_index(drop=True)
         )
 
@@ -458,14 +461,14 @@ def prep_full_xy(
         log.info(message)
         return df
 
-    log.info("Merging features and label data...")
     return (
         feats.compute()
         .set_index(["y", "x"])
         .pipe(pipe_log, "Masking features...")
         .mask(feats_mask)
-        .pipe(pipe_log, "Merging...")
+        .pipe(pipe_log, "Merging features and label data...")
         .merge(label, validate="1:m", right_index=True, left_index=True)
+        .reset_index()
     )
 
 
