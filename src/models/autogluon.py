@@ -66,7 +66,7 @@ class TraitSetInfo:
     def cv_fold_complete_flag(self, fold: int) -> Path:
         """Flag to indicate if the cross-validation evaluation results are complete for
         a given fold."""
-        return self.training_dir / f"cv_fold_{fold}_complete.flag"
+        return self.training_dir / "cv" / f"cv_fold_{fold}_complete.flag"
 
     def mark_cv_fold_complete(self, fold: int) -> None:
         """Mark the cross-validation evaluation results as complete for a given fold."""
@@ -242,6 +242,8 @@ class TraitTrainer:
             presets=self.opts.cfg.autogluon.presets,
             time_limit=self.opts.cfg.autogluon.time_limit,
         )
+
+        ts_info.mark_full_model_complete()
 
     def _train_fold(self, fold_id: int, cv_dir: Path, trait_set: str) -> None:
         log.info("Training model for fold %d...", fold_id)
