@@ -344,7 +344,7 @@ class TraitTrainer:
         last_complete_fold = ts_info.get_last_complete_fold_id()
         starting_fold = last_complete_fold + 1 if last_complete_fold is not None else 0
 
-        for i in range(starting_fold, max(self.xy["fold"].unique())):
+        for i in range(starting_fold, max(self.xy["fold"].unique()) + 1):
             self._train_fold(i, ts_info.cv_dir, ts_info.trait_set)
             ts_info.mark_cv_fold_complete(i)
 
