@@ -474,9 +474,18 @@ def prep_full_xy(
 
 def load_data() -> tuple[dd.DataFrame, pd.DataFrame, dd.DataFrame]:
     """Load the input data for modeling."""
+    y_cfg = get_config().datasets.Y
     feats = dd.read_parquet(get_predict_imputed_fn())
     feats_mask = pd.read_parquet(get_predict_mask_fn()).set_index(["y", "x"])
-    labels = dd.read_parquet(get_y_fn())
+    labels = dd.read_parquet(
+        get_y_fn(),
+        columns=[
+            "x",
+            "y",
+            "source",
+            *[f"X{i}_{y_cfg.trait_stats[y_cfg.trait_stat - 1]}" for i in y_cfg.traits],
+        ],
+    )
     return feats, feats_mask, labels
 
 
