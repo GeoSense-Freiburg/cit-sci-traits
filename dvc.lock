@@ -254,14 +254,14 @@ stages:
       params.yaml:
         train.cv_splits:
           range_stat: median
-          n_splits: 7
+          n_splits: 5
           n_sims: 100
           dir: skcv_splits
     outs:
     - path: data/features/Shrub_Tree_Grass/001/skcv_splits
       hash: md5
-      md5: 770e1ff5537987e2c799941feb8c708a.dir
-      size: 347508676
+      md5: 50be0b6dfdbc81fd0d7ff0c4643780da.dir
+      size: 345848304
       nfiles: 33
   train_models:
     cmd: python src/models/train_models.py -r
