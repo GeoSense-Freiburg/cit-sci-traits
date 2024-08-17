@@ -16,6 +16,15 @@ os.chdir(PROJECT_ROOT)
 log = setup_logger(__name__, "INFO")
 
 
+def activate_env() -> None:
+    """Setup the environment for the project."""
+
+    load_dotenv(find_dotenv(), override=True)
+    project_root = os.environ["PROJECT_ROOT"]
+    detect_system()
+    log.info("Project root: %s", project_root)
+
+
 def detect_system() -> str:
     """Detect the system environment."""
     system = os.environ.get("SYSTEM", None)
