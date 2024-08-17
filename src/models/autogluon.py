@@ -130,41 +130,16 @@ class TraitTrainer:
             else get_trait_models_dir(self.trait_name)
         )
 
-        sorted_models = sorted(list(self.runs_dir.glob("*")), reverse=True)
-        if not sorted_models:
-            raise FileNotFoundError(f"No models found in {self.runs_dir}")
-        self.last_run: Path = sorted_models[0]
+        sorted_runs = sorted(
+            [run for run in self.runs_dir.rglob("*") if "tmp" not in run.name],
+            reverse=True,
+        )
+
+        if not sorted_runs:
+            raise FileNotFoundError(f"No runs found in {self.runs_dir}")
+        self.last_run: Path = sorted_runs[0]
 
         self.current_run: Path = self.last_run if opts.resume else self.runs_dir / now()
-
-    # @property
-    # def runs_dir(self) -> Path:
-    #     """Directory where models are stored for the current trait and ML architecture.
-    #     If debug mode is enabled, the models are stored in the "debug" subdirectory."""
-    #     return (
-    #         get_trait_models_dir(self.trait_name) / "debug"
-    #         if self.opts.debug
-    #         else get_trait_models_dir(self.trait_name)
-    #     )
-
-    # @classmethod
-    # def set_current_run(cls) -> None:
-    #     """The directory where the current run is (if resuming training) or will be stored."""
-    #     if cls.opts.resume:
-    #         cls.current_run = cls.last_run
-    #     elif cls.current_run is None:
-    #         cls.current_run = cls.runs_dir / now()
-
-    # @property
-    # def last_run(self) -> Path:
-    #     """The most recent model in the trait directory."""
-    #     sorted_models = sorted(list(self.runs_dir.glob("*")), reverse=True)
-    #     if not sorted_models:
-    #         raise FileNotFoundError(f"No models found in {self.runs_dir}")
-
-    #     return sorted_models[0]
-
-    # current_run: Path = last_run if opts.resume else runs_dir / now()
 
     def _sample_xy(self) -> pd.DataFrame:
         """Sample the input data for quick prototyping."""
