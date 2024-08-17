@@ -120,31 +120,51 @@ class TraitTrainer:
         self.opts = opts
         self.dry_run_text = set_dry_run_text(opts.dry_run)
 
-    @property
-    def runs_dir(self) -> Path:
-        """Directory where models are stored for the current trait and ML architecture.
-        If debug mode is enabled, the models are stored in the "debug" subdirectory."""
-        return (
+        if opts.sample < 1.0:
+            self._log_subsampling()
+            self.xy = self._sample_xy() if not opts.dry_run else self.xy
+
+        self.runs_dir: Path = (
             get_trait_models_dir(self.trait_name) / "debug"
-            if self.opts.debug
+            if opts.debug
             else get_trait_models_dir(self.trait_name)
         )
 
-    @property
-    def current_run(self) -> Path:
-        """The directory where the current run is (if resuming training) or will be stored."""
-        if self.opts.resume:
-            return self.last_run
-        return self.runs_dir / now()
-
-    @property
-    def last_run(self) -> Path:
-        """The most recent model in the trait directory."""
-        sorted_models = sorted(list(self.runs_dir.glob("x")), reverse=True)
+        sorted_models = sorted(list(self.runs_dir.glob("*")), reverse=True)
         if not sorted_models:
             raise FileNotFoundError(f"No models found in {self.runs_dir}")
+        self.last_run: Path = sorted_models[0]
 
-        return sorted_models[0]
+        self.current_run: Path = self.last_run if opts.resume else self.runs_dir / now()
+
+    # @property
+    # def runs_dir(self) -> Path:
+    #     """Directory where models are stored for the current trait and ML architecture.
+    #     If debug mode is enabled, the models are stored in the "debug" subdirectory."""
+    #     return (
+    #         get_trait_models_dir(self.trait_name) / "debug"
+    #         if self.opts.debug
+    #         else get_trait_models_dir(self.trait_name)
+    #     )
+
+    # @classmethod
+    # def set_current_run(cls) -> None:
+    #     """The directory where the current run is (if resuming training) or will be stored."""
+    #     if cls.opts.resume:
+    #         cls.current_run = cls.last_run
+    #     elif cls.current_run is None:
+    #         cls.current_run = cls.runs_dir / now()
+
+    # @property
+    # def last_run(self) -> Path:
+    #     """The most recent model in the trait directory."""
+    #     sorted_models = sorted(list(self.runs_dir.glob("*")), reverse=True)
+    #     if not sorted_models:
+    #         raise FileNotFoundError(f"No models found in {self.runs_dir}")
+
+    #     return sorted_models[0]
+
+    # current_run: Path = last_run if opts.resume else runs_dir / now()
 
     def _sample_xy(self) -> pd.DataFrame:
         """Sample the input data for quick prototyping."""
@@ -344,10 +364,6 @@ class TraitTrainer:
         if ts_info.is_cv_complete and ts_info.is_full_model_complete:
             self._log_is_trained_full(trait_set)
             return
-
-        if self.opts.sample < 1.0:
-            self._log_subsampling()
-            self.xy = self._sample_xy() if not dry_run else self.xy
 
         if not ts_info.is_cv_complete:
             self._log_is_trained_partial_cv(trait_set)
