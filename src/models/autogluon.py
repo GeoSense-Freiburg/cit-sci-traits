@@ -229,7 +229,7 @@ class TraitTrainer:
     def _train_full_model(self, ts_info: TraitSetInfo):
         train_full = TabularDataset(
             self.xy.pipe(filter_trait_set, ts_info.trait_set)
-            .pipe(assign_weights)
+            .pipe(assign_weights, w_gbif=self.opts.cfg.train.weights.gbif)
             .drop(columns=["x", "y", "source", "fold"])
         )
 
@@ -255,7 +255,7 @@ class TraitTrainer:
         train = TabularDataset(
             self.xy[self.xy["fold"] != fold_id]
             .pipe(filter_trait_set, trait_set)
-            .pipe(assign_weights)
+            .pipe(assign_weights, w_gbif=self.opts.cfg.train.weights.gbif)
             .drop(columns=["x", "y", "source", "fold"])
             .reset_index(drop=True)
         )

@@ -164,8 +164,7 @@ train:
     fn: feature_weights.parquet
     method: manual # "auto", "manual" -- "manual" will use below weights
     splot: 1.0
-    # gbif: 0.08661
-    gbif: 0.01
+    gbif: 0.08661
   arch: "autogluon"
   eval_results: evaluation_results.csv
   feature_importance: feature_importance.csv
