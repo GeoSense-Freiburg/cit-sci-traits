@@ -493,17 +493,43 @@ def train_models(
     feats, feats_mask, labels = load_data()
 
     for label_col in labels.columns.difference(["x", "y", "source"]):
-        log.info("Preparing data for %s training...%s", label_col, dry_run_text)
 
         tmp_xy_path = get_trait_models_dir(label_col) / "tmp" / "xy.parquet"
+
+        if not tmp_xy_path.exists() and resume:
+            latest_run = max(
+                (
+                    run
+                    for run in get_trait_models_dir(label_col).glob("*")
+                    if run.is_dir() and "tmp" not in run.name
+                )
+            )
+
+            completed = [
+                TraitSetInfo(
+                    trait_set, label_col, latest_run / trait_set
+                ).is_full_model_complete
+                for trait_set in ["splot", "splot_gbif", "gbif"]
+            ]
+
+            if all(completed):
+                log.info(
+                    "All models for %s already trained. Skipping...%s",
+                    label_col,
+                    dry_run_text,
+                )
+                continue
+
+        log.info("Preparing data for %s training...%s", label_col, dry_run_text)
         if not tmp_xy_path.exists() or not resume:
 
             def _to_ddf(df: pd.DataFrame) -> dd.DataFrame:
                 return dd.from_pandas(df, npartitions=100)
 
             if not dry_run:
-                tmp_xy_path.parent.mkdir(parents=True, exist_ok=True)
                 xy = prep_full_xy(feats, feats_mask, labels, label_col)
+                log.info("Saving xy data for %s...%s", label_col, dry_run_text)
+                tmp_xy_path.parent.mkdir(parents=True, exist_ok=True)
                 xy.pipe(_to_ddf).to_parquet(
                     tmp_xy_path, compression="zstd", overwrite=True
                 )
