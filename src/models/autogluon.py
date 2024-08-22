@@ -237,7 +237,7 @@ class TraitTrainer:
             .drop(columns=["x", "y", "source", "fold"])
         )
 
-        TabularPredictor(
+        predictor = TabularPredictor(
             label=ts_info.trait_name,
             sample_weight="weights",  # pyright: ignore[reportArgumentType]
             path=str(ts_info.full_model),
@@ -251,6 +251,7 @@ class TraitTrainer:
         )
 
         ts_info.mark_full_model_complete()
+        predictor.save_space()
 
     def _train_fold(self, fold_id: int, cv_dir: Path, trait_set: str) -> None:
         log.info("Training model for fold %d...", fold_id)
@@ -308,6 +309,8 @@ class TraitTrainer:
             pd.DataFrame({col: [val] for col, val in eval_results.items()}).assign(
                 fold=fold_id
             ).to_csv(fold_model_path / self.opts.cfg.train.eval_results)
+
+            predictor.save_space()
 
         except ValueError as e:
             log.error("Error training model: %s", e)
