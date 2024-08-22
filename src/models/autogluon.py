@@ -12,7 +12,6 @@ from box import ConfigBox
 
 from src.conf.conf import get_config
 from src.conf.environment import log
-from src.utils.autogluon_utils import get_best_model_ag
 from src.utils.dataset_utils import (
     get_cv_splits_dir,
     get_predict_imputed_fn,
@@ -389,27 +388,6 @@ class TraitTrainer:
 def now() -> str:
     """Get the current date and time."""
     return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-
-
-def is_model_already_trained(
-    model_dir: Path, y_col: str, config: ConfigBox = get_config()
-) -> bool:
-    """Check if the model has already been trained."""
-
-    # We know a model has been trained if the most recent model in the trait
-    # directory starts with the configured preset, and if evaluation_results.csv,
-    # feature_importance.csv, and leaderboard.csv are present.
-
-    best_model = get_best_model_ag(model_dir / y_col)
-    if best_model is not None and best_model.stem.startswith(config.autogluon.presets):
-        if (
-            Path(best_model, config.train.eval_results).exists()
-            and Path(best_model, config.train.feature_importance).exists()
-            and Path(best_model, config.autogluon.leaderboard).exists()
-        ):
-            return True
-
-    return False
 
 
 def prep_full_xy(
