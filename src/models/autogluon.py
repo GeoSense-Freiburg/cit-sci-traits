@@ -107,7 +107,7 @@ class TraitSetInfo:
         if not complete_folds:
             return None
 
-        return max(int(f.name.split("_")[1]) for f in complete_folds)
+        return max(int(f.name.split("_")[2]) for f in complete_folds)
 
 
 class TraitTrainer:
