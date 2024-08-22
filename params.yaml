@@ -177,14 +177,17 @@ processed:
   splot_corr: splot_correlation.csv
 
 autogluon:
-  included_model_types: ["FASTAI", "GBM", "NN_TORCH"]
+  included_model_types: ["GBM"]
   presets: "high"
   save_bag_folds: true
   refit_full: false
   set_best_to_refit_full: false
+  cv_fit_time_limit: 3600
+  full_fit_time_limit: 12600 # 3.5 hours per trait
+  num_gpus: "auto"
   num_cpus: 64
   feature_importance: true
-  FI_time_limit: 3600
+  FI_time_limit: 1800
   FI_num_shuffle_sets: 10
 
 models:
