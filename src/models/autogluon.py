@@ -477,28 +477,41 @@ def train_models(
         tmp_xy_path = get_trait_models_dir(label_col) / "tmp" / "xy.parquet"
 
         if not tmp_xy_path.exists() and resume:
-            latest_run = max(
-                (
-                    run
-                    for run in get_trait_models_dir(label_col).glob("*")
-                    if run.is_dir() and "tmp" not in run.name
-                )
-            )
-
-            completed = [
-                TraitSetInfo(
-                    trait_set, label_col, latest_run / trait_set
-                ).is_full_model_complete
-                for trait_set in ["splot", "splot_gbif", "gbif"]
+            runs = [
+                run
+                for run in get_trait_models_dir(label_col).glob("*")
+                if run.is_dir() and "tmp" not in run.name
             ]
 
-            if all(completed):
-                log.info(
-                    "All models for %s already trained. Skipping...%s",
+            if not runs:
+                log.warning(
+                    "No prior runs found for %s. Creating new run...%s",
                     label_col,
                     dry_run_text,
                 )
-                continue
+            else:
+                latest_run = max(
+                    (
+                        run
+                        for run in get_trait_models_dir(label_col).glob("*")
+                        if run.is_dir() and "tmp" not in run.name
+                    )
+                )
+
+                completed = [
+                    TraitSetInfo(
+                        trait_set, label_col, latest_run / trait_set
+                    ).is_full_model_complete
+                    for trait_set in ["splot", "splot_gbif", "gbif"]
+                ]
+
+                if all(completed):
+                    log.info(
+                        "All models for %s already trained. Skipping...%s",
+                        label_col,
+                        dry_run_text,
+                    )
+                    continue
 
         log.info("Preparing data for %s training...%s", label_col, dry_run_text)
         if not tmp_xy_path.exists() or not resume:
