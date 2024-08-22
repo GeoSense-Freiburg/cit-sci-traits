@@ -131,7 +131,7 @@ class TraitTrainer:
         )
 
         sorted_runs = sorted(
-            [run for run in self.runs_dir.rglob("*") if "tmp" not in run.name],
+            [run for run in self.runs_dir.glob("*") if "tmp" not in run.name],
             reverse=True,
         )
 
