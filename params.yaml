@@ -182,8 +182,7 @@ autogluon:
   save_bag_folds: true
   refit_full: false
   set_best_to_refit_full: false
-  time_limit: 12600 # 3.5 hours per trait
-  num_gpus: 4
+  num_cpus: 64
   feature_importance: true
   FI_time_limit: 3600
   FI_num_shuffle_sets: 10
