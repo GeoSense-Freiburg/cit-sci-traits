@@ -136,10 +136,14 @@ class TraitTrainer:
         )
 
         if not sorted_runs:
-            raise FileNotFoundError(f"No runs found in {self.runs_dir}")
-        self.last_run: Path = sorted_runs[0]
-
-        self.current_run: Path = self.last_run if opts.resume else self.runs_dir / now()
+            log.warning("No prior runs found in %s. Creating new run...", self.runs_dir)
+            self.last_run: Path = self.runs_dir / now()
+            self.current_run: Path = self.last_run
+        else:
+            self.last_run: Path = sorted_runs[0]
+            self.current_run: Path = (
+                self.last_run if opts.resume else self.runs_dir / now()
+            )
 
     def _sample_xy(self) -> pd.DataFrame:
         """Sample the input data for quick prototyping."""
