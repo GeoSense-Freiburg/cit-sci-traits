@@ -4,14 +4,16 @@ import argparse
 from pathlib import Path
 from typing import Generator
 
+import dask.dataframe as dd
 import pandas as pd
 from autogluon.tabular import TabularDataset, TabularPredictor
 from box import ConfigBox
-from tqdm import trange
+from dask.diagnostics import ProgressBar
 
 from src.conf.conf import get_config
 from src.conf.environment import log
 from src.utils.autogluon_utils import get_best_model_ag
+from src.utils.dataset_utils import get_models_dir, get_predict_fn
 from src.utils.df_utils import grid_df_to_raster
 
 
@@ -24,37 +26,59 @@ def cli() -> argparse.Namespace:
     parser.add_argument(
         "-b", "--batches", type=int, default=1, help="Number of batches for prediction"
     )
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
 
     parser.add_argument("-r", "--resume", action="store_true", help="Resume prediction")
     return parser.parse_args()
 
 
-def predict_trait_ag(
-    data: pd.DataFrame | TabularDataset,
-    xy: pd.DataFrame,
+def predict_trait_ag_dask(
+    data: dd.DataFrame,
     model_path: str | Path,
-    batches: int = 1,
+    batches: int = 2,
 ) -> pd.DataFrame:
-    """Predict the trait using the given model in batches."""
+    """Predict the trait using the given model in batches, optimized for Dask DataFrames,
+    ensuring order is preserved."""
+
+    log.info("Loading model...")
     model = TabularPredictor.load(str(model_path))
 
-    if batches > 1:
-        # Calculate batch size
-        batch_size = len(data) // batches + (len(data) % batches > 0)
+    log.info("Repartitioning data into %d batches...", batches)
+    data = data.repartition(npartitions=batches)
 
-        # Initialize an empty list to store batch predictions
-        predictions = []
+    predictions = []
+    log.info("Predicting in batches...")
+    with ProgressBar():
+        for partition in data.to_delayed():
+            batch = dd.from_delayed(partition)
+            batch_pd = batch.compute()
+            xy = batch_pd[["x", "y"]]
+            batch_pd = batch_pd.drop(columns=["x", "y"])
+            predictions.append(
+                pd.concat(
+                    [
+                        xy.reset_index(drop=True),
+                        model.predict(batch_pd, as_pandas=True).reset_index(drop=True),
+                    ],
+                    axis=1,
+                )
+            )
 
-        # Predict in batches
-        log.info("Predicting in batches...")
-        for i in trange(0, len(data), batch_size):
-            batch = data.iloc[i : i + batch_size]
-            predictions.append(model.predict(batch, as_pandas=True))
+    # Concatenate all batch predictions using Dask
+    log.info("Combining batch predictions...")
+    return pd.concat(predictions).reset_index(drop=True).set_index(["y", "x"])
 
-        # Concatenate all batch predictions
-        full_prediction = pd.concat(predictions)
-    else:
-        full_prediction = model.predict(data, as_pandas=True)
+
+def predict_trait_ag(
+    data: pd.DataFrame | TabularDataset,
+    model_path: str | Path,
+) -> pd.DataFrame:
+    """Predict the trait using the given model in batches."""
+    xy = data[["x", "y"]]  # Save the x and y columns
+    data = data.drop(columns=["x", "y"])
+
+    model = TabularPredictor.load(str(model_path))
+    full_prediction = model.predict(data, as_pandas=True)
 
     # Concatenate xy DataFrame with predictions and set index
     result = pd.concat(
@@ -72,18 +96,6 @@ def predict_traits_ag(
     resume: bool = False,
 ) -> None:
     """Predict all traits that have been trained."""
-    log.info("Loading predict data...")
-    data = pd.read_parquet(data_path)
-    # Add super small noise to vodca columns to avoid AutoGluon's super annoying type
-    # coercion
-    for col in data.columns:
-        if col.startswith("vodca"):
-            data[col] += 1e-10
-    data = TabularDataset(data)
-
-    xy = data[["x", "y"]]  # Save the x and y columns
-    data = data.drop(columns=["x", "y"])
-
     for trait_models in trait_model_dirs:
         if not trait_models.is_dir():
             log.warning("Skipping %s, not a directory", trait_models)
@@ -92,12 +104,23 @@ def predict_traits_ag(
         out_fn: Path = Path(out_dir) / f"{trait_models.stem}.tif"
 
         if resume and out_fn.exists():
-            log.info("Skipping %s, already exists", trait_models)
+            log.info("Skipping %s, already exists", out_fn)
             continue
 
         log.info("Predicting traits for %s...", trait_models)
         best_model_path = get_best_model_ag(trait_models)
-        pred = predict_trait_ag(data, xy, best_model_path, batches)
+
+        if batches > 1:
+            log.info("Batches > 1. Predicting in batches with Dask...")
+            pred = predict_trait_ag_dask(
+                dd.read_parquet(data_path), best_model_path, batches
+            )
+        else:
+            log.info("No batches detected. Loading full data and predicting...")
+            pred = predict_trait_ag(
+                dd.read_parquet(data_path).compute().reset_index(drop=True),
+                best_model_path,
+            )
 
         log.info("Writing predictions to raster...")
         grid_df_to_raster(pred, res, out_fn)
@@ -108,20 +131,9 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
     Predict the traits for the given model.
     """
 
-    predict_fn: Path = (
-        Path(cfg.train.dir)
-        / cfg.eo_data.predict.dir
-        / cfg.model_res
-        / cfg.eo_data.predict.filename
-    )
+    predict_fn: Path = get_predict_fn(cfg)
 
-    models_dir: Path = (
-        Path(cfg.models.dir)
-        / cfg.PFT
-        / cfg.model_res
-        / cfg.datasets.Y.use
-        / cfg.train.arch
-    )
+    models_dir: Path = get_models_dir(cfg)
 
     # E.g. ./data/processed/Shrub_Tree_Grass/001/splot_gbif/predict
     out_dir = (
@@ -131,6 +143,13 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
         / cfg.datasets.Y.use
         / cfg.processed.predict_dir
     )
+
+    if args.debug:
+        models_dir = models_dir / "debug"
+        models_dir.mkdir(parents=True, exist_ok=True)
+
+        out_dir = out_dir / "debug"
+
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if cfg.train.arch == "autogluon":

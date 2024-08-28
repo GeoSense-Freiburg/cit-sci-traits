@@ -1,19 +1,20 @@
 """Get the filenames of datasets based on the specified stage of processing."""
 
 from pathlib import Path
-import pickle
 
 import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 import xarray as xr
+from autogluon.tabular import TabularPredictor
 from box import ConfigBox
 from dask import compute, delayed
 from tqdm import trange
-from autogluon.tabular import TabularPredictor
 
 from src.conf.conf import get_config
 from src.utils.raster_utils import open_raster
+
+cfg = get_config()
 
 
 def get_eo_fns_dict(
@@ -22,8 +23,6 @@ def get_eo_fns_dict(
     """
     Get the filenames of EO datasets for a given stage.
     """
-    cfg: ConfigBox = get_config()
-
     if isinstance(datasets, str):
         datasets = [datasets]
 
@@ -66,36 +65,6 @@ def get_eo_fns_list(stage: str, datasets: str | list[str] | None = None) -> list
 
     # Return flattened list of filenames
     return [fn for ds_fns in fns.values() for fn in ds_fns]
-
-
-def get_trait_map_fns(stage: str) -> list[Path]:
-    """Get the filenames of trait maps for a given stage."""
-    cfg = get_config()
-
-    stage_map = {
-        "interim": {
-            "path": Path(cfg.interim_dir),
-            "ext": ".tif",
-        },
-    }
-    if stage not in stage_map:
-        raise ValueError(f"Invalid stage. Must be one of {stage_map.keys()}.")
-
-    if stage == "interim":
-        trait_map_fns = []
-        y_datasets = cfg.datasets.Y.use.split("_")
-        for dataset in y_datasets:
-            trait_maps_dir = (
-                Path(cfg.interim_dir)
-                / cfg[dataset].interim.dir
-                / cfg[dataset].interim.traits
-                / cfg.PFT
-                / cfg.model_res
-            )
-            trait_map_fns += list(trait_maps_dir.glob(f"*{stage_map[stage]['ext']}"))
-
-    # Sort trait_map_fns by number in file name (eg. X1, X2, X3)
-    return sorted(trait_map_fns, key=lambda x: int(x.stem.split("X")[-1]))
 
 
 def map_da_dtype(fn: Path, band: int = 1, nchunks: int = 9) -> tuple[str, str]:
@@ -169,7 +138,9 @@ def get_res(fn: Path) -> int | float:
 
 
 @delayed
-def load_x_raster(fn: Path, nchunks: int = 9) -> tuple[str, xr.DataArray]:
+def load_x_or_y_raster(
+    fn: Path, band: int = 1, nchunks: int = 9
+) -> tuple[str, xr.DataArray]:
     """
     Load a raster dataset using delayed computation.
 
@@ -189,71 +160,49 @@ def load_x_raster(fn: Path, nchunks: int = 9) -> tuple[str, xr.DataArray]:
         fn,
         chunks={"x": (360 / res) // nchunks, "y": (180 / res) // nchunks},
         mask_and_scale=True,
-    ).sel(band=1)
+    ).sel(band=band)
 
     long_name = da.attrs["long_name"]
+
+    # If the file is a trait map, append the band stat to the dataarray name
+    if fn.stem.startswith("X"):
+        bands = da.attrs["long_name"]
+        long_name = f"{fn.stem}_{bands[band - 1]}"
+        da.attrs["long_name"] = long_name
 
     return long_name, xr.DataArray(da)
 
 
-def group_y_fns(fns: list[Path]) -> list[list[Path]]:
-    """Group y rasters by trait. I.e. if both sPlot and GBIF files exist for a trait,
-    group them."""
-    unique_traits = sorted(
-        {fn.stem.split("_")[0] for fn in fns},
-        key=lambda x: int(x.split("X")[-1]),
-    )
-    fns_grouped = [[fn for fn in fns if trait == fn.stem] for trait in unique_traits]
-
-    return fns_grouped
-
-
-@delayed
-def load_y_raster(
-    fn_group: list[Path], band: int = 1, nchunks: int = 9
-) -> tuple[str, xr.DataArray]:
-    """Load and process y rasters. If both sPlot and GBIF are present, merge them in
-    favor of sPlot."""
-    # find all matching files in fns
-    if len(fn_group) == 0:
-        raise ValueError("No files found")
-
-    das = []
-    for raster_file in fn_group:
-        da = open_raster(
-            raster_file,
-            chunks={"x": 36000 // nchunks, "y": 18000 // nchunks},
-            mask_and_scale=True,
-        )
-
-        long_name = da.attrs["long_name"]
-        long_name = f"{raster_file.stem}_{long_name[band - 1]}"
-        da.attrs["long_name"] = long_name
-
-        das.append(da.sel(band=band))
-
-    if len(das) == 1:
-        return long_name, das[0]
-
-    # Find the array position of the fn in trait_fns that contains "gbif"
+def get_dataset_idx(fn_group: list[Path]) -> tuple[int, int]:
+    """Get the array position of the sPlot and GBIF trait maps in a pair of trait maps."""
     gbif_idx = [i for i, fn in enumerate(fn_group) if "gbif" in str(fn)][0]
     splot_idx = 1 - gbif_idx
 
-    merged = xr.where(
-        das[splot_idx].notnull(), das[splot_idx], das[gbif_idx], keep_attrs=True
+    return splot_idx, gbif_idx
+
+
+def merge_splot_gbif(
+    splot_id: int, gbif_id: int, dax: list[xr.DataArray]
+) -> xr.DataArray:
+    """Merge sPlot and GBIF trait maps in favor of sPlot."""
+    return xr.where(
+        dax[splot_id].notnull(), dax[splot_id], dax[gbif_id], keep_attrs=True
     )
 
-    for da in das:
-        da.close()
 
-    return long_name, merged
+def merge_splot_gbif_sources(
+    splot_id: int, gbif_id: int, dax: list[xr.DataArray]
+) -> xr.DataArray:
+    """Merge sPlot and GBIF source maps in favor of sPlot."""
+    return xr.where(
+        dax[splot_id].notnull(), "s", xr.where(dax[gbif_id].notnull(), "g", None)
+    )
 
 
 def load_rasters_parallel(
     fns: list[Path] | list[list[Path]],
     band: int = 1,
     nchunks: int = 9,
-    ml_set: str = "x",
 ) -> xr.Dataset:
     """
     Load multiple raster datasets in parallel using delayed computation.
@@ -266,18 +215,10 @@ def load_rasters_parallel(
         dict[str, xr.DataArray]: A dictionary where keys are the long_name attributes of
             the datasets and values are the loaded raster data as DataArrays.
     """
-    if ml_set not in ["x", "y"]:
-        raise ValueError("Invalid ml_set. Must be one of 'x', 'y'.")
+    das: dict[str, xr.DataArray] = dict(
+        compute(*[load_x_or_y_raster(fn, band=band, nchunks=nchunks) for fn in fns])
+    )
 
-    if ml_set == "x":
-        das: dict[str, xr.DataArray] = dict(
-            compute(*[load_x_raster(fn, nchunks) for fn in fns])
-        )
-
-    if ml_set == "y":
-        das: dict[str, xr.DataArray] = dict(
-            compute(*[load_y_raster(fn_group, band, nchunks) for fn_group in fns])
-        )
     return xr.Dataset(das)
 
 
@@ -300,24 +241,51 @@ def compute_partitions(ddf: dd.DataFrame) -> pd.DataFrame:
     return pd.concat(dfs)
 
 
-def get_models_dir(cfg: ConfigBox) -> Path:
+def check_y_set(y_set: str) -> None:
+    """Check if the specified y_set is valid."""
+    y_sets = ["gbif", "splot", "splot_gbif"]
+    if y_set not in y_sets:
+        raise ValueError(f"Invalid y_set. Must be one of {y_sets}.")
+
+
+def get_models_dir(config: ConfigBox = cfg) -> Path:
     """Get the path to the models directory for a specific configuration."""
+    return Path(config.models.dir) / config.PFT / config.model_res
+
+
+def get_trait_models_dir(trait: str, config: ConfigBox = cfg) -> Path:
+    """Get the path to the models directory for a specific trait and ML architecture."""
+    return get_models_dir(config) / trait / config.train.arch
+
+
+def get_latest_run(runs_path: Path):
+    """Get latest run from a specified trait models path."""
+    sorted_runs = sorted(
+        [run for run in Path(runs_path).glob("*") if "tmp" not in run.name],
+        reverse=True,
+    )
+    if not sorted_runs:
+        raise FileNotFoundError("No runs found.")
+    return sorted_runs[0]
+
+
+def get_predict_mask_fn(config: ConfigBox = cfg) -> Path:
+    """Get the path to the predict features mask file for a specific configuration."""
     return (
-        Path(cfg.models.dir)
-        / cfg.PFT
-        / cfg.model_res
-        / cfg.datasets.Y.use
-        / cfg.train.arch
+        Path(config.train.dir)
+        / config.eo_data.predict.dir
+        / config.model_res
+        / config.eo_data.predict.mask_fn
     )
 
 
-def get_predict_fn(cfg: ConfigBox) -> Path:
-    """Get the path to the predict file for a specific configuration."""
+def get_predict_imputed_fn(config: ConfigBox = cfg) -> Path:
+    """Get the path to the imputed predict features file for a specific configuration."""
     return (
-        Path(cfg.train.dir)
-        / cfg.eo_data.predict.dir
-        / cfg.model_res
-        / cfg.eo_data.predict.filename
+        Path(config.train.dir)
+        / config.eo_data.predict.dir
+        / config.model_res
+        / config.eo_data.predict.imputed_fn
     )
 
 
@@ -334,20 +302,75 @@ def get_cv_models_dir(predictor: TabularPredictor) -> Path:
     return Path(predictor.path, "models", str(best_base_model))
 
 
-def get_train_dir(cfg: ConfigBox) -> Path:
+def get_train_dir(config: ConfigBox = cfg) -> Path:
     """Get the path to the train directory for a specific configuration."""
-    return Path(cfg.train.dir) / cfg.PFT / cfg.model_res / cfg.datasets.Y.use
+    return Path(config.train.dir) / config.PFT / config.model_res
 
 
-def get_train_fn(cfg: ConfigBox) -> Path:
+def get_y_fn(config: ConfigBox = cfg) -> Path:
     """Get the path to the train file for a specific configuration."""
-    return get_train_dir(cfg) / cfg.train.features
+    return get_train_dir(config) / config.train.Y.fn
 
 
-def get_cv_splits(cfg: ConfigBox, label: str) -> list[tuple[np.ndarray, np.ndarray]]:
-    """Load the CV splits for a given label."""
-    with open(get_train_dir(cfg) / cfg.train.cv_splits.dir / f"{label}.pkl", "rb") as f:
-        return pickle.load(f)
+def get_autocorr_ranges_fn(config: ConfigBox = cfg) -> Path:
+    """Get the path to the autocorrelation ranges file for a specific configuration."""
+    return get_train_dir(config) / config.train.spatial_autocorr
+
+
+def get_cv_splits_dir(config: ConfigBox = cfg) -> Path:
+    """Get the path to the CV splits directory for a specific configuration."""
+    return get_train_dir(config) / config.train.cv_splits.dir
+
+
+def get_processed_dir(config: ConfigBox = cfg) -> Path:
+    """Get the path to the processed directory for a specific configuration."""
+    return (
+        Path(config.processed.dir)
+        / config.PFT
+        / config.model_res
+        / config.datasets.Y.use
+    )
+
+
+def get_splot_corr_fn(config: ConfigBox = cfg) -> Path:
+    """Get the path to the sPlot correlation file for a specific configuration."""
+    return get_processed_dir(config) / config.processed.splot_corr
+
+
+def get_weights_fn(config: ConfigBox = cfg) -> Path:
+    """Get the path to the weights file."""
+    return get_train_dir(config) / config.train.weights.fn
+
+
+def get_trait_maps_dir(y_set: str, config: ConfigBox = cfg) -> Path:
+    """Get the path to the trait maps directory for a specific dataset (e.g. GBIF or sPlot)."""
+    check_y_set(y_set, config)
+
+    return (
+        Path(config.interim_dir)
+        / config[y_set].interim.dir
+        / config[y_set].interim.traits
+        / config.PFT
+        / config.model_res
+    )
+
+
+def get_trait_map_fns(y_set: str, config: ConfigBox = cfg) -> list[Path]:
+    """Get the filenames of trait maps."""
+    trait_maps_dir = get_trait_maps_dir(y_set, config)
+
+    return sorted(list(trait_maps_dir.glob("*.tif")))
+
+
+def get_predict_dir(config: ConfigBox = cfg) -> Path:
+    """Get the path to the predicted trait directory for a specific configuration."""
+    return (
+        Path(config.processed.dir)
+        / config.PFT
+        / config.model_res
+        / config.datasets.Y.use
+        / config.processed.predict_dir
+    )
 
 
 def add_cv_splits_to_column(

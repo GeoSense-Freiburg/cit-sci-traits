@@ -1,8 +1,13 @@
 """Spatial utility functions."""
 
+from typing import Iterable
+
 import h3
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
+from pyproj import Proj
+from shapely.geometry import shape
 
 
 def get_h3_resolution(edge_length: float) -> int | float:
@@ -99,11 +104,58 @@ def assign_hexagons(
     """
 
     def _assign_hex_to_df(_df: pd.DataFrame) -> pd.DataFrame:
+        _df = _df.copy()
         geo_to_h3_vectorized = np.vectorize(h3.geo_to_h3)
-        _df["hex_id"] = geo_to_h3_vectorized(_df[lat], _df[lon], resolution)
+        _df.loc[:, "hex_id"] = geo_to_h3_vectorized(_df[lat], _df[lon], resolution)
         return _df
 
     if dask:
         return df.map_partitions(_assign_hex_to_df)
 
     return _assign_hex_to_df(df)
+
+
+def get_lat_area(lat: int | float, resolution: int | float) -> float:
+    """Calculate the area of a grid cell at a given latitude."""
+    # Define the grid cell coordinates
+    coordinates = [
+        (0, lat + (resolution / 2)),
+        (resolution, lat + (resolution / 2)),
+        (resolution, lat - (resolution / 2)),
+        (0, lat - (resolution / 2)),
+        (0, lat + (resolution / 2)),  # Close the polygon by repeating the first point
+    ]
+
+    # Define the projection string directly using the coordinates
+    projection_string = (
+        f"+proj=aea +lat_1={coordinates[0][1]} +lat_2={coordinates[2][1]} "
+        f"+lat_0={lat} +lon_0={resolution / 2}"
+    )
+    pa = Proj(projection_string)
+
+    # Project the coordinates and create the polygon
+    x, y = pa(*zip(*coordinates))  # pylint: disable=unpacking-non-sequence
+    area = shape({"type": "Polygon", "coordinates": [list(zip(x, y))]}).area / 1000000
+
+    return area
+
+
+def lat_weights(lat_unique: Iterable[int | float], resolution: int | float) -> dict:
+    """Calculate weights for each latitude band based on area of grid cells."""
+    weights = {}
+
+    for j in lat_unique:
+        weights[j] = get_lat_area(j, resolution)
+
+    # Normalize the weights by the maximum area
+    max_area = max(weights.values())
+    weights = {k: v / max_area for k, v in weights.items()}
+
+    return weights
+
+
+def weighted_pearson_r(df: pd.DataFrame, weights: dict) -> float:
+    """Calculate the weighted Pearson correlation coefficient between two DataFrames."""
+    df["weights"] = df.index.get_level_values("y").map(weights)
+    model = sm.stats.DescrStatsW(df.iloc[:, :2], df["weights"])
+    return model.corrcoef[0, 1]

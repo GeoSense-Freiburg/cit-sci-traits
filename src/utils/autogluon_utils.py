@@ -3,6 +3,7 @@
 from pathlib import Path
 
 
+# TODO: #12 Update get_best_model_ag to use the new model directory structure @dluks
 def get_best_model_ag(models_dir: Path) -> Path:
     """Find the best model in the specified directory."""
     quality_levels = ["best", "high", "medium", "good", "fastest"]
@@ -28,6 +29,6 @@ def get_best_model_ag(models_dir: Path) -> Path:
         break
 
     if best_model is None:
-        raise ValueError("No models found in the specified directory")
+        raise ValueError(f"No models found in the specified directory: {models_dir}")
 
     return best_model

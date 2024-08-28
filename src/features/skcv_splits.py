@@ -1,8 +1,7 @@
 """Split the data into train and test sets using spatial k-fold cross-validation."""
 
 import logging
-import pickle
-from pathlib import Path
+import warnings
 from typing import Sequence
 
 import dask.dataframe as dd
@@ -15,7 +14,8 @@ from dask.distributed import Client
 from scipy.stats import ks_2samp
 
 from src.conf.conf import get_config
-from src.conf.environment import log
+from src.conf.environment import detect_system, log
+from src.utils.dataset_utils import get_autocorr_ranges_fn, get_cv_splits_dir, get_y_fn
 from src.utils.log_utils import get_loggers_starting_with
 from src.utils.spatial_utils import acr_to_h3_res, assign_hexagons
 
@@ -41,7 +41,7 @@ def calculate_kg_p_value(
     fold_i_values = folds_values[mask]
     fold_j_values = folds_values[~mask]
     _, p_value = ks_2samp(fold_i_values, fold_j_values)
-    return p_value
+    return p_value  # pyright: ignore[reportReturnType]
 
 
 def calculate_similarity_kg(folds: Sequence, df: pd.DataFrame, data_col: str) -> float:
@@ -65,7 +65,7 @@ def calculate_similarity_kg(folds: Sequence, df: pd.DataFrame, data_col: str) ->
     ]
 
     # Return the minimum p-value as the similarity score
-    return min(p_values)
+    return float(np.mean(p_values))
 
 
 def assign_folds_iteration(
@@ -120,6 +120,7 @@ def assign_folds(
         ]
     )
     for similarity, assignment in results:
+        log.info("Similarity: %e. Current best: %e", similarity, best_similarity)
         if best_similarity is None or similarity > best_similarity:
             best_similarity = similarity
             best_assignment = assignment
@@ -154,60 +155,58 @@ def get_splits(
 
 def main(cfg: ConfigBox = get_config()) -> None:
     """Main function to generate spatial k-fold cross-validation splits."""
-    train_dir = Path(cfg.train.dir) / cfg.PFT / cfg.model_res / cfg.datasets.Y.use
+    syscfg = cfg[detect_system()]
+
+    # Ignore warnings
+    warnings.simplefilter(action="ignore", category=UserWarning)
+
     ranges = pd.read_parquet(
-        train_dir / cfg.train.spatial_autocorr,
+        get_autocorr_ranges_fn(),
         columns=["trait", cfg.train.cv_splits.range_stat],
     )
 
-    feat_cols = dd.read_parquet(train_dir / cfg.train.features).columns.to_list()
+    target_cols: pd.Index = dd.read_parquet(get_y_fn()).columns.difference(["source"])
+    trait_cols: pd.Index = target_cols.difference(["x", "y"])
 
-    # Only select columns starting with "X"
-    feat_cols = [col for col in feat_cols if col.startswith("X")]
-    feats = dd.read_parquet(
-        train_dir / cfg.train.features, columns=["x", "y"] + feat_cols
-    ).repartition(npartitions=100)
+    traits = dd.read_parquet(get_y_fn(), columns=target_cols).repartition(
+        npartitions=100
+    )
 
-    for trait in feat_cols:
-        log.info("Processing trait: %s", trait)
+    for trait_col in trait_cols:
+        log.info("Processing trait: %s", trait_col)
 
-        with Client(dashboard_address=cfg.dask_dashboard, n_workers=80):
+        with Client(
+            dashboard_address=cfg.dask_dashboard, n_workers=syscfg.skcv_splits.n_workers
+        ):
             # Ensure dask loggers don't interfere with the main logger
             dask_loggers = get_loggers_starting_with("distributed")
             for logger in dask_loggers:
                 logging.getLogger(logger).setLevel(logging.WARNING)
 
-            trait_range = ranges[ranges["trait"] == trait][
+            trait_range = ranges[ranges["trait"] == trait_col][
                 cfg.train.cv_splits.range_stat
             ]
             h3_res = acr_to_h3_res(trait_range)
+
             df = (
-                assign_hexagons(feats[["x", "y", trait]], h3_res, dask=True)
-                .drop(columns=["x", "y"])
+                assign_hexagons(traits[["x", "y", trait_col]], h3_res, dask=True)
                 .compute()
                 .reset_index(drop=True)
             )
-            log.info("Assigning the best folds...")
-            df = assign_folds(
-                df, cfg.train.cv_splits.n_splits, cfg.train.cv_splits.n_sims, trait
-            )
 
-        log.info("Generating splits...")
-        splits = get_splits(df)
+        log.info("Assigning the best folds...")
+        df = assign_folds(
+            df, cfg.train.cv_splits.n_splits, cfg.train.cv_splits.n_sims, trait_col
+        )
 
-        # Downcast splits to int32 as we won't be saving them in a very efficient format
-        splits = [
-            (train.astype(np.int32), test.astype(np.int32)) for train, test in splits
-        ]
+        splits = df[["x", "y", "fold"]].drop_duplicates().reset_index(drop=True)
 
-        # Save the splits
-        splits_dir = train_dir / cfg.train.cv_splits.dir
+        splits_dir = get_cv_splits_dir()
         splits_dir.mkdir(parents=True, exist_ok=True)
-        splits_fn = splits_dir / f"{trait}.pkl"
+        splits_fn = splits_dir / f"{trait_col}.parquet"
 
         log.info("Saving splits to %s", splits_fn.absolute())
-        with open(splits_fn, "wb") as f:
-            pickle.dump(splits, f)
+        splits.to_parquet(splits_fn, compression="zstd")
 
     log.info("Done!")
 

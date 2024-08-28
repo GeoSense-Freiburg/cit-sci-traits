@@ -1,4 +1,8 @@
 stages:
+  ######################################################################################
+  # BASE STAGES (ALL PFTs) -------------------------------------------------------------
+  ######################################################################################
+
   harmonize_eo_data:
     cmd: python src/data/harmonize_eo_data.py -n 12 # 12 is max procs w/ 250 GB RAM
     deps:
@@ -14,6 +18,28 @@ stages:
     outs:
       - ${interim_dir}/${eo_data.interim.dir}/${model_res}:
           persist: false
+
+  build_predict:
+    cmd: python src/features/featurize_predict.py
+    deps:
+      - src/features/featurize_predict.py
+      - ${interim_dir}/${eo_data.interim.dir}/${model_res}
+    params:
+      - model_res
+      - train.dir
+      - eo_data.interim.dir
+      - eo_data.predict.dir
+      - eo_data.predict.mask_fn
+      - eo_data.predict.imputed_fn
+    outs:
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.mask_fn}:
+          persist: false
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}:
+          persist: false
+
+  ######################################################################################
+  # END BASE STAGES (ALL PFTs) ---------------------------------------------------------
+  ######################################################################################
 
   get_TRY_mean_traits:
     cmd: python src/data/build_try_traits.py
@@ -107,128 +133,102 @@ stages:
       - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}:
           persist: true
 
-  build_features:
-    cmd: python src/features/featurize_train.py --nchunks 13
+  build_y:
+    cmd: python src/features/build_y.py
     deps:
-      - src/features/featurize_train.py
-      - ${interim_dir}/${eo_data.interim.dir}/${model_res}
+      - src/features/build_y.py
       - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}
       - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
     params:
-      - PFT
-      - model_res
-      - eo_data.interim.dir
       - datasets.Y.trait_stat
-      - datasets.Y.use
-      - gbif.interim.dir
-      - gbif.interim.traits
-      - splot.interim.dir
-      - splot.interim.traits
-      - train.dir
-      - train.features
+
     outs:
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.features}:
-          persist: false
+      - ${train.dir}/${PFT}/${model_res}/${train.Y.fn}
 
   calculate_spatial_autocorr:
     cmd: python src/features/calc_spatial_autocorr.py
     deps:
       - src/features/calc_spatial_autocorr.py
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.features}
+      - ${train.dir}/${PFT}/${model_res}/${train.Y.fn}
     params:
       - train.spatial_autocorr
     outs:
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.spatial_autocorr}:
-          persist: false
+      - ${train.dir}/${PFT}/${model_res}/${train.spatial_autocorr}
 
   build_cv_splits:
     cmd: python src/features/skcv_splits.py
     deps:
       - src/features/skcv_splits.py
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.features}
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.spatial_autocorr}
+      - ${train.dir}/${PFT}/${model_res}/${train.Y.fn}
+      - ${train.dir}/${PFT}/${model_res}/${train.spatial_autocorr}
     params:
       - train.cv_splits
     outs:
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.cv_splits.dir}:
-          persist: false
+      - ${train.dir}/${PFT}/${model_res}/${train.cv_splits.dir}
 
   train_models:
     cmd: python src/models/train_models.py -r
     deps:
       - src/models/train_models.py
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.features}
-      - ${train.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.cv_splits.dir}
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.mask_fn}
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}
+      - ${train.dir}/${PFT}/${model_res}/${train.Y.fn}
+      - ${train.dir}/${PFT}/${model_res}/${train.cv_splits.dir}
     params:
       - train.arch
-      - ${train.arch}
+      - autogluon
+      - datasets.Y.traits
     outs:
-      - ${models.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.arch}:
+      - ${models.dir}/${PFT}/${model_res}:
           persist: true
 
-  build_predict:
-    cmd: python src/features/featurize_predict.py
-    deps:
-      - src/features/featurize_predict.py
-      - ${interim_dir}/${eo_data.interim.dir}/${model_res}
-    params:
-      - model_res
-      - train.dir
-      - eo_data.interim.dir
-      - eo_data.predict.dir
-      - eo_data.predict.filename
-    outs:
-      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}:
-          persist: true
+  # predict:
+  #   cmd: python src/models/predict_traits.py -b 2 -r
+  #   deps:
+  #     - src/models/predict_traits.py
+  #     - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
+  #     - ${models.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.arch}
+  #   params:
+  #     - model_res
+  #     - PFT
+  #     - datasets.Y.use
+  #     - eo_data.predict.dir
+  #     - eo_data.predict.filename
+  #     - train.arch
+  #     - processed.dir
+  #     - processed.predict_dir
+  #   outs:
+  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.predict_dir}:
+  #         persist: true
 
-  predict:
-    cmd: python src/models/predict_traits.py -b 5 -r
-    deps:
-      - src/models/predict_traits.py
-      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
-      - ${models.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.arch}
-    params:
-      - model_res
-      - PFT
-      - datasets.Y.use
-      - eo_data.predict.dir
-      - eo_data.predict.filename
-      - train.arch
-      - processed.dir
-      - processed.predict_dir
-    outs:
-      - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.predict_dir}:
-          persist: true
+  # splot_corr:
+  #   cmd: python src/analysis/splot_correlation.py -n 4
+  #   deps:
+  #     - src/analysis/splot_correlation.py
+  #     - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
+  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.predict_dir}
+  #   outs:
+  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.splot_corr}:
+  #         persist: true
 
-  splot_corr:
-    cmd: python src/analysis/splot_correlation.py -n 4
-    deps:
-      - src/analysis/splot_correlation.py
-      - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
-      - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.predict_dir}
-    outs:
-      - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.splot_corr}:
-          persist: true
+  # cov:
+  #   cmd: python src/analysis/cov.py -b 2 -r
+  #   deps:
+  #     - src/analysis/cov.py
+  #     - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
+  #   params:
+  #     - target_resolution
+  #   outs:
+  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.cov_dir}:
+  #         persist: true
 
-  cov:
-    cmd: python src/analysis/cov.py -b 1
-    deps:
-      - src/analysis/cov.py
-      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
-      - ${models.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.arch}
-    params:
-      - target_resolution
-    outs:
-      - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.cov_dir}:
-          persist: true
-
-  impute_missing:
-    cmd: python src/data/impute_missing.py
-    deps:
-      - src/data/impute_missing.py
-      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
-    params:
-      - eo_data.imputed
-    outs:
-      - ${interim_dir}/${eo_data.interim.dir}/${eo_data.imputed.dir}/${eo_data.imputed.filename}:
-          persist: true
+  # build_final_product:
+  #   cmd: python src/data/build_final_product.py
+  #   deps:
+  #     - src/data/build_final_product.py
+  #     - reference/trait_mapping.json
+  #     - reference/trait_stat_mapping.json
+  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.predict_dir}
+  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.cov_dir}
+  #   params:
+  #     - public.dir

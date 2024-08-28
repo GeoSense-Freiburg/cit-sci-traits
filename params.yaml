@@ -1,3 +1,4 @@
+version: "0.1.0"
 model_res: "001"
 PFT: "Shrub_Tree_Grass"
 random_seed: 42
@@ -8,6 +9,37 @@ raw_dir: data/raw
 interim_dir: data/interim
 processed_dir: data/processed
 dask_dashboard: ":39143"
+
+pylos:
+  featurize_train:
+    n_chunks: 6
+    n_workers: 30
+    memory_limit: null
+  build_predict:
+    n_chunks: 5
+    n_workers: null
+    memory_limit: 100GB
+    impute_chunks: 3
+  calc_spatial_autocorr:
+    n_workers: 60
+    n_workers_variogram: 5
+  skcv_splits:
+    n_workers: 60
+geos:
+  featurize_train:
+    n_chunks: 2
+    n_workers: 100
+    memory_limit: 150GB
+  build_predict:
+    n_chunks: 3
+    n_workers: 100
+    memory_limit: 500GB
+    impute_chunks: 2
+  calc_spatial_autocorr:
+    n_workers: 100
+    n_workers_variogram: 20
+  skcv_splits:
+    n_workers: 80
 
 mask:
   path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
@@ -32,7 +64,7 @@ datasets:
   Y:
     splot: splot4-0
     gbif: all_tracheophyta_non-cult_2024-04-10
-    use: "gbif" # Which trait dataset(s) to use for training, separated by "_"
+    trait_stats: ["mean", "std", "median", "q05", "q95", "count"]
     trait_stat: 1 # ('mean', 'std', 'median', 'q05', 'q95', 'count') (bands start at 1)
     traits:
       - 4 # Stem specific density (SSD) or wood density (stem dry mass per stem fresh volume)
@@ -74,10 +106,8 @@ eo_data:
     dir: eo_data
   predict:
     dir: predict
-    filename: eo_predict.parquet
-  imputed:
-    dir: imputed
-    filename: eo_predict_imputed.parquet
+    mask_fn: eo_predict_mask.parquet
+    imputed_fn: eo_predict_imputed.parquet
 
 worldclim:
   bio_vars:
@@ -121,13 +151,20 @@ trydb:
 
 train:
   dir: data/features
-  features: features.parquet
+  Y:
+    fn: Y.parquet
+  missing_val_thresh: 0.4 # Drop features with more than this fraction of missing values
   spatial_autocorr: spatial_autocorr.parquet
   cv_splits:
     range_stat: "median"
-    n_splits: 10
+    n_splits: 5
     n_sims: 100
     dir: skcv_splits
+  weights:
+    fn: feature_weights.parquet
+    method: manual # "auto", "manual" -- "manual" will use below weights
+    splot: 1.0
+    gbif: 0.08661
   arch: "autogluon"
   eval_results: evaluation_results.csv
   feature_importance: feature_importance.csv
@@ -140,17 +177,21 @@ processed:
   splot_corr: splot_correlation.csv
 
 autogluon:
-  included_model_types: ["FASTAI", "GBM", "NN_TORCH"]
+  included_model_types: ["GBM"]
   presets: "high"
   save_bag_folds: true
   refit_full: false
   set_best_to_refit_full: false
-  time_limit: 12600 # 3.5 hours per trait
-  num_gpus: 4
+  cv_fit_time_limit: 3600
+  full_fit_time_limit: 12600 # 3.5 hours per trait
+  num_gpus: "auto"
+  num_cpus: 64
   feature_importance: true
-  FI_time_limit: 3600
+  FI_time_limit: 1800
   FI_num_shuffle_sets: 10
-  leaderboard: leaderboard.csv
 
 models:
   dir: models
+
+public:
+  dir: PANOPS/cit-sci-traits/trait_maps

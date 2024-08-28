@@ -72,3 +72,15 @@ def get_loggers_starting_with(s: str) -> list[str]:
         for name, logger in logging.Logger.manager.loggerDict.items()
         if name.startswith(s)
     ]
+
+
+def suppress_dask_logging() -> None:
+    """Suppress Dask logging."""
+    dask_loggers = get_loggers_starting_with("distributed")
+    for logger_name in dask_loggers:
+        logging.getLogger(logger_name).setLevel("WARNING")
+
+
+def set_dry_run_text(dry_run: bool) -> str:
+    """Set the text to indicate dry-run."""
+    return " (DRY-RUN)" if dry_run else ""
