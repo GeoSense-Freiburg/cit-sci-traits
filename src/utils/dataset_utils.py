@@ -344,7 +344,7 @@ def get_weights_fn(config: ConfigBox = cfg) -> Path:
 
 def get_trait_maps_dir(y_set: str, config: ConfigBox = cfg) -> Path:
     """Get the path to the trait maps directory for a specific dataset (e.g. GBIF or sPlot)."""
-    check_y_set(y_set, config)
+    check_y_set(y_set)
 
     return (
         Path(config.interim_dir)
