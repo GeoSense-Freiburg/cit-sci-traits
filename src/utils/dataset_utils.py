@@ -240,9 +240,9 @@ def compute_partitions(ddf: dd.DataFrame) -> pd.DataFrame:
     return pd.concat(dfs)
 
 
-def check_y_set(y_set: str, config: ConfigBox = cfg) -> None:
+def check_y_set(y_set: str) -> None:
     """Check if the specified y_set is valid."""
-    y_sets = list(config.datasets.Y.keys())[:2]
+    y_sets = ["gbif", "splot", "splot_gbif"]
     if y_set not in y_sets:
         raise ValueError(f"Invalid y_set. Must be one of {y_sets}.")
 
