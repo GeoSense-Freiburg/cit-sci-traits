@@ -14,6 +14,11 @@ from tqdm import trange
 from src.conf.conf import get_config
 from src.conf.environment import log
 from src.utils.autogluon_utils import get_best_model_ag
+from src.utils.dataset_utils import (
+    get_models_dir,
+    get_predict_imputed_fn,
+    get_predict_mask_fn,
+)
 from src.utils.df_utils import grid_df_to_raster
 
 
@@ -89,33 +94,14 @@ def calculate_cov_ag(
 
 def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> None:
     """Main function"""
-    predict_fn: Path = (
-        Path(cfg.train.dir)
-        / cfg.eo_data.predict.dir
-        / cfg.model_res
-        / cfg.eo_data.predict.filename
+    log.info("Loading and masking predict data...")
+    pred_imputed = (
+        dd.read_parquet(get_predict_imputed_fn()).compute().set_index(["y", "x"])
     )
+    pred_mask = dd.read_parquet(get_predict_mask_fn()).compute().set_index(["y", "x"])
+    pred_data = pred_imputed.mask(pred_mask)
 
-    models_dir: Path = (
-        Path(cfg.models.dir)
-        / cfg.PFT
-        / cfg.model_res
-        / cfg.datasets.Y.use
-        / cfg.train.arch
-    )
-
-    # E.g. ./data/processed/Shrub_Tree_Grass/001/splot_gbif/predict
-    out_dir = (
-        Path(cfg.processed.dir)
-        / cfg.PFT
-        / cfg.model_res
-        / cfg.datasets.Y.use
-        / cfg.processed.cov_dir
-    )
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    log.info("Loading predict data...")
-    data = dd.read_parquet(predict_fn).compute().reset_index(drop=True)
+    models_dir = get_models_dir()
 
     for model_dir in models_dir.iterdir():
         if not model_dir.is_dir():

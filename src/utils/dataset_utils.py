@@ -323,12 +323,7 @@ def get_cv_splits_dir(config: ConfigBox = cfg) -> Path:
 
 def get_processed_dir(config: ConfigBox = cfg) -> Path:
     """Get the path to the processed directory for a specific configuration."""
-    return (
-        Path(config.processed.dir)
-        / config.PFT
-        / config.model_res
-        / config.datasets.Y.use
-    )
+    return Path(config.processed.dir) / config.PFT / config.model_res
 
 
 def get_splot_corr_fn(config: ConfigBox = cfg) -> Path:
