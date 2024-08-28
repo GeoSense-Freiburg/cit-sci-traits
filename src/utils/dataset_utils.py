@@ -257,6 +257,17 @@ def get_trait_models_dir(trait: str, config: ConfigBox = cfg) -> Path:
     return get_models_dir(config) / trait / config.train.arch
 
 
+def get_latest_run(runs_path: Path):
+    """Get latest run from a specified trait models path."""
+    sorted_runs = sorted(
+        [run for run in Path(runs_path).glob("*") if "tmp" not in run.name],
+        reverse=True,
+    )
+    if not sorted_runs:
+        raise FileNotFoundError("No runs found.")
+    return sorted_runs[0]
+
+
 def get_predict_mask_fn(config: ConfigBox = cfg) -> Path:
     """Get the path to the predict features mask file for a specific configuration."""
     return (
