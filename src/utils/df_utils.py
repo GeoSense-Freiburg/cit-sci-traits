@@ -10,6 +10,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 
+from src.conf.environment import log
 from src.utils.log_utils import setup_logger
 from src.utils.raster_utils import create_sample_raster, xr_to_raster
 
@@ -289,3 +290,9 @@ def grid_df_to_raster(
 
     del ref, ds
     gc.collect()
+
+
+def pipe_log(df: pd.DataFrame, message: str) -> pd.DataFrame:
+    """Simple function to log a message during method chaining with a DataFrame."""
+    log.info(message)
+    return df
