@@ -5,34 +5,29 @@ from pathlib import Path
 
 import cudf
 import cupy as cp
-import dask.array as da
 import dask.dataframe as dd
 import pandas as pd
 from box import ConfigBox
 from cuml.metrics import pairwise_distances
 from cuml.neighbors import NearestNeighbors
-from dask_cuda import LocalCUDACluster
-from distributed import Client, LocalCluster
+from distributed import Client
 
 from src.conf.conf import get_config
 from src.conf.environment import log
+from src.utils.cuda_utils import df_to_cupy
+from src.utils.dask_utils import close_dask, df_to_dd, init_dask
 from src.utils.dataset_utils import (
+    get_aoa_dir,
     get_latest_run,
     get_predict_imputed_fn,
     get_trait_models_dir,
     get_y_fn,
 )
-
-# from src.utils.log_utils import suppress_dask_logging
+from src.utils.df_utils import grid_df_to_raster
 from src.utils.training_utils import assign_splits, filter_trait_set, set_yx_index
+from src.utils.trait_utils import get_active_traits
 
-Y_COL: str = "X11_mean"
-TRAIT_SET: str = "splot"
-CFG: ConfigBox = get_config()
-DEVICE_IDS = (0, 1, 2, 3)
-TRAIN_SAMPLE = 1
-PREDICT_SAMPLE = 0.5
-PREDICT_PARTITIONS = 5
+CFG = get_config()
 
 
 def cli() -> argparse.Namespace:
@@ -41,95 +36,28 @@ def cli() -> argparse.Namespace:
         description="Calculate Area of Applicability (AOA)"
     )
     parser.add_argument(
-        "--trait",
-        type=str,
-        default=Y_COL,
-        help="Trait to calculate AOA for",
+        "-o", "--overwrite", action="store_true", help="Overwrite files"
     )
-    parser.add_argument(
-        "--trait_set",
-        type=str,
-        default=TRAIT_SET,
-        help="Trait set to use for training and prediction",
-    )
-    parser.add_argument(
-        "--train_sample",
-        type=float,
-        default=TRAIN_SAMPLE,
-        help="Fraction of training data to sample",
-    )
-    parser.add_argument(
-        "--predict_sample",
-        type=float,
-        default=PREDICT_SAMPLE,
-        help="Fraction of predict data to sample",
-    )
-    parser.add_argument(
-        "--predict_partitions",
-        type=int,
-        default=PREDICT_PARTITIONS,
-        help="Number of partitions for the predict data",
-    )
-    parser.add_argument("--device-ids", type=int, nargs="+", default=DEVICE_IDS)
     return parser.parse_args()
-
-
-def init_dask(
-    cuda: bool = False,
-    device_ids: tuple[int, ...] | None = None,
-    memory_limit: str = "auto",
-) -> tuple[Client, LocalCluster]:
-    """Initialize the Dask client and cluster."""
-    if cuda:
-        cluster = LocalCUDACluster(
-            CUDA_VISIBLE_DEVICES=device_ids, memory_limit=memory_limit
-        )
-    else:
-        cluster = LocalCluster(
-            dashboard_address=CFG.dask_dashboard, memory_limit=memory_limit
-        )
-
-    client = Client(cluster)
-    return client, cluster
-
-
-def close_dask(client: Client, cluster: LocalCluster | LocalCUDACluster) -> None:
-    """Close the Dask client and cluster."""
-    client.close()
-    cluster.close()
-
-
-def _to_dd(
-    df: pd.DataFrame, npartitions: int
-) -> dd.DataFrame:  # pyright: ignore[reportPrivateImportUsage]
-    return dd.from_pandas(  # pyright: ignore[reportPrivateImportUsage]
-        df, npartitions=npartitions
-    )
 
 
 def load_train_data(
     y_col: str, trait_set: str, sample: int | float = 1
 ) -> pd.DataFrame:
     """Load the training data for the AOA analysis."""
-    # suppress_dask_logging()
-
     with Client(n_workers=20, dashboard_address=CFG.dask_dashboard):
         train = (
             pd.read_parquet(get_y_fn(), columns=["x", "y", y_col, "source"])
-            # .pipe(pipe_log, "Setting yx index and assigning splits...")
             .pipe(set_yx_index)
             .pipe(assign_splits, label_col=y_col)
             .groupby("fold", group_keys=False)
             .sample(frac=sample, random_state=CFG.random_seed)
             .reset_index()
-            # .pipe(pipe_log, "Filtering trait set...")
             .pipe(filter_trait_set, trait_set=trait_set)
             .drop(columns=[y_col, "source"])
-            # .pipe(pipe_log, "Converting to dask dataframe...")
-            .pipe(_to_dd, npartitions=50)
-            # .pipe(pipe_log, "Merging with imputed predict data...")
+            .pipe(df_to_dd, npartitions=50)
             .merge(
-                # Merge using inner join with the imputed predict data (described below)
+                # Merge using inner join with the imputed predict data
                 dd.read_parquet(  # pyright: ignore[reportPrivateImportUsage]
                     get_predict_imputed_fn()
                 ).repartition(npartitions=200),
@@ -145,14 +73,22 @@ def load_train_data(
     return train
 
 
-def load_predict_data(npartitions: int = 50, sample: int | float = 1) -> dd.DataFrame:
+def load_predict_data(
+    npartitions: int | None = None, sample: int | float = 1
+) -> dd.DataFrame:
     """Load the imputed predict data for the AOA analysis."""
-    return dd.read_parquet(get_predict_imputed_fn(), npartitions=npartitions).sample(
+    ddf = dd.read_parquet(get_predict_imputed_fn()).sample(
         frac=sample, random_state=CFG.random_seed
     )
 
+    if npartitions is not None:
+        return ddf.repartition(npartitions=npartitions)
 
-def _scale(df: pd.DataFrame, means: pd.Series, stds: pd.Series) -> pd.DataFrame:
+    return ddf
+
+
+def scale_features(df: pd.DataFrame, means: pd.Series, stds: pd.Series) -> pd.DataFrame:
+    """Scale/standardize the features in the dataframe."""
     return (df - means) / stds
 
 
@@ -174,68 +110,50 @@ def load_feature_importance(
     )
 
 
-def _weight(df: pd.DataFrame, fi: pd.DataFrame, dask: bool = False) -> pd.DataFrame:
+def weight_features(
+    df: pd.DataFrame, fi: pd.DataFrame, dask: bool = False
+) -> pd.DataFrame:
+    """Weight the features in the dataframe by the feature importance."""
     if dask:
         return dd.concat([df * fi.T.values], axis=1)
 
     return pd.concat([df * fi.T.values], axis=1)
 
 
-def _scale_and_weight_train(
+def scale_and_weight_train(
     df: pd.DataFrame, fi: pd.DataFrame, means: pd.Series, stds: pd.Series
 ) -> pd.DataFrame:
+    """Scale and weight the training data."""
     folds = df[["fold"]].copy()
     df = df.drop(columns=["fold"])
-    return pd.concat([_weight(_scale(df, means, stds), fi), folds], axis=1)
-
-
-def _scale_and_weight_predict(
-    df: dd.DataFrame, fi: pd.DataFrame, means: pd.Series, stds: pd.Series
-) -> dd.DataFrame:
-    xy = df[["x", "y"]].copy()
-    df = df.drop(columns=["x", "y"])
-    return dd.concat(
-        [xy, _weight(df.map_partitions(_scale, means, stds), fi, dask=True)], axis=1
+    return pd.concat(
+        [weight_features(scale_features(df, means, stds), fi), folds], axis=1
     )
 
 
-def _df_to_cupy(df: pd.DataFrame, device_id: int) -> cp.ndarray:
-    """Convert a Pandas DataFrame to CuPy array on a specific GPU device."""
-    with cp.cuda.Device(device_id):
-        return cudf.DataFrame.from_pandas(df).to_cupy()
+def scale_and_weight_predict(
+    df: dd.DataFrame, fi: pd.DataFrame, means: pd.Series, stds: pd.Series
+) -> dd.DataFrame:
+    """Scale and weight the predict data."""
+    xy = df[["x", "y"]].copy()
+    df = df.drop(columns=["x", "y"])
+    return dd.concat(
+        [
+            xy,
+            weight_features(
+                df.map_partitions(scale_features, means, stds), fi, dask=True
+            ),
+        ],
+        axis=1,
+    )
 
 
-def _df_to_cudf(df: pd.DataFrame, device_id: int) -> cudf.DataFrame:
-    """Convert a Pandas DataFrame to CuDF DataFrame on a specific GPU device."""
-    with cp.cuda.Device(device_id):
-        return cudf.DataFrame.from_pandas(df)
-
-
-def _cupy_to_dask(data: cp.ndarray, num_chunks: int) -> da.Array:
-    """Convert a CuPy array into a Dask array with specified number of chunks."""
-    return da.from_array(data, chunks=(data.shape[0] // num_chunks, data.shape[1]))
-
-
-# def _batch_pairwise_distances(
-#     data: cp.ndarray, start_idx: int, end_idx: int
-# ) -> cp.ndarray:
-#     batch_data = data[start_idx:end_idx]
-#     distances = pairwise_distances(data, batch_data)
-#     avg_distances = cp.mean(distances, axis=1)
-#     return avg_distances
-
-
-# def _batch_pairwise_distances(
-#     data: da.Array, start_idx: int, end_idx: int
-# ) -> cp.ndarray:
-#     """Process a batch of data to compute pairwise distances on GPU."""
-#     # Extract batch and compute pairwise distances
-#     batch_data = data[start_idx:end_idx].compute()  # Smaller batch to worker
-#     distances = pairwise_distances(
-#         cp.asarray(data), cp.asarray(batch_data), metric="euclidean"
-#     )
-#     avg_distances = cp.mean(distances, axis=1)
-#     return avg_distances
+def df_to_cupy_chunks(
+    df: pd.DataFrame, chunk_size: int, n_samples: int, device_id: int
+) -> list[cp.ndarray]:
+    """Convert a DataFrame to a list of CuPy arrays in chunks."""
+    cupy_data = df_to_cupy(df, device_id=device_id)
+    return [cupy_data[i : i + chunk_size] for i in range(0, n_samples, chunk_size)]
 
 
 def average_train_distance_chunked(
@@ -248,26 +166,21 @@ def average_train_distance_chunked(
         avg_distances = cp.mean(distances)
         return avg_distances
 
-    cluster = LocalCUDACluster(CUDA_VISIBLE_DEVICES=device_ids)
-    client = Client(cluster)
-
-    # Convert data to CuPy for GPU processing
-    cupy_data = _df_to_cupy(train_df, device_ids[0])
+    client, cluster = init_dask(cuda=True, device_ids=device_ids)
 
     # Define chunk size based on the number of chunks
     n_samples = train_df.shape[0]
     chunk_size = (n_samples + num_chunks - 1) // num_chunks
 
-    # Divide data into chunks
-    chunks = [cupy_data[i : i + chunk_size] for i in range(0, n_samples, chunk_size)]
+    chunks = df_to_cupy_chunks(train_df, chunk_size, n_samples, device_ids[0])
 
     # Scatter each chunk separately
-    scattered_chunks = client.scatter(chunks)
+    chunks = client.scatter(chunks)
 
     # Create Dask futures for each chunk pair
     futures = []
-    for i, chunk1 in enumerate(scattered_chunks):
-        for j, chunk2 in enumerate(scattered_chunks):
+    for chunk1 in chunks:
+        for chunk2 in chunks:
             future = client.submit(_process_chunk, chunk1, chunk2)
             futures.append(future)
 
@@ -296,8 +209,8 @@ def average_train_distance(
     client, cluster = init_dask(cuda=True, device_ids=device_ids)
 
     # Convert data to CuPy for GPU processing
-    cupy_data = _df_to_cupy(train_df, device_ids[0])
-    scattered_data = client.scatter(cupy_data, broadcast=True)
+    cupy_data = df_to_cupy(train_df, device_ids[0])
+    cupy_data = client.scatter(cupy_data, broadcast=True)
 
     # Define number of batches
     n_samples = train_df.shape[0]
@@ -308,18 +221,10 @@ def average_train_distance(
     for batch_idx in range(num_batches):
         start_idx = batch_idx * batch_size
         end_idx = min((batch_idx + 1) * batch_size, n_samples)
-        future = client.submit(_process_batch, scattered_data, start_idx, end_idx)
+        future = client.submit(_process_batch, cupy_data, start_idx, end_idx)
         futures.append(future)
 
     batch_results = client.gather(futures)
-
-    # results = []
-    # for future in futures:
-    #     try:
-    #         result = future.result()
-    #         results.append(result)
-    #     except Exception as e:
-    #         log.error(f"Future failed with exception: {e}")
 
     close_dask(client, cluster)
 
@@ -328,58 +233,6 @@ def average_train_distance(
 
     # Compute the overall mean of the average distances
     return cp.mean(avg_distances).item()  # Convert from CuPy to Python float
-
-
-# def average_train_distance(
-#     train_df: pd.DataFrame, batch_size: int, device_ids: tuple[int, ...]
-# ) -> float:
-#     """
-#     Compute average pairwise distances using CuML's pairwise_distances, leveraging Dask and GPU.
-#     :param dataframe: Dask-cuDF dataframe containing the dataset
-#     :param batch_size: Number of rows in each batch/partition
-#     :return: Average pairwise distance across all observations
-#     """
-#     cluster = LocalCUDACluster(CUDA_VISIBLE_DEVICES=device_ids)
-#     client = Client(cluster)
-
-#     n = len(train_df)
-
-#     # Repartition the dataframe into chunks to fit in GPU memory
-#     train_ddf = dask_cudf.from_cudf(_df_to_cudf(train_df, device_ids[0])).repartition(
-#         npartitions=n // batch_size
-#     )
-
-#     total_sum = 0
-#     total_pairs = 0
-
-#     # Compute pairwise distances between all partition pairs
-#     def chunked_distance(part1: dask_cudf.DataFrame, part2: dask_cudf.DataFrame):
-#         # Compute pairwise distances using CuML's optimized function
-#         dists = pairwise_distances(part1.to_cupy(), part2.to_cupy())
-#         return dists.sum(), dists.size  # Return the sum and number of distances
-
-#     results = []
-
-#     # Loop through all partition pairs (both intra- and inter-chunk)
-#     for i in range(train_ddf.npartitions):
-#         df1 = train_ddf.get_partition(i)
-#         for j in range(i, train_ddf.npartitions):
-#             df2 = train_ddf.get_partition(j)
-#             result = delayed(chunked_distance)(df1, df2)
-#             results.append(result)
-
-#     # Collect the results
-#     distances_and_pairs = compute(*results)
-
-#     close_dask(client, cluster)
-
-#     # Sum all distances and count pairs
-#     total_sum = sum(d[0] for d in distances_and_pairs)
-#     total_pairs = sum(d[1] for d in distances_and_pairs)
-
-#     avg_distance = total_sum / total_pairs
-
-#     return avg_distance
 
 
 def _train_folds_to_cupy(df: pd.DataFrame, device_id: int) -> cp.ndarray:
@@ -394,12 +247,11 @@ def _train_folds_to_cupy(df: pd.DataFrame, device_id: int) -> cp.ndarray:
     return folds
 
 
-def calculate_fold_min_distances(
-    fold_data: cp.ndarray, other_fold_data: cp.ndarray
-) -> cp.ndarray:
+def get_min_dists(input_data: cp.ndarray, ref_data: cp.ndarray) -> cp.ndarray:
+    """Calculate the minimum distances between observations in one fold and all other folds."""
     nn_model = NearestNeighbors(n_neighbors=1, algorithm="brute")
-    nn_model.fit(other_fold_data)
-    distances, _ = nn_model.kneighbors(fold_data)
+    nn_model.fit(ref_data)
+    distances, _ = nn_model.kneighbors(input_data)
     return distances.flatten()
 
 
@@ -427,7 +279,7 @@ def calc_di_threshold(
 
             # task = delayed(calculate_fold_min_distances)(fold_data, other_fold_data)
             future = client.submit(
-                calculate_fold_min_distances, fold_data, other_fold_data, retries=10
+                get_min_dists, fold_data, other_fold_data, retries=10
             )
             futures.append(future)
 
@@ -461,25 +313,24 @@ def calc_di_predict(
     predict_gpu = predict.to_backend("cudf")
     train_gpu = dd.from_pandas(train).to_backend("cudf")
 
-    def compute_nearest_neighbors(
+    def _compute_nearest_neighbors(
         pred_partition: cudf.DataFrame, train_df: cudf.DataFrame
     ) -> cudf.DataFrame:
-        nn_model = NearestNeighbors(n_neighbors=1, algorithm="brute")
-        nn_model.fit(train_df)
-        pred_partition_xy = pred_partition[["x", "y"]]
-        distances, _ = nn_model.kneighbors(pred_partition.drop(columns=["x", "y"]))
+        distances = get_min_dists(
+            pred_partition.drop(columns=["x", "y"]).to_cupy(),
+            train_df.to_cupy(),
+        )
         result = cudf.DataFrame(
             {
-                "x": pred_partition_xy["x"],
-                "y": pred_partition_xy["y"],
+                "x": pred_partition["x"],
+                "y": pred_partition["y"],
                 "distance": distances,
             },
             index=pred_partition.index,
         )
         return result
 
-    distances = predict_gpu.map_partitions(compute_nearest_neighbors, train_gpu)
-
+    distances = predict_gpu.map_partitions(_compute_nearest_neighbors, train_gpu)
     distances = distances.compute()
 
     close_dask(client, cluster)
@@ -489,107 +340,115 @@ def calc_di_predict(
     return distances
 
 
-def main(args: argparse.Namespace = cli()) -> None:
-    """Main function for the AOA analysis."""
-    train_fn = Path(f"{args.trait}_{args.trait_set}.parquet")
+def calc_aoa(
+    trait: str, trait_set: str, out_path: Path, cfg: ConfigBox, overwrite: bool = False
+) -> None:
+    """Calculate the Area of Applicability (AoA) for the given trait and trait set."""
+    log.info("Calculating AoA for %s using %s...", trait, trait_set)
+    train_fn = out_path.parent / f"{trait}_train_{trait_set}.parquet"
+    ts_cfg = cfg.aoa[trait_set]
 
-    if train_fn.exists():
+    if train_fn.exists() and not overwrite:
         log.info("Loading existing training data...")
         train = pd.read_parquet(train_fn)
-
     else:
         log.info("Generating training data...")
-        train = load_train_data(
-            sample=args.train_sample, y_col=args.trait, trait_set=args.trait_set
-        )
-        log.info("Writing training data to disk...")
+        train = load_train_data(y_col=trait, trait_set=trait_set)
+        log.info("Writing training data to disk in case of failure...")
         train.to_parquet(train_fn, compression="zstd")
 
     log.info("Scaling and weighting training data...")
     train_means = train.drop(columns=["fold"]).mean()
     train_stds = train.drop(columns=["fold"]).std()
 
-    fi = load_feature_importance(
-        train.drop(columns=["fold"]).columns, args.trait, args.trait_set
-    )
-    train_scaled_weighted = _scale_and_weight_train(
+    fi = load_feature_importance(train.drop(columns=["fold"]).columns, trait, trait_set)
+    train_scaled_weighted = scale_and_weight_train(
         df=train, fi=fi, means=train_means, stds=train_stds
-    )
+    ).sample(frac=ts_cfg.train_sample, random_state=cfg.random_seed)
 
     log.info("Calculating average pairwise distance for training data...")
-    if args.trait_set == "splot":
+    if trait_set == "splot":
         avg_train_dist = average_train_distance(
-            train_df=train_scaled_weighted.drop(columns=["fold"]).sample(
-                frac=args.train_sample
-            ),
-            batch_size=10000,
-            device_ids=args.device_ids,
+            train_df=train_scaled_weighted.drop(columns=["fold"]),
+            batch_size=ts_cfg.avg_dist_batch_size,
+            device_ids=cfg.aoa.device_ids,
         )
     else:
-        avg_train_dist = 0.8633
-        # log.warning("Using chunked pairwise distance calculation for large dataset...")
-        # avg_train_dist = average_train_distance_chunked(
-        #     train_df=train_scaled_weighted.drop(columns=["fold"]).sample(
-        #         frac=0.5, random_state=CFG.random_seed
-        #     ),
-        #     num_chunks=40,
-        #     device_ids=args.device_ids,
-        # )
+        log.warning("Using chunked pairwise distance calculation for large dataset...")
+        avg_train_dist = average_train_distance_chunked(
+            train_df=train_scaled_weighted.drop(columns=["fold"]),
+            num_chunks=40,
+            device_ids=cfg.aoa.device_ids,
+        )
 
     log.info("Average Pairwise Distance for training data: %.4f", avg_train_dist)
 
-    # log.info(
-    #     "Writing scaled and weighted training data to temporary file (addresses strange "
-    #     "Dask CUDA bug)..."
-    # )
-    # with tempfile.TemporaryFile() as f:
-    #     train_scaled_weighted.to_parquet(f, compression="zstd")
-    #     train_scaled_weighted = pd.read_parquet(f)
-
     log.info("Calculating DI threshold using training data...")
-    if args.trait_set == "splot":
-        di_threshold = calc_di_threshold(
-            train_scaled_weighted.sample(frac=args.train_sample),
-            avg_train_dist,
-            args.device_ids,
-        )
-    else:
-        di_threshold = 0.3056
+    di_threshold = calc_di_threshold(
+        train_scaled_weighted.sample(frac=ts_cfg.train_sample),
+        avg_train_dist,
+        cfg.aoa.device_ids,
+    )
     log.info("DI threshold: %.4f", di_threshold)
 
-    # Load, scale, and weight predict data
     log.info("Loading, scaling, and weighting predict data...")
     client, cluster = init_dask(cuda=False)
-
-    pred_scaled_weighted = _scale_and_weight_predict(
+    pred_scaled_weighted = scale_and_weight_predict(
         df=load_predict_data(
-            npartitions=args.predict_partitions, sample=args.predict_sample
+            npartitions=ts_cfg.predict_partitions, sample=cfg.aoa.predict_sample
         ),
         fi=fi,
         means=train_means,
         stds=train_stds,
     )
-
     close_dask(client, cluster)
 
-    # Compute DI for predict data
     log.info("Computing DI values for predict data...")
     predict_di = calc_di_predict(
         predict=pred_scaled_weighted,
         train=train_scaled_weighted.drop(columns=["fold"]).sample(
-            frac=args.train_sample
+            frac=ts_cfg.train_sample
         ),
         mean_distance=avg_train_dist,
         di_threshold=di_threshold,
-        device_ids=args.device_ids,
-        # num_chunks_predict=args.predict_partitions,
-        # num_chunks_train=20,
+        device_ids=cfg.aoa.device_ids,
     )
 
-    log.info("Saving DI and AoA for predict data...")
-    predict_di.to_parquet(
-        f"{args.trait}_DI_{args.trait_set}.parquet", compression="zstd"
-    )
+    log.info("DI stats for %s (%s):", trait, trait_set)
+    log.info(predict_di["di"].describe())
+
+    log.info("Writing %s...", out_path)
+    grid_df_to_raster(predict_di, cfg.target_resolution, out_path)
+
+    log.info("Cleaning up...")
+    train_fn.unlink()
+    log.info("Done! ✅")
+
+
+def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> None:
+    """Main function for the AOA analysis."""
+
+    aoa_dirs = [get_aoa_dir() / trait for trait in get_active_traits()]
+
+    for d in aoa_dirs:
+        trait = d.name
+        for ts in ["splot_gbif", "splot"]:
+            ts_aoa_fn = d / ts / f"{trait}_{ts}_aoa.tif"
+            ts_aoa_fn.parent.mkdir(parents=True, exist_ok=True)
+
+            if ts_aoa_fn.exists() and not args.overwrite:
+                log.info("Skipping existing AoA file: %s", ts_aoa_fn)
+                continue
+
+            calc_aoa(
+                trait=trait,
+                trait_set=ts,
+                out_path=ts_aoa_fn,
+                cfg=cfg,
+                overwrite=args.overwrite,
+            )
+
+    log.info("Done! 🎉")
 
 
 if __name__ == "__main__":
