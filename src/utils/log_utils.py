@@ -4,16 +4,37 @@ import logging
 import os
 
 
+class ColoredFormatter(logging.Formatter):
+    """Custom formatter to add colors to log messages based on their level."""
+
+    COLORS = {
+        "INFO": "\033[94m",  # Blue
+        "WARNING": "\033[93m",  # Yellow
+        "ERROR": "\033[91m",  # Red
+        "RESET": "\033[0m",  # Reset to default color
+    }
+
+    def format(self, record: logging.LogRecord) -> str:
+        log_msg = super().format(record)
+        color = self.COLORS.get(record.levelname, self.COLORS["RESET"])
+        reset = self.COLORS["RESET"]
+        return f"{color}{log_msg}{reset}"
+
+
 def setup_logger(
     name: str = "__main__", level: str | int = "WARNING"
 ) -> logging.Logger:
-    """Setup logging for the project."""
-    logging.basicConfig(
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    """Setup logging for the project with colored output."""
+    formatter = ColoredFormatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S %Z",
     )
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+
     log = logging.getLogger(name)
     log.setLevel(level)
+    log.addHandler(handler)
     return log
 
 
