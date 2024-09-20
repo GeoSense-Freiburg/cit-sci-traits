@@ -76,9 +76,9 @@ def get_loggers_starting_with(s: str) -> list[str]:
 
 def suppress_dask_logging() -> None:
     """Suppress Dask logging."""
-    dask_loggers = get_loggers_starting_with("distributed")
-    for logger_name in dask_loggers:
-        logging.getLogger(logger_name).setLevel("WARNING")
+    logging.getLogger("distributed.scheduler").setLevel(logging.WARNING)
+    logging.getLogger("distributed.core").setLevel(logging.WARNING)
+    logging.getLogger("distributed.nanny").setLevel(logging.WARNING)
 
 
 def set_dry_run_text(dry_run: bool) -> str:
