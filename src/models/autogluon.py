@@ -19,6 +19,7 @@ from src.utils.dataset_utils import (
     get_trait_models_dir,
     get_y_fn,
 )
+from src.utils.df_utils import pipe_log
 from src.utils.log_utils import set_dry_run_text, suppress_dask_logging
 from src.utils.training_utils import assign_weights, filter_trait_set
 
@@ -423,10 +424,6 @@ def prep_full_xy(
         .set_index(["y", "x"])
         .merge(splits, validate="m:1", right_index=True, left_index=True)
     )
-
-    def pipe_log(df: pd.DataFrame, message: str) -> pd.DataFrame:
-        log.info(message)
-        return df
 
     return (
         feats.compute()

@@ -17,12 +17,8 @@ def assign_splits(df: pd.DataFrame, label_col: str) -> pd.DataFrame:
     """Assign the cross-validation splits to the DataFrame based on the label column."""
     splits = pd.read_parquet(get_cv_splits_dir() / f"{label_col}.parquet")
 
-    return (
-        df.pipe(set_yx_index)
-        .merge(
-            splits.pipe(set_yx_index), validate="m:1", right_index=True, left_index=True
-        )
-        .reset_index()
+    return df.pipe(set_yx_index).merge(
+        splits.pipe(set_yx_index), validate="m:1", right_index=True, left_index=True
     )
 
 

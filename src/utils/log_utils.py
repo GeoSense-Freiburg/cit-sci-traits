@@ -69,7 +69,7 @@ def get_loggers_starting_with(s: str) -> list[str]:
     """
     return [
         name
-        for name, logger in logging.Logger.manager.loggerDict.items()
+        for name, _ in logging.Logger.manager.loggerDict.items()
         if name.startswith(s)
     ]
 
