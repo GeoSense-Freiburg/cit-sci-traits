@@ -6,5 +6,6 @@
     "exclude": [
         "data",
         "models",
-    ]
+    ],
+    "reportPrivateImportUsage": "information"
 }
