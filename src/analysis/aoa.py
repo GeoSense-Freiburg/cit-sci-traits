@@ -418,7 +418,11 @@ def calc_aoa(
     log.info(predict_di["di"].describe())
 
     log.info("Writing %s...", out_path)
-    grid_df_to_raster(predict_di, cfg.target_resolution, out_path)
+    grid_df_to_raster(
+        predict_di[["x", "y", "di", "aoa"]].set_index(["y", "x"]),
+        cfg.target_resolution,
+        out_path,
+    )
 
     log.info("Cleaning up...")
     train_fn.unlink()
