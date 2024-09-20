@@ -9,6 +9,7 @@ import dask_geopandas as dgpd
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 from src.conf.environment import log
 from src.utils.log_utils import setup_logger
@@ -244,8 +245,13 @@ def global_grid_df(
 
 
 def grid_df_to_raster(
-    df: pd.DataFrame, res: int | float, out: Path, *args: Any, **kwargs: Any
-) -> None:
+    df: pd.DataFrame,
+    res: int | float,
+    out: Path | None,
+    name: str = "trait",
+    *args: Any,
+    **kwargs: Any,
+) -> None | xr.Dataset:
     """
     Converts a grid DataFrame to a raster file.
 
@@ -281,15 +287,24 @@ def grid_df_to_raster(
         ds[var] = ds[var].rio.write_nodata(-32767.0, encoded=True)
 
     ds.attrs["long_name"] = list(ds.data_vars)
-    ds.attrs["trait"] = out.stem
+    if out is None:
+        ds.attrs["trait"] = name
+    else:
+        ds.attrs["trait"] = out.stem
 
-    xr_to_raster(ds, out, *args, **kwargs)
+    if out is not None:
+        xr_to_raster(ds, out, *args, **kwargs)
 
     ref.close()
+
+    if out is None:
+        return ds
+
     ds.close()
 
     del ref, ds
     gc.collect()
+    return None
 
 
 def pipe_log(df: pd.DataFrame, message: str) -> pd.DataFrame:
