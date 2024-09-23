@@ -521,3 +521,81 @@ stages:
       hash: md5
       md5: 443e6753fa2ed895e5f16b61bd6df385
       size: 1316913887
+  aoa:
+    cmd: python src/analysis/aoa.py
+    deps:
+    - path: data/features/Shrub_Tree_Grass/001/Y.parquet
+      hash: md5
+      md5: 443e6753fa2ed895e5f16b61bd6df385
+      size: 1316913887
+    - path: data/features/predict/001/eo_predict_imputed.parquet
+      hash: md5
+      md5: 0d865c4fb80cfb31a2dca600ee87896f
+      size: 32491512883
+    - path: models/Shrub_Tree_Grass/001
+      hash: md5
+      md5: 201da38d1bb50ffb47555f34ee7d0f5a.dir
+      size: 15977129650
+      nfiles: 20222
+    - path: src/analysis/aoa.py
+      hash: md5
+      md5: 470757831da41c75efc17b5b3d3c92a8
+      size: 15494
+    params:
+      params.yaml:
+        aoa:
+          dir: aoa
+          device_ids:
+          - 0
+          - 1
+          - 2
+          - 3
+          predict_sample: 0.5
+          splot:
+            train_sample: 1
+            avg_dist_batch_size: 10000
+            predict_partitions:
+          splot_gbif:
+            train_sample: 0.5
+            avg_dist_batch_size: 5000
+            predict_partitions:
+        datasets.Y.traits:
+        - 4
+        - 6
+        - 11
+        - 13
+        - 14
+        - 15
+        - 18
+        - 21
+        - 26
+        - 27
+        - 46
+        - 47
+        - 50
+        - 55
+        - 78
+        - 95
+        - 138
+        - 144
+        - 145
+        - 146
+        - 163
+        - 169
+        - 223
+        - 224
+        - 237
+        - 281
+        - 282
+        - 289
+        - 1080
+        - 3112
+        - 3113
+        - 3114
+        - 3120
+    outs:
+    - path: data/processed/Shrub_Tree_Grass/001/aoa
+      hash: md5
+      md5: 28068067b112aa917b71ccd619cfc317.dir
+      size: 32959988061
+      nfiles: 66
