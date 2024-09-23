@@ -181,6 +181,20 @@ stages:
     outs:
       - ${models.dir}/${PFT}/${model_res}:
           persist: true
+  
+  aoa:
+    cmd: python src/analysis/aoa.py
+    deps:
+      - src/analysis/aoa.py
+      - ${train.dir}/{PFT}/{model_res}/{train.Y.fn}
+      - ${train.dir}/{eo_data.predict.dir}/{model_res}/{eo_data.predict.imputed_fn}
+      - ${models.dir}/{PFT}/{model_res}  # Feature importance
+    params:
+      - datasets.Y.traits
+      - aoa
+    outs:
+      - ${processed.dir}/{PFT}/{model_res}/{aoa.dir}:
+          persist: true
 
   # predict:
   #   cmd: python src/models/predict_traits.py -b 2 -r
