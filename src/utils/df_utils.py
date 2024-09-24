@@ -9,7 +9,9 @@ import dask_geopandas as dgpd
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import xarray as xr
 
+from src.conf.environment import log
 from src.utils.log_utils import setup_logger
 from src.utils.raster_utils import create_sample_raster, xr_to_raster
 
@@ -153,7 +155,7 @@ def outlier_mask(
         np.ndarray: A boolean mask indicating whether each value is an outlier or not.
     """
     col_values = col.values
-    lower_bound, upper_bound = np.quantile(
+    lower_bound, upper_bound = np.quantile(  # pyright: ignore[reportCallIssue]
         col_values, [lower, upper]  # pyright: ignore[reportArgumentType]
     )
     return (col_values >= lower_bound) & (col_values <= upper_bound)
@@ -243,8 +245,13 @@ def global_grid_df(
 
 
 def grid_df_to_raster(
-    df: pd.DataFrame, res: int | float, out: Path, *args: Any, **kwargs: Any
-) -> None:
+    df: pd.DataFrame,
+    res: int | float,
+    out: Path | None,
+    name: str = "trait",
+    *args: Any,
+    **kwargs: Any,
+) -> None | xr.Dataset:
     """
     Converts a grid DataFrame to a raster file.
 
@@ -280,12 +287,27 @@ def grid_df_to_raster(
         ds[var] = ds[var].rio.write_nodata(-32767.0, encoded=True)
 
     ds.attrs["long_name"] = list(ds.data_vars)
-    ds.attrs["trait"] = out.stem
+    if out is None:
+        ds.attrs["trait"] = name
+    else:
+        ds.attrs["trait"] = out.stem
 
-    xr_to_raster(ds, out, *args, **kwargs)
+    if out is not None:
+        xr_to_raster(ds, out, *args, **kwargs)
 
     ref.close()
+
+    if out is None:
+        return ds
+
     ds.close()
 
     del ref, ds
     gc.collect()
+    return None
+
+
+def pipe_log(df: pd.DataFrame, message: str) -> pd.DataFrame:
+    """Simple function to log a message during method chaining with a DataFrame."""
+    log.info(message)
+    return df

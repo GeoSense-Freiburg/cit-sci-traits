@@ -1,6 +1,9 @@
 """Utility functions for cleaning and processing trait data."""
 
 import pandas as pd
+from box import ConfigBox
+
+from src.conf.conf import get_config
 
 
 def genus_species_caps(col: pd.Series) -> pd.Series:
@@ -58,3 +61,9 @@ def filter_pft(df: pd.DataFrame, pft_set: str, pft_col: str = "pft") -> pd.DataF
         raise ValueError(f"Invalid PFT designation: {pft_set}")
 
     return df[df[pft_col].isin(pfts)]
+
+
+def get_active_traits(cfg: ConfigBox = get_config()) -> list[str]:
+    """Returns a list of full names of the active traits. E.g. ['X1_mean', 'X2_mean']"""
+    y_cfg = cfg.datasets.Y
+    return [f"X{i}_{y_cfg.trait_stats[y_cfg.trait_stat - 1]}" for i in y_cfg.traits]

@@ -3,6 +3,24 @@
 import numpy as np
 import pandas as pd
 
+from src.utils.dataset_utils import get_cv_splits_dir
+
+
+def set_yx_index(df: pd.DataFrame) -> pd.DataFrame:
+    """Set the DataFrame index to "y" and "x"."""
+    if not df.index.names == ["y", "x"]:
+        return df.set_index(["y", "x"])
+    return df
+
+
+def assign_splits(df: pd.DataFrame, label_col: str) -> pd.DataFrame:
+    """Assign the cross-validation splits to the DataFrame based on the label column."""
+    splits = pd.read_parquet(get_cv_splits_dir() / f"{label_col}.parquet")
+
+    return df.pipe(set_yx_index).merge(
+        splits.pipe(set_yx_index), validate="m:1", right_index=True, left_index=True
+    )
+
 
 def filter_trait_set(df: pd.DataFrame, trait_set: str) -> pd.DataFrame:
     """Filter the DataFrame based on the trait set."""

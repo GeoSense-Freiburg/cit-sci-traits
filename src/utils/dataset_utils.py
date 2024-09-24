@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import dask.dataframe as dd
+import numpy as np
 import pandas as pd
 import xarray as xr
 from autogluon.tabular import TabularPredictor
@@ -257,7 +258,7 @@ def get_trait_models_dir(trait: str, config: ConfigBox = cfg) -> Path:
     return get_models_dir(config) / trait / config.train.arch
 
 
-def get_latest_run(runs_path: Path):
+def get_latest_run(runs_path: Path) -> Path:
     """Get latest run from a specified trait models path."""
     sorted_runs = sorted(
         [run for run in Path(runs_path).glob("*") if "tmp" not in run.name],
@@ -326,6 +327,11 @@ def get_processed_dir(config: ConfigBox = cfg) -> Path:
     return Path(config.processed.dir) / config.PFT / config.model_res
 
 
+def get_aoa_dir(config: ConfigBox = cfg) -> Path:
+    """Get the path to aoa directory for a specific configuration."""
+    return get_processed_dir(config) / config.aoa.dir
+
+
 def get_splot_corr_fn(config: ConfigBox = cfg) -> Path:
     """Get the path to the sPlot correlation file for a specific configuration."""
     return get_processed_dir(config) / config.processed.splot_corr
@@ -338,7 +344,7 @@ def get_weights_fn(config: ConfigBox = cfg) -> Path:
 
 def get_trait_maps_dir(y_set: str, config: ConfigBox = cfg) -> Path:
     """Get the path to the trait maps directory for a specific dataset (e.g. GBIF or sPlot)."""
-    check_y_set(y_set, config)
+    check_y_set(y_set)
 
     return (
         Path(config.interim_dir)
@@ -358,13 +364,16 @@ def get_trait_map_fns(y_set: str, config: ConfigBox = cfg) -> list[Path]:
 
 def get_predict_dir(config: ConfigBox = cfg) -> Path:
     """Get the path to the predicted trait directory for a specific configuration."""
-    return (
-        Path(config.processed.dir)
-        / config.PFT
-        / config.model_res
-        / config.datasets.Y.use
-        / config.processed.predict_dir
-    )
+    return get_processed_dir(config) / config.predict.dir
+
+
+def add_cv_splits_to_column(
+    df: pd.DataFrame, splits: list[tuple[np.ndarray, np.ndarray]]
+) -> pd.DataFrame:
+    """Add the CV splits to the DataFrame as a new column."""
+    for i, (_, test_idx) in enumerate(splits):
+        df.loc[test_idx, "cv_split"] = i
+    return df
 
 
 if __name__ == "__main__":

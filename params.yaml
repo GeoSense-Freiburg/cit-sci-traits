@@ -193,5 +193,21 @@ autogluon:
 models:
   dir: models
 
+aoa:
+  dir: aoa
+  device_ids: [0, 1, 2, 3]
+  predict_sample: 0.5
+  splot:
+    train_sample: 1
+    avg_dist_batch_size: 10000
+    predict_partitions: null
+  splot_gbif:
+    train_sample: 0.5
+    avg_dist_batch_size: 5000
+    predict_partitions: null
+  
+predict:
+  dir: predict
+  
 public:
   dir: PANOPS/cit-sci-traits/trait_maps
