@@ -208,6 +208,9 @@ aoa:
   
 predict:
   dir: predict
+
+cov:
+  dir: cov
   
 public:
   dir: PANOPS/cit-sci-traits/trait_maps

@@ -332,6 +332,11 @@ def get_aoa_dir(config: ConfigBox = cfg) -> Path:
     return get_processed_dir(config) / config.aoa.dir
 
 
+def get_cov_dir(config: ConfigBox = cfg) -> Path:
+    """Get the path to the cov directory for a specific configuration."""
+    return get_processed_dir(config) / config.cov.dir
+
+
 def get_splot_corr_fn(config: ConfigBox = cfg) -> Path:
     """Get the path to the sPlot correlation file for a specific configuration."""
     return get_processed_dir(config) / config.processed.splot_corr
