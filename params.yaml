@@ -205,5 +205,9 @@ aoa:
     train_sample: 0.5
     avg_dist_batch_size: 5000
     predict_partitions: null
+  
+predict:
+  dir: predict
+  
 public:
   dir: PANOPS/cit-sci-traits/trait_maps

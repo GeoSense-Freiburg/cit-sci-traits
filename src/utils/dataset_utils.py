@@ -258,7 +258,7 @@ def get_trait_models_dir(trait: str, config: ConfigBox = cfg) -> Path:
     return get_models_dir(config) / trait / config.train.arch
 
 
-def get_latest_run(runs_path: Path):
+def get_latest_run(runs_path: Path) -> Path:
     """Get latest run from a specified trait models path."""
     sorted_runs = sorted(
         [run for run in Path(runs_path).glob("*") if "tmp" not in run.name],
@@ -364,13 +364,7 @@ def get_trait_map_fns(y_set: str, config: ConfigBox = cfg) -> list[Path]:
 
 def get_predict_dir(config: ConfigBox = cfg) -> Path:
     """Get the path to the predicted trait directory for a specific configuration."""
-    return (
-        Path(config.processed.dir)
-        / config.PFT
-        / config.model_res
-        / config.datasets.Y.use
-        / config.processed.predict_dir
-    )
+    return get_processed_dir(config) / config.predict.dir
 
 
 def add_cv_splits_to_column(
