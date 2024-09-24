@@ -196,24 +196,18 @@ stages:
       - ${processed.dir}/${PFT}/${model_res}/${aoa.dir}:
           persist: true
 
-  # predict:
-  #   cmd: python src/models/predict_traits.py -b 2 -r
-  #   deps:
-  #     - src/models/predict_traits.py
-  #     - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
-  #     - ${models.dir}/${PFT}/${model_res}/${datasets.Y.use}/${train.arch}
-  #   params:
-  #     - model_res
-  #     - PFT
-  #     - datasets.Y.use
-  #     - eo_data.predict.dir
-  #     - eo_data.predict.filename
-  #     - train.arch
-  #     - processed.dir
-  #     - processed.predict_dir
-  #   outs:
-  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.predict_dir}:
-  #         persist: true
+  predict:
+    cmd: python src/models/predict_traits.py -b 3 -r
+    deps:
+      - src/models/predict_traits.py
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.mask_fn}
+      - ${models.dir}/${PFT}/${model_res}
+    params:
+      - predict
+    outs:
+      - ${processed.dir}/${PFT}/${model_res}/${predict.dir}:
+          persist: true
 
   # splot_corr:
   #   cmd: python src/analysis/splot_correlation.py -n 4
