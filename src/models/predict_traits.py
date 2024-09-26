@@ -1,18 +1,19 @@
 """Predict traits using best and most recent models."""
 
 import argparse
-import tempfile
+import shutil
 from pathlib import Path
 from typing import Generator
 
 import dask.dataframe as dd
 import pandas as pd
-from autogluon.tabular import TabularDataset, TabularPredictor
+from autogluon.tabular import TabularPredictor
 from box import ConfigBox
 from tqdm import tqdm
 
 from src.conf.conf import get_config
 from src.conf.environment import log
+from src.utils.dask_utils import close_dask, df_to_dd, init_dask
 from src.utils.dataset_utils import (
     get_cov_dir,
     get_latest_run,
@@ -22,6 +23,8 @@ from src.utils.dataset_utils import (
     get_predict_mask_fn,
 )
 from src.utils.df_utils import grid_df_to_raster, pipe_log
+
+CFG = get_config()
 
 
 def cli() -> argparse.Namespace:
@@ -35,7 +38,18 @@ def cli() -> argparse.Namespace:
         help="Calculate Coefficient of Variation (instead of normal prediction)",
     )
     parser.add_argument(
-        "-b", "--batches", type=int, default=1, help="Number of batches for prediction"
+        "-b",
+        "--batches",
+        type=int,
+        default=CFG.predict.batches,
+        help="Number of batches for prediction",
+    )
+    parser.add_argument(
+        "-n",
+        "--n_workers",
+        type=int,
+        default=CFG.predict.n_workers,
+        help="Number of workers",
     )
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
 
@@ -48,144 +62,103 @@ def cli() -> argparse.Namespace:
 
 def predict_trait_ag_dask(
     data: dd.DataFrame,
-    model: TabularPredictor,
-    batches: int = 2,
+    model_path: Path,
 ) -> pd.DataFrame:
     """Predict the trait using the given model in batches, optimized for Dask DataFrames,
     ensuring order is preserved."""
-    log.info("Repartitioning data into %d batches...", batches)
-    data = data.repartition(npartitions=batches)
-
-    predictions = []
-    log.info("Predicting in batches...")
-    for partition in data.to_delayed():
-        batch = dd.from_delayed(partition)
-        batch_pd = batch.compute()
-        xy = batch_pd[["x", "y"]]
-        batch_pd = batch_pd.drop(columns=["x", "y"])
-        predictions.append(
-            pd.concat(
-                [
-                    xy.reset_index(drop=True),
-                    model.predict(batch_pd, as_pandas=True).reset_index(drop=True),
-                ],
-                axis=1,
-            )
-        )
-
-    # Concatenate all batch predictions using Dask
-    log.info("Combining batch predictions...")
-    return pd.concat(predictions).reset_index(drop=True).set_index(["y", "x"])
+    log.info("Prediction with Dask...")
+    return (
+        data.map_partitions(predict_partition, predictor_path=model_path)
+        .compute()
+        .set_index(["y", "x"])
+    )
 
 
-def predict_trait_ag(data: pd.DataFrame, model: TabularPredictor) -> pd.DataFrame:
+def predict_trait_ag(data: pd.DataFrame, model_path: Path) -> pd.DataFrame:
     """Predict the trait using the given model in batches."""
+    model = TabularPredictor.load(str(model_path))
     full_prediction = model.predict(data.drop(columns=["x", "y"]), as_pandas=True)
 
     # Concatenate xy DataFrame with predictions and set index
     result = pd.concat(
         [
-            TabularDataset(data[["x", "y"]].reset_index(drop=True)),
-            full_prediction.reset_index(drop=True),
+            data[["x", "y"]].reset_index(drop=True),
+            full_prediction.reset_index(  # pyright: ignore[reportAttributeAccessIssue]
+                drop=True
+            ),
         ],
         axis=1,
     )
     return result.set_index(["y", "x"])
 
 
-def predict_trait(
-    predict_data: pd.DataFrame | dd.DataFrame,
-    full_model: TabularPredictor,
-    batches: int,
-) -> pd.DataFrame:
-    """Predict the trait using the given model."""
-    if batches > 1:
-        log.info("Batches > 1. Predicting in batches with Dask...")
-        if isinstance(predict_data, pd.DataFrame):
-            predict_data = dd.from_pandas(predict_data, npartitions=batches)
+def predict_partition(partition: pd.DataFrame, predictor_path: Path):
+    """Predict on a single partition."""
+    fold_predictor = TabularPredictor.load(str(predictor_path))
 
-        pred = predict_trait_ag_dask(predict_data, full_model, batches)
-    else:
-        log.info("No batches detected. Loading full data and predicting...")
-        pred = predict_trait_ag(
-            predict_data,
-            full_model,
-        )
+    predictions = fold_predictor.predict(
+        partition.drop(columns=["x", "y"]), as_pandas=True
+    )
 
-    return pred
+    return pd.concat(
+        [
+            partition[["x", "y"]].reset_index(drop=True),
+            predictions.reset_index(  # pyright: ignore[reportAttributeAccessIssue]
+                drop=True
+            ),
+        ],
+        axis=1,
+    )
 
 
-def coefficient_of_variation(
-    predict_data: dd.DataFrame, cv_dir: Path, batches: int = 2
-) -> pd.DataFrame:
-    """Calculate the Coefficient of Variation for the given model."""
-    predict_data = predict_data.repartition(npartitions=batches)
+def predict_cov_dask(
+    predict_data: dd.DataFrame, cv_dir: Path
+) -> tuple[pd.DataFrame, Path]:
+    """Calculate the Coefficient of Variation for the given model using parallel predictions."""
+    cv_predictions = []
+    tmp_dir = get_cov_dir(get_config()) / "tmp"
+    tmp_dir.mkdir(parents=True, exist_ok=True)
 
-    # xy = predict_data[["x", "y"]]
-    # predict_data = predict_data.drop(columns=["x", "y"])
+    for fold_model_path in cv_dir.iterdir():
+        cv_prediction_fn = Path(tmp_dir) / f"{fold_model_path.stem}.parquet"
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cv_predictions = []
+        if not fold_model_path.is_dir():
+            continue
 
-        for fold_model in cv_dir.iterdir():
-            if not fold_model.is_dir():
-                continue
+        if cv_prediction_fn.exists():
+            log.info("Skipping %s, already exists", cv_prediction_fn)
+            cv_predictions.append(cv_prediction_fn)
+            continue
 
-            log.info("Predicting with %s...", fold_model.stem)
-            fold_predictor = TabularPredictor.load(str(fold_model))
+        log.info("Predicting with %s...", fold_model_path.stem)
+        predict_data.map_partitions(
+            predict_partition, predictor_path=fold_model_path
+        ).compute().set_index(["y", "x"]).to_parquet(cv_prediction_fn)
 
-            if batches > 1:
-                batch_predictions = []
-                # batch_size = len(predict_data) // batches + (len(predict_data) % batches > 0)
+        cv_predictions.append(cv_prediction_fn)
 
-                # for i in range(batches):
-                #     batch_data = predict_data.iloc[i * batch_size : (i + 1) * batch_size]
-                #     batch_predictions.append(
-                #         pd.DataFrame(
-                #             fold_predictor.predict(batch_data),
-                #             columns=[f"{fold_model.stem}"],
-                #             index=batch_data.index,
-                #         )
-                #     )
+    log.info("CV predictions complete. Re-loading...")
+    dfs = [pd.read_parquet(f).set_index(["y", "x"]) for f in cv_predictions]
 
-                for partition in predict_data.to_delayed():
-                    batch = dd.from_delayed(partition)
-                    batch_pd = batch.compute()
-                    xy = batch_pd[["x", "y"]]
-                    batch_pd = batch_pd.drop(columns=["x", "y"])
-                    batch_predictions.append(
-                        pd.concat(
-                            [
-                                xy.reset_index(drop=True),
-                                fold_predictor.predict(
-                                    batch_pd, as_pandas=True
-                                ).reset_index(drop=True),
-                            ],
-                            axis=1,
-                        )
-                    )
+    log.info("Calculating CoV...")
+    cov = (
+        pd.concat(dfs, axis=1)
+        .pipe(lambda _df: _df.std(axis=1) / _df.mean(axis=1))  # CoV calculation
+        .rename("cov")
+        .to_frame()
+    )
 
-                fold_predictions = pd.concat(batch_predictions)
-            else:
-                raise NotImplementedError("Batches == 1 not implemented for CoV")
+    return cov, tmp_dir
 
-            prediction_file = Path(temp_dir) / f"{fold_model.stem}.parquet"
-            fold_predictions.to_parquet(prediction_file, index=True)
-            cv_predictions.append(prediction_file)
 
-        log.info("CV predictions complete. Re-loading...")
-        dfs = [pd.read_parquet(f) for f in cv_predictions]
-
-        log.info("Calculating CoV...")
-        cov = (
-            pd.concat(dfs, axis=1)
-            .pipe(lambda _df: _df.std(axis=1) / _df.mean(axis=1))  # CoV calculation
-            .rename("cov")
-            .pipe(lambda _df: pd.concat([xy, _df], axis=1))
-            .set_index(["y", "x"])
-        )
-
-        return cov
+def predict_dask(
+    predict_data: dd.DataFrame, model_path: Path, cov: bool
+) -> tuple[pd.DataFrame, Path | None]:
+    """Predict the trait using the given model in batches, optimized for Dask DataFrames,
+    ensuring order is preserved."""
+    if cov:
+        return predict_cov_dask(predict_data, model_path)
+    return predict_trait_ag_dask(predict_data, model_path / "full_model"), None
 
 
 def predict_traits_ag(
@@ -193,11 +166,13 @@ def predict_traits_ag(
     trait_model_dirs: list[Path] | Generator[Path, None, None],
     res: int | float,
     out_dir: str | Path,
-    batches: int = 1,
+    predict_cfg: ConfigBox,
     resume: bool = False,
     cov: bool = False,
 ) -> None:
     """Predict all traits that have been trained."""
+    dask: bool = predict_cfg.batches > 1
+
     for trait_dir in (pbar := tqdm(list(trait_model_dirs))):
         if not trait_dir.is_dir():
             log.warning("Skipping %s, not a directory", trait_dir)
@@ -212,8 +187,8 @@ def predict_traits_ag(
 
             pbar.set_description(f"{trait} -- {trait_set_dir.stem}")
 
-            trait_set: str = trait_set_dir.stem
-            out_fn: Path = (
+            trait_set = trait_set_dir.stem
+            out_fn = (
                 Path(out_dir)
                 / trait
                 / trait_set
@@ -225,24 +200,34 @@ def predict_traits_ag(
                 log.info("Skipping %s, already exists", out_fn)
                 continue
 
-            if cov:
-                log.info("Generating Coefficient of Variation for %s...", trait_set_dir)
-                if batches == 1:
-                    raise NotImplementedError("Batches == 1 not implemented for CoV")
-
+            if dask:
                 if isinstance(predict_data, pd.DataFrame):
-                    predict_data = dd.from_pandas(predict_data, npartitions=batches)
+                    predict_data = df_to_dd(
+                        predict_data, npartitions=predict_cfg.batches
+                    )
 
-                pred = coefficient_of_variation(
-                    predict_data, trait_set_dir / "cv", batches
+                client, cluster = init_dask(
+                    dashboard_address=get_config().dask_dashboard,
+                    n_workers=predict_cfg.workers,
+                    threads_per_worker=1,
                 )
+
+                pred, tmp_dir = predict_dask(predict_data, trait_set_dir, cov)
+                close_dask(client, cluster)
             else:
                 log.info("Predicting traits for %s...", trait_set_dir)
-                full_model = TabularPredictor.load(str(trait_set_dir / "full_model"))
-                pred = predict_trait(predict_data, full_model, batches)
+                if isinstance(predict_data, dd.DataFrame):
+                    predict_data = predict_data.compute()
+                pred = predict_trait_ag(
+                    pd.DataFrame(predict_data), trait_set_dir / "full_model"
+                )
+                tmp_dir = None
 
             log.info("Writing predictions to raster...")
             grid_df_to_raster(pred, res, out_fn)
+
+            if tmp_dir is not None:
+                shutil.rmtree(tmp_dir)
 
 
 def load_predict(tmp_predict_fn: Path, batches: int = 1) -> pd.DataFrame | dd.DataFrame:
@@ -263,15 +248,15 @@ def load_predict(tmp_predict_fn: Path, batches: int = 1) -> pd.DataFrame | dd.Da
         )
 
         predict.to_parquet(tmp_predict_fn, compression="zstd")
+
     else:
         log.info("Found existing masked predict data. Reading...")
-        predict = (
-            pd.read_parquet(tmp_predict_fn)
-            if batches == 1
-            else dd.read_parquet(tmp_predict_fn)
-        )
 
-    return predict
+    return (
+        pd.read_parquet(tmp_predict_fn)
+        if batches == 1
+        else dd.read_parquet(tmp_predict_fn).repartition(npartitions=batches)
+    )
 
 
 def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
@@ -302,11 +287,13 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
             predict_data=predict,
             trait_model_dirs=model_dirs,
             res=cfg.target_resolution,
+            predict_cfg=cfg.predict,
             out_dir=out_dir,
-            batches=args.batches,
             resume=args.resume,
             cov=args.cov,
         )
+    else:
+        raise NotImplementedError("Only Autogluon models are currently supported.")
 
     log.info("Cleaning up temporary files...")
     tmp_predict_fn.unlink()
