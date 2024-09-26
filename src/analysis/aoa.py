@@ -15,6 +15,7 @@ from distributed import Client
 from src.conf.conf import get_config
 from src.conf.environment import log
 from src.utils.cuda_utils import df_to_cupy
+from src.utils.dask_cuda_utils import init_dask_cuda
 from src.utils.dask_utils import close_dask, df_to_dd, init_dask
 from src.utils.dataset_utils import (
     get_aoa_dir,
@@ -166,7 +167,7 @@ def average_train_distance_chunked(
         avg_distances = cp.mean(distances)
         return avg_distances
 
-    client, cluster = init_dask(cuda=True, device_ids=device_ids)
+    client, cluster = init_dask_cuda(device_ids=device_ids)
 
     # Define chunk size based on the number of chunks
     n_samples = train_df.shape[0]
@@ -206,7 +207,7 @@ def average_train_distance(
         avg_distances = cp.mean(distances, axis=1)
         return avg_distances
 
-    client, cluster = init_dask(cuda=True, device_ids=device_ids)
+    client, cluster = init_dask_cuda(device_ids=device_ids)
 
     # Convert data to CuPy for GPU processing
     cupy_data = df_to_cupy(train_df, device_ids[0])
@@ -265,7 +266,7 @@ def calc_di_threshold(
     # Separate the data into folds based on the 'fold' column
     folds = _train_folds_to_cupy(df, device_ids[0])
 
-    client, cluster = init_dask(cuda=True, device_ids=device_ids[1:])
+    client, cluster = init_dask_cuda(device_ids=device_ids[1:])
     # client.restart()
 
     folds_scattered = client.scatter(folds, broadcast=True)
@@ -308,7 +309,7 @@ def calc_di_predict(
 ) -> pd.DataFrame:
     """Compute the DI values and AOA mask for the predict data using the training data
     and DI threshold."""
-    client, cluster = init_dask(cuda=True, device_ids=device_ids)
+    client, cluster = init_dask_cuda(device_ids=device_ids)
 
     predict_gpu = predict.to_backend("cudf")
     train_gpu = dd.from_pandas(train).to_backend("cudf")
@@ -392,7 +393,7 @@ def calc_aoa(
     log.info("DI threshold: %.4f", di_threshold)
 
     log.info("Loading, scaling, and weighting predict data...")
-    client, cluster = init_dask(cuda=False)
+    client, cluster = init_dask()
     pred_scaled_weighted = scale_and_weight_predict(
         df=load_predict_data(
             npartitions=ts_cfg.predict_partitions, sample=cfg.aoa.predict_sample
