@@ -7,19 +7,9 @@ import pandas as pd
 from distributed import Client, LocalCluster
 
 
-def init_dask(
-    memory_limit: str = "auto",
-    dashboard_address: str = "auto",
-    n_workers: int | None = None,
-    threads_per_worker: int | None = None,
-) -> tuple[Client, LocalCluster]:
+def init_dask(**kwargs) -> tuple[Client, LocalCluster]:
     """Initialize the Dask client and cluster."""
-    cluster = LocalCluster(
-        dashboard_address=dashboard_address,
-        n_workers=n_workers,
-        threads_per_worker=threads_per_worker,
-        memory_limit=memory_limit,
-    )
+    cluster = LocalCluster(**kwargs)
 
     client = Client(cluster)
     return client, cluster
