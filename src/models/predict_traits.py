@@ -1,6 +1,7 @@
 """Predict traits using best and most recent models."""
 
 import argparse
+import errno
 import shutil
 from pathlib import Path
 from typing import Generator
@@ -301,4 +302,15 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
 
 
 if __name__ == "__main__":
-    main(cli())
+    i = 0
+    try:
+        main(cli())
+    except OSError as e:  # Except
+        if e.errno == errno.EHOSTDOWN:  # Check for specific errno
+            i += 1
+            log.error("OSError: [Errno %s] Host is down: %s", e.errno, e.strerror)
+            if i < 3:
+                log.error("Retrying...")
+                main(cli())
+        else:
+            raise
