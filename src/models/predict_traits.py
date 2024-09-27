@@ -24,8 +24,6 @@ from src.utils.dataset_utils import (
 )
 from src.utils.df_utils import grid_df_to_raster, pipe_log
 
-CFG = get_config()
-
 
 def cli() -> argparse.Namespace:
     """Parse command-line arguments."""
@@ -41,14 +39,14 @@ def cli() -> argparse.Namespace:
         "-b",
         "--batches",
         type=int,
-        default=CFG.predict.batches,
+        default=24,
         help="Number of batches for prediction",
     )
     parser.add_argument(
         "-n",
         "--n_workers",
         type=int,
-        default=CFG.predict.n_workers,
+        default=4,
         help="Number of workers",
     )
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
