@@ -12,7 +12,7 @@ from box import ConfigBox
 from tqdm import tqdm
 
 from src.conf.conf import get_config
-from src.conf.environment import log
+from src.conf.environment import detect_system, log
 from src.utils.dask_utils import close_dask, df_to_dd, init_dask
 from src.utils.dataset_utils import (
     get_cov_dir,
@@ -208,7 +208,7 @@ def predict_traits_ag(
 
                 client, cluster = init_dask(
                     dashboard_address=get_config().dask_dashboard,
-                    n_workers=predict_cfg.workers,
+                    n_workers=predict_cfg.n_workers,
                     threads_per_worker=1,
                 )
 
@@ -263,6 +263,8 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
     """
     Predict the traits for the given model.
     """
+    predict_cfg = cfg.predict[detect_system()]
+
     if not args.verbose:
         log.setLevel("WARNING")
 
@@ -279,7 +281,7 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     tmp_predict_fn = Path(out_dir / "predict.parquet")
 
-    predict = load_predict(tmp_predict_fn, args.batches)
+    predict = load_predict(tmp_predict_fn, predict_cfg.batches)
 
     if cfg.train.arch == "autogluon":
         model_dirs = models_dir.glob("*")
@@ -287,7 +289,7 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
             predict_data=predict,
             trait_model_dirs=model_dirs,
             res=cfg.target_resolution,
-            predict_cfg=cfg.predict,
+            predict_cfg=predict_cfg,
             out_dir=out_dir,
             resume=args.resume,
             cov=args.cov,

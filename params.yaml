@@ -208,8 +208,12 @@ aoa:
   
 predict:
   dir: predict
-  n_workers: 4
-  batches: 24
+  geos:
+    n_workers: 10
+    batches: 24
+  pylos:
+    n_workers: 4
+    batches: 24
 
 cov:
   dir: cov
