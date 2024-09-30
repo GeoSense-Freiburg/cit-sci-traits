@@ -432,25 +432,43 @@ stages:
       md5: 2694f64d33dd768064dba52dd5cbaa66
       size: 956
   cov:
-    cmd: python src/analysis/cov.py -b 2 -r
+    cmd: python src/models/predict_traits.py -r --cov
     deps:
-    - path: data/features/predict/001/eo_predict.parquet
+    - path: data/features/predict/001/eo_predict_imputed.parquet
       hash: md5
-      md5: 51b833f7798c2ac29fab54cb10b6cce3
-      size: 33109670422
-    - path: src/analysis/cov.py
+      md5: 0d865c4fb80cfb31a2dca600ee87896f
+      size: 32491512883
+    - path: data/features/predict/001/eo_predict_mask.parquet
       hash: md5
-      md5: 6289de056aaf8c444c73cdb5d49e991b
-      size: 5137
+      md5: ccb875cc5b91fa8167876a9e075a3b47
+      size: 605125575
+    - path: models/Shrub_Tree_Grass/001
+      hash: md5
+      md5: 201da38d1bb50ffb47555f34ee7d0f5a.dir
+      size: 15977129650
+      nfiles: 20222
+    - path: src/models/predict_traits.py
+      hash: md5
+      md5: 5f28fafbd49ae7b7d548f132d922e2c0
+      size: 10167
     params:
       params.yaml:
-        target_resolution: 0.01
+        cov:
+          dir: cov
+        predict:
+          dir: predict
+          geos:
+            n_workers: 10
+            batches: 24
+          pylos:
+            n_workers: 4
+            batches: 24
     outs:
-    - path: data/processed/Shrub_Tree_Grass/001/splot_gbif/cov
+    - path: data/processed/Shrub_Tree_Grass/001/cov
       hash: md5
-      md5: 330d9b51b7b89ee11d427f188a84b416.dir
-      size: 22953495610
-      nfiles: 33
+      md5: c163fa9d7adb4a82fbc7e8f14b1e780b.dir
+      size: 34516748207
+      nfiles: 4
   build_final_product:
     cmd: python src/data/build_final_product.py
     deps:
