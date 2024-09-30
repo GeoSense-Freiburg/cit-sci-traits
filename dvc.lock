@@ -539,8 +539,8 @@ stages:
       nfiles: 20222
     - path: src/analysis/aoa.py
       hash: md5
-      md5: 470757831da41c75efc17b5b3d3c92a8
-      size: 15494
+      md5: 53ae38e7bc0e3e808c924f7caf7054af
+      size: 15513
     params:
       params.yaml:
         aoa:
