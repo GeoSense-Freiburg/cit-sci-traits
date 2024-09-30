@@ -374,37 +374,41 @@ stages:
       md5: ccb875cc5b91fa8167876a9e075a3b47
       size: 605125575
   predict:
-    cmd: python src/models/predict_traits.py -b 2 -r
+    cmd: python src/models/predict_traits.py -r
     deps:
-    - path: data/features/predict/001/eo_predict.parquet
+    - path: data/features/predict/001/eo_predict_imputed.parquet
       hash: md5
-      md5: 51b833f7798c2ac29fab54cb10b6cce3
-      size: 33109670422
-    - path: models/Shrub_Tree_Grass/001/splot_gbif/autogluon
+      md5: 0d865c4fb80cfb31a2dca600ee87896f
+      size: 32491512883
+    - path: data/features/predict/001/eo_predict_mask.parquet
       hash: md5
-      md5: 9b4a63ea354a00cccb3f0c90203f637e.dir
-      size: 271778692947
-      nfiles: 9484
+      md5: ccb875cc5b91fa8167876a9e075a3b47
+      size: 605125575
+    - path: models/Shrub_Tree_Grass/001
+      hash: md5
+      md5: 201da38d1bb50ffb47555f34ee7d0f5a.dir
+      size: 15977129650
+      nfiles: 20222
     - path: src/models/predict_traits.py
       hash: md5
-      md5: d76701cab0173f5edc774db21c44aa19
-      size: 5132
+      md5: 5f28fafbd49ae7b7d548f132d922e2c0
+      size: 10167
     params:
       params.yaml:
-        PFT: Shrub_Tree_Grass
-        datasets.Y.use: splot_gbif
-        eo_data.predict.dir: predict
-        eo_data.predict.filename: eo_predict.parquet
-        model_res: '001'
-        processed.dir: data/processed
-        processed.predict_dir: predict
-        train.arch: autogluon
+        predict:
+          dir: predict
+          geos:
+            n_workers: 10
+            batches: 24
+          pylos:
+            n_workers: 4
+            batches: 24
     outs:
-    - path: data/processed/Shrub_Tree_Grass/001/splot_gbif/predict
+    - path: data/processed/Shrub_Tree_Grass/001/predict
       hash: md5
-      md5: 0925e8abb6d4fb4cda8262e90ddb09e1.dir
-      size: 21624371949
-      nfiles: 33
+      md5: 03f4388f75c78ed4175d4cf6d85603d4.dir
+      size: 42349891101
+      nfiles: 66
   splot_corr:
     cmd: python src/analysis/splot_correlation.py -n 4
     deps:
