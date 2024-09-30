@@ -137,7 +137,7 @@ def predict_cov_dask(
         cv_predictions.append(cv_prediction_fn)
 
     log.info("CV predictions complete. Re-loading...")
-    dfs = [pd.read_parquet(f).set_index(["y", "x"]) for f in cv_predictions]
+    dfs = [pd.read_parquet(f) for f in cv_predictions]
 
     log.info("Calculating CoV...")
     cov = (
