@@ -219,16 +219,19 @@ stages:
   #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.splot_corr}:
   #         persist: true
 
-  # cov:
-  #   cmd: python src/analysis/cov.py -b 2 -r
-  #   deps:
-  #     - src/analysis/cov.py
-  #     - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.filename}
-  #   params:
-  #     - target_resolution
-  #   outs:
-  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.cov_dir}:
-  #         persist: true
+  cov:
+    cmd: python src/models/predict_traits.py -r --cov
+    deps:
+      - src/models/predict_traits.py
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.mask_fn}
+      - ${models.dir}/${PFT}/${model_res}
+    params:
+      - predict
+      - cov
+    outs:
+      - ${processed.dir}/${PFT}/${model_res}/${cov.dir}:
+          persist: true
 
   # build_final_product:
   #   cmd: python src/data/build_final_product.py
