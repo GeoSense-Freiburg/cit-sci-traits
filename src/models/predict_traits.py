@@ -156,7 +156,7 @@ def predict_dask(
     """Predict the trait using the given model in batches, optimized for Dask DataFrames,
     ensuring order is preserved."""
     if cov:
-        return predict_cov_dask(predict_data, model_path)
+        return predict_cov_dask(predict_data, model_path / "cv")
     return predict_trait_ag_dask(predict_data, model_path / "full_model"), None
 
 
