@@ -209,7 +209,7 @@ aoa:
 predict:
   dir: predict
   geos:
-    n_workers: 10
+    n_workers: 14
     batches: 24
   pylos:
     n_workers: 4
