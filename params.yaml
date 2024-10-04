@@ -9,6 +9,8 @@ raw_dir: data/raw
 interim_dir: data/interim
 processed_dir: data/processed
 dask_dashboard: ":39143"
+trait_mapping: "reference/trait_mapping.json"
+trait_stat_mapping: "reference/trait_stat_mapping.json"
 
 pylos:
   featurize_train:
