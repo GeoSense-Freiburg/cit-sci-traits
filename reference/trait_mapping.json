@@ -145,17 +145,17 @@
         "unit": "cm g"
     },
     "3112": {
-        "short": "Leaf area",
+        "short": "Leaf area (3112)",
         "long": "Leaf area (in case of compound leaves: leaf, undefined if petiole in- or excluded)",
         "unit": "mm2"
     },
     "3113": {
-        "short": "Leaf area",
+        "short": "Leaf area (3113)",
         "long": "Leaf area (in case of compound leaves: leaflet, undefined if petiole is in- or excluded)",
         "unit": "mm2"
     },
     "3114": {
-        "short": "Leaf area",
+        "short": "Leaf area (3114)",
         "long": "Leaf area (in case of compound leaves: undefined if leaf or leaflet, undefined if petiole is in- or excluded)",
         "unit": "mm2"
     },

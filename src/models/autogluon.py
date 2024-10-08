@@ -308,6 +308,15 @@ class TraitTrainer:
             eval_results = predictor.evaluate(
                 val, auxiliary_metrics=True, detailed_report=True
             )
+
+            # Normalize RMSE by the standard deviation of the validation set
+            norm_factor = val[self.trait_name].quantile(0.99) - val[
+                self.trait_name
+            ].quantile(0.01)
+            eval_results["norm_root_mean_squared_error"] = (
+                eval_results["root_mean_squared_error"] / norm_factor
+            )
+
             pd.DataFrame({col: [val] for col, val in eval_results.items()}).assign(
                 fold=fold_id
             ).to_csv(fold_model_path / self.opts.cfg.train.eval_results)
