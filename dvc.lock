@@ -449,8 +449,8 @@ stages:
       nfiles: 20222
     - path: src/models/predict_traits.py
       hash: md5
-      md5: 5f28fafbd49ae7b7d548f132d922e2c0
-      size: 10167
+      md5: 4cd3bebadcdc862806f4e1c525efaeb8
+      size: 10152
     params:
       params.yaml:
         cov:
@@ -458,7 +458,7 @@ stages:
         predict:
           dir: predict
           geos:
-            n_workers: 10
+            n_workers: 14
             batches: 24
           pylos:
             n_workers: 4
@@ -466,9 +466,9 @@ stages:
     outs:
     - path: data/processed/Shrub_Tree_Grass/001/cov
       hash: md5
-      md5: c163fa9d7adb4a82fbc7e8f14b1e780b.dir
-      size: 34516748207
-      nfiles: 4
+      md5: a3f34140e3e30d0cd0b62e4aeb3793ea.dir
+      size: 44567507181
+      nfiles: 66
   build_final_product:
     cmd: python src/data/build_final_product.py
     deps:
