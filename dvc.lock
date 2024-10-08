@@ -391,14 +391,14 @@ stages:
       nfiles: 20222
     - path: src/models/predict_traits.py
       hash: md5
-      md5: 5f28fafbd49ae7b7d548f132d922e2c0
-      size: 10167
+      md5: 4cd3bebadcdc862806f4e1c525efaeb8
+      size: 10152
     params:
       params.yaml:
         predict:
           dir: predict
           geos:
-            n_workers: 10
+            n_workers: 14
             batches: 24
           pylos:
             n_workers: 4
