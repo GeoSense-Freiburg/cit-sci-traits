@@ -1,5 +1,8 @@
 """Utility functions for cleaning and processing trait data."""
 
+import json
+import re
+
 import pandas as pd
 from box import ConfigBox
 
@@ -67,3 +70,27 @@ def get_active_traits(cfg: ConfigBox = get_config()) -> list[str]:
     """Returns a list of full names of the active traits. E.g. ['X1_mean', 'X2_mean']"""
     y_cfg = cfg.datasets.Y
     return [f"X{i}_{y_cfg.trait_stats[y_cfg.trait_stat - 1]}" for i in y_cfg.traits]
+
+
+def get_trait_number_from_id(trait_id: str) -> str:
+    """Parses the trait number from a trait id string."""
+    tnum = re.search(r"\d+", trait_id)
+    if tnum is None:
+        raise ValueError(f"Could not extract trait number from {trait_id}")
+    return tnum.group()
+
+
+def get_trait_name_from_id(trait_id: str, length: str = "short") -> tuple[str, str]:
+    """Returns the name of a trait from its id as well as the unit of the trait."""
+    with open(get_config().trait_mapping, encoding="utf-8") as f:
+        mapping = json.load(f)
+
+    tnum = get_trait_number_from_id(trait_id)
+
+    if tnum not in mapping:
+        raise ValueError(f"Trait number {tnum} not in mapping")
+
+    if length not in mapping[tnum]:
+        raise ValueError(f"Length {length} not in mapping for trait {trait_id}")
+
+    return mapping[tnum][length], mapping[tnum]["unit"]
