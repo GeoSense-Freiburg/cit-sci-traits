@@ -44,8 +44,9 @@ def get_stats(
     pred = cv_obs_vs_pred.pred.to_numpy()
 
     if log_transform:
-        obs = np.log(obs)
-        pred = np.log(pred)
+        # scale obs and pred to avoid log(0)
+        obs = np.log(obs + 1)
+        pred = np.log(pred + 1)
         cv_obs_vs_pred = cv_obs_vs_pred.assign(obs=obs, pred=pred)
 
     r2 = metrics.r2_score(obs, pred)
