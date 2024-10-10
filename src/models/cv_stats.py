@@ -44,8 +44,9 @@ def get_stats(
     pred = cv_obs_vs_pred.pred.to_numpy()
 
     if log_transform:
-        obs = np.log(obs)
-        pred = np.log(pred)
+        # scale obs and pred to avoid log(0)
+        obs = np.log(obs + 1)
+        pred = np.log(pred + 1)
         cv_obs_vs_pred = cv_obs_vs_pred.assign(obs=obs, pred=pred)
 
     r2 = metrics.r2_score(obs, pred)
@@ -168,15 +169,14 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
 
             results_path = Path(ts_dir, cfg.train.eval_results)
             old_path = results_path.with_name(
-                f"{results_path.stem}_old.{results_path.suffix}"
+                f"{results_path.stem}_old{results_path.suffix}"
             )
+            if not results_path.exists():
+                raise FileNotFoundError(f"Results file not found: {results_path}")
+
             if results_path.exists() and old_path.exists():
                 log.info("Found existing stats. Skipping...")
                 continue
-
-            results_path.rename(
-                results_path.with_name(f"{results_path.stem}_old.{results_path.suffix}")
-            )
 
             log.info("Joining X and Y data...")
             trait_df = load_xy(x, trait_id, trait_set)
@@ -220,6 +220,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
             )
 
             log.info("Writing stats to disk...")
+            results_path.rename(old_path)
             all_stats.to_csv(results_path, index=False)
 
     log.info("Cleaning up temporary files...")
