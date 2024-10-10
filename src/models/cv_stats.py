@@ -1,4 +1,5 @@
 import argparse
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,8 @@ from src.utils.dataset_utils import (
 )
 from src.utils.spatial_utils import lat_weights, weighted_pearson_r
 from src.utils.training_utils import filter_trait_set
+
+TMP_DIR = Path("tmp")
 
 
 @delayed
@@ -71,12 +74,13 @@ def get_stats(
     }
 
 
-def load_x(trait_set: str = "splot") -> pd.DataFrame:
+def load_x(trait_set: str) -> pd.DataFrame:
     """Load X data for a given trait set."""
     if trait_set not in ["splot", "splot_gbif", "gbif"]:
         raise ValueError("trait_set must be one of 'splot', 'splot_gbif', or 'gbif'.")
 
-    tmp_x_path = Path("tmp", "cv_stats", trait_set, "x.parquet")
+    tmp_x_path = TMP_DIR / "cv_stats" / trait_set / "x.parquet"
+
     if tmp_x_path.exists():
         log.info("Found cached X data. Loading...")
         return pd.read_parquet(tmp_x_path)
@@ -148,6 +152,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
     for trait_set in trait_sets:
         log.info("Processing trait set: %s", trait_set)
         log.info("Loading X data...")
+
         x = load_x(trait_set)
 
         for trait_dir in models_dir.iterdir():
@@ -216,6 +221,9 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
 
             log.info("Writing stats to disk...")
             all_stats.to_csv(results_path, index=False)
+
+    log.info("Cleaning up temporary files...")
+    shutil.rmtree(TMP_DIR)
 
 
 if __name__ == "__main__":
