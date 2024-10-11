@@ -341,8 +341,8 @@ stages:
     outs:
     - path: models/Shrub_Tree_Grass/001
       hash: md5
-      md5: 816d7d668d0db7e7e48a9c4e665c45dd.dir
-      size: 21883356955
+      md5: 3772f172da6d2560f8b1922c7300ee46.dir
+      size: 18793377357
       nfiles: 20420
   build_predict:
     cmd: python src/features/featurize_predict.py
@@ -386,8 +386,8 @@ stages:
       size: 605125575
     - path: models/Shrub_Tree_Grass/001
       hash: md5
-      md5: 816d7d668d0db7e7e48a9c4e665c45dd.dir
-      size: 21883356955
+      md5: 3772f172da6d2560f8b1922c7300ee46.dir
+      size: 18793377357
       nfiles: 20420
     - path: src/models/predict_traits.py
       hash: md5
@@ -444,8 +444,8 @@ stages:
       size: 605125575
     - path: models/Shrub_Tree_Grass/001
       hash: md5
-      md5: 816d7d668d0db7e7e48a9c4e665c45dd.dir
-      size: 21883356955
+      md5: 3772f172da6d2560f8b1922c7300ee46.dir
+      size: 18793377357
       nfiles: 20420
     - path: src/models/predict_traits.py
       hash: md5
@@ -556,8 +556,8 @@ stages:
       size: 32491512883
     - path: models/Shrub_Tree_Grass/001
       hash: md5
-      md5: 816d7d668d0db7e7e48a9c4e665c45dd.dir
-      size: 21883356955
+      md5: 3772f172da6d2560f8b1922c7300ee46.dir
+      size: 18793377357
       nfiles: 20420
     - path: src/analysis/aoa.py
       hash: md5
