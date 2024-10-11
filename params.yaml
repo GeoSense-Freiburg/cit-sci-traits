@@ -1,9 +1,9 @@
 version: "0.1.0"
-model_res: "001"
+model_res: "02"
 PFT: "Shrub_Tree_Grass"
 random_seed: 42
 base_resolution: 0.01 # Shared best resolution of all EO datasets (used for masking)
-target_resolution: 0.01 # Target resolution for model training
+target_resolution: 0.2 # Target resolution for model training
 extent: [-180, -60, 180, 90] # Extent of the final dataset
 raw_dir: data/raw
 interim_dir: data/interim
