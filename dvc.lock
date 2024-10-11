@@ -29,8 +29,8 @@ stages:
           - 90
           - 95
           - 100
-        model_res: '001'
-        target_resolution: 0.01
+        model_res: '02'
+        target_resolution: 0.2
         worldclim.bio_vars:
         - '1'
         - '4'
@@ -39,10 +39,10 @@ stages:
         - 13-14
         - '15'
     outs:
-    - path: data/interim/eo_data/001
+    - path: data/interim/eo_data/02
       hash: md5
-      md5: 33b4751370ba70d27e0b170fa13beb54.dir
-      size: 34856945252
+      md5: 790ea8b0adc4b0c2b5517bbe94b82679.dir
+      size: 119112406
       nfiles: 150
   build_predict:
     cmd: python src/features/featurize_predict.py
