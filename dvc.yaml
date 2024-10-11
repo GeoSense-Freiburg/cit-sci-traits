@@ -167,7 +167,7 @@ stages:
       - ${train.dir}/${PFT}/${model_res}/${train.cv_splits.dir}
 
   train_models:
-    cmd: python src/models/train_models.py -r
+    cmd: python src/models/train_models.py -r & python src/models/cv_stats.py
     deps:
       - src/models/train_models.py
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.mask_fn}
