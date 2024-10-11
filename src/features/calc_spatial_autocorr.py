@@ -106,7 +106,7 @@ def calculate_variogram(group: pd.DataFrame, data_col: str, **kwargs) -> float |
 
 def main(cfg: ConfigBox = get_config()) -> None:
     """Main function for calculating spatial autocorrelation."""
-    syscfg = cfg[detect_system()]
+    syscfg = cfg[detect_system()][cfg.model_res]
 
     y_fn = get_y_fn(cfg)
 

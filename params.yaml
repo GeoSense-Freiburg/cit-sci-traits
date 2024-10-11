@@ -13,35 +13,157 @@ trait_mapping: "reference/trait_mapping.json"
 trait_stat_mapping: "reference/trait_stat_mapping.json"
 
 pylos:
-  featurize_train:
-    n_chunks: 6
-    n_workers: 30
-    memory_limit: null
-  build_predict:
-    n_chunks: 5
-    n_workers: null
-    memory_limit: 100GB
-    impute_chunks: 3
-  calc_spatial_autocorr:
-    n_workers: 60
-    n_workers_variogram: 5
-  skcv_splits:
-    n_workers: 60
+  "001":
+    featurize_train:
+      n_chunks: 6
+      n_workers: 30
+      memory_limit: null
+    build_predict:
+      n_chunks: 5
+      n_workers: null
+      memory_limit: 100GB
+      impute_chunks: 3
+    calc_spatial_autocorr:
+      n_workers: 60
+      n_workers_variogram: 5
+    skcv_splits:
+      n_workers: 60
+  "02":
+    featurize_train:
+      n_chunks: 1
+      n_workers: 30
+      memory_limit: null
+    build_predict:
+      n_chunks: 1
+      n_workers: null
+      memory_limit: 100GB
+      impute_chunks: 1
+    calc_spatial_autocorr:
+      n_workers: 60
+      n_workers_variogram: 5
+    skcv_splits:
+      n_workers: 60
+  "05":
+    featurize_train:
+      n_chunks: 1
+      n_workers: 30
+      memory_limit: null
+    build_predict:
+      n_chunks: 1
+      n_workers: null
+      memory_limit: 100GB
+      impute_chunks: 1
+    calc_spatial_autocorr:
+      n_workers: 60
+      n_workers_variogram: 5
+    skcv_splits:
+      n_workers: 60
+  "1":
+    featurize_train:
+      n_chunks: 1
+      n_workers: 30
+      memory_limit: null
+    build_predict:
+      n_chunks: 1
+      n_workers: null
+      memory_limit: 100GB
+      impute_chunks: 1
+    calc_spatial_autocorr:
+      n_workers: 60
+      n_workers_variogram: 5
+    skcv_splits:
+      n_workers: 60
+  "2":
+    featurize_train:
+      n_chunks: 1
+      n_workers: 30
+      memory_limit: null
+    build_predict:
+      n_chunks: 1
+      n_workers: null
+      memory_limit: 100GB
+      impute_chunks: 1
+    calc_spatial_autocorr:
+      n_workers: 60
+      n_workers_variogram: 5
+    skcv_splits:
+      n_workers: 60
 geos:
-  featurize_train:
-    n_chunks: 2
-    n_workers: 100
-    memory_limit: 150GB
-  build_predict:
-    n_chunks: 3
-    n_workers: 100
-    memory_limit: 500GB
-    impute_chunks: 2
-  calc_spatial_autocorr:
-    n_workers: 100
-    n_workers_variogram: 20
-  skcv_splits:
-    n_workers: 80
+  "001":
+    featurize_train:
+      n_chunks: 2
+      n_workers: 100
+      memory_limit: 150GB
+    build_predict:
+      n_chunks: 3
+      n_workers: 100
+      memory_limit: 500GB
+      impute_chunks: 2
+    calc_spatial_autocorr:
+      n_workers: 100
+      n_workers_variogram: 20
+    skcv_splits:
+      n_workers: 80
+  "02":
+    featurize_train:
+      n_chunks: 1
+      n_workers: 100
+      memory_limit: 150GB
+    build_predict:
+      n_chunks: 1
+      n_workers: 100
+      memory_limit: 500GB
+      impute_chunks: 1
+    calc_spatial_autocorr:
+      n_workers: 100
+      n_workers_variogram: 20
+    skcv_splits:
+      n_workers: 80
+  "05":
+    featurize_train:
+      n_chunks: 1
+      n_workers: 100
+      memory_limit: 150GB
+    build_predict:
+      n_chunks: 1
+      n_workers: 100
+      memory_limit: 500GB
+      impute_chunks: 1
+    calc_spatial_autocorr:
+      n_workers: 100
+      n_workers_variogram: 20
+    skcv_splits:
+      n_workers: 80
+  "1":
+    featurize_train:
+      n_chunks: 1
+      n_workers: 100
+      memory_limit: 150GB
+    build_predict:
+      n_chunks: 1
+      n_workers: 100
+      memory_limit: 500GB
+      impute_chunks: 1
+    calc_spatial_autocorr:
+      n_workers: 100
+      n_workers_variogram: 20
+    skcv_splits:
+      n_workers: 80
+  "2":
+    featurize_train:
+      n_chunks: 1
+      n_workers: 100
+      memory_limit: 150GB
+    build_predict:
+      n_chunks: 1
+      n_workers: 100
+      memory_limit: 500GB
+      impute_chunks: 1
+    calc_spatial_autocorr:
+      n_workers: 100
+      n_workers_variogram: 20
+    skcv_splits:
+      n_workers: 80
 
 mask:
   path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif

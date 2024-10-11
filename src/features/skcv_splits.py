@@ -155,7 +155,7 @@ def get_splits(
 
 def main(cfg: ConfigBox = get_config()) -> None:
     """Main function to generate spatial k-fold cross-validation splits."""
-    syscfg = cfg[detect_system()]
+    syscfg = cfg[detect_system()][cfg.model_res]
 
     # Ignore warnings
     warnings.simplefilter(action="ignore", category=UserWarning)

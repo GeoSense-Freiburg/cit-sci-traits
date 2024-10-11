@@ -62,7 +62,7 @@ def main(cfg: ConfigBox = get_config()) -> None:
     Returns:
         None
     """
-    syscfg = cfg[detect_system()]
+    syscfg = cfg[detect_system()][cfg.model_res]
 
     with Client(
         dashboard_address=cfg.dask_dashboard,
