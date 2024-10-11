@@ -76,12 +76,9 @@ def get_stats(
     }
 
 
-def load_x(trait_set: str) -> pd.DataFrame:
+def load_x() -> pd.DataFrame:
     """Load X data for a given trait set."""
-    if trait_set not in ["splot", "splot_gbif", "gbif"]:
-        raise ValueError("trait_set must be one of 'splot', 'splot_gbif', or 'gbif'.")
-
-    tmp_x_path = TMP_DIR / "cv_stats" / trait_set / "x.parquet"
+    tmp_x_path = TMP_DIR / "cv_stats" / "x.parquet"
 
     if tmp_x_path.exists():
         log.info("Found cached X data. Loading...")
@@ -94,7 +91,7 @@ def load_x(trait_set: str) -> pd.DataFrame:
 
     xy = (
         dd.read_parquet(get_y_fn(), columns=["x", "y", "source"])
-        .pipe(filter_trait_set, trait_set)
+        .query("source == 's'")
         .drop(columns=["source"])
     )
 
@@ -113,14 +110,11 @@ def load_x(trait_set: str) -> pd.DataFrame:
     return x_trait_masked
 
 
-def load_y(trait_id: str, trait_set: str = "splot") -> pd.DataFrame:
+def load_y(trait_id: str) -> pd.DataFrame:
     """Load Y data for a given trait set."""
-    if trait_set not in ["splot", "splot_gbif", "gbif"]:
-        raise ValueError("trait_set must be one of 'splot', 'splot_gbif', or 'gbif'.")
-
     y = (
         dd.read_parquet(get_y_fn(), columns=["x", "y", trait_id, "source"])
-        .pipe(filter_trait_set, trait_set)
+        .query("source == 's'")
         .merge(
             dd.read_parquet(get_cv_splits_dir() / f"{trait_id}.parquet"),
             how="inner",
@@ -131,9 +125,9 @@ def load_y(trait_id: str, trait_set: str = "splot") -> pd.DataFrame:
     return y.compute().set_index(["y", "x"])
 
 
-def load_xy(x: pd.DataFrame, trait_id: str, trait_set: str) -> pd.DataFrame:
+def load_xy(x: pd.DataFrame, trait_id: str) -> pd.DataFrame:
     """Load X and Y data for a given trait set."""
-    y = load_y(trait_id, trait_set)
+    y = load_y(trait_id)
     return x.join(y, how="inner").reset_index().rename({trait_id: "obs"}, axis=1)
 
 
@@ -141,6 +135,12 @@ def cli() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action="store_true", help="Run in debug mode.")
+    parser.add_argument(
+        "-r", "--recompute", action="store_true", help="Recompute stats."
+    )
+    parser.add_argument(
+        "-p", "--persist", action="store_true", help="Persist temp. X data."
+    )
     return parser.parse_args()
 
 
@@ -151,17 +151,15 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
     models_dir = get_models_dir() / "debug" if args.debug else get_models_dir()
     trait_sets = ["splot", "splot_gbif", "gbif"]
 
-    for trait_set in trait_sets:
-        log.info("Processing trait set: %s", trait_set)
-        log.info("Loading X data...")
+    log.info("Loading X data...")
+    x = load_x()
+    for trait_dir in models_dir.iterdir():
+        if not trait_dir.is_dir():
+            continue
 
-        x = load_x(trait_set)
+        trait_id = trait_dir.stem
 
-        for trait_dir in models_dir.iterdir():
-            if not trait_dir.is_dir():
-                continue
-
-            trait_id = trait_dir.stem
+        for trait_set in trait_sets:
             log.info("Processing trait: %s for %s", trait_id, trait_set)
             ts_dir = get_latest_run(trait_dir / cfg.train.arch) / trait_set
             if not ts_dir.exists():
@@ -176,11 +174,16 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
                 raise FileNotFoundError(f"Results file not found: {results_path}")
 
             if results_path.exists() and old_path.exists():
-                log.info("Found existing stats. Skipping...")
-                continue
+                if not args.recompute:
+                    log.info("Found existing stats. Skipping...")
+                    continue
+
+                log.info("Found existing stats but recompute is True. Recomputing...")
+                results_path.unlink()
+                old_path.rename(results_path)
 
             log.info("Joining X and Y data...")
-            trait_df = load_xy(x, trait_id, trait_set)
+            trait_df = load_xy(x, trait_id)
 
             fold_dirs = [d for d in Path(ts_dir, "cv").iterdir() if d.is_dir()]
             fold_ids = [fold_dir.stem.split("_")[-1] for fold_dir in fold_dirs]
@@ -203,7 +206,10 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
             log.info("Concatenating results...")
             cv_obs_vs_pred = pd.concat(coll, ignore_index=True)
             log.info("Writing results to disk...")
-            cv_obs_vs_pred.to_parquet(Path(ts_dir, "cv_obs_vs_pred.parquet"))
+            cv_obs_vs_pred_path = Path(ts_dir, "cv_obs_vs_pred.parquet")
+            if cv_obs_vs_pred_path.exists():
+                cv_obs_vs_pred_path.unlink()
+            cv_obs_vs_pred.to_parquet(cv_obs_vs_pred_path)
 
             log.info("Calculating stats...")
             all_stats = pd.DataFrame()
@@ -224,8 +230,9 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
             results_path.rename(old_path)
             all_stats.to_csv(results_path, index=False)
 
-    log.info("Cleaning up temporary files...")
-    shutil.rmtree(TMP_DIR)
+    if not args.persist:
+        log.info("Cleaning up temporary files...")
+        shutil.rmtree(TMP_DIR)
 
 
 if __name__ == "__main__":
