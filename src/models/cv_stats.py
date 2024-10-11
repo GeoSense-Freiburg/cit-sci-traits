@@ -113,14 +113,11 @@ def load_x(trait_set: str) -> pd.DataFrame:
     return x_trait_masked
 
 
-def load_y(trait_id: str, trait_set: str = "splot") -> pd.DataFrame:
+def load_y(trait_id: str) -> pd.DataFrame:
     """Load Y data for a given trait set."""
-    if trait_set not in ["splot", "splot_gbif", "gbif"]:
-        raise ValueError("trait_set must be one of 'splot', 'splot_gbif', or 'gbif'.")
-
     y = (
         dd.read_parquet(get_y_fn(), columns=["x", "y", trait_id, "source"])
-        .pipe(filter_trait_set, trait_set)
+        .query("source == 's'")
         .merge(
             dd.read_parquet(get_cv_splits_dir() / f"{trait_id}.parquet"),
             how="inner",
@@ -131,9 +128,9 @@ def load_y(trait_id: str, trait_set: str = "splot") -> pd.DataFrame:
     return y.compute().set_index(["y", "x"])
 
 
-def load_xy(x: pd.DataFrame, trait_id: str, trait_set: str) -> pd.DataFrame:
+def load_xy(x: pd.DataFrame, trait_id: str) -> pd.DataFrame:
     """Load X and Y data for a given trait set."""
-    y = load_y(trait_id, trait_set)
+    y = load_y(trait_id)
     return x.join(y, how="inner").reset_index().rename({trait_id: "obs"}, axis=1)
 
 
@@ -180,7 +177,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
                 continue
 
             log.info("Joining X and Y data...")
-            trait_df = load_xy(x, trait_id, trait_set)
+            trait_df = load_xy(x, trait_id)
 
             fold_dirs = [d for d in Path(ts_dir, "cv").iterdir() if d.is_dir()]
             fold_ids = [fold_dir.stem.split("_")[-1] for fold_dir in fold_dirs]
