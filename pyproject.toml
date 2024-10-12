@@ -37,6 +37,7 @@ autogluon-tabular = {extras = ["all"], version = "^1.1.0"}
 statsmodels = "^0.14.2"
 tabulate = "^0.9.0"
 scikit-learn = "~1.4"
+rpy2 = "^3.5.16"
 
 
 [tool.poetry.group.dev.dependencies]
