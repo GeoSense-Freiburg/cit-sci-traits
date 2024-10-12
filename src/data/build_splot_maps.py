@@ -1,15 +1,16 @@
 """"Match sPlot data with filtered trait data, calculate CWMs, and grid it."""
 
+import argparse
 from pathlib import Path
 
 import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 from box import ConfigBox
-from dask.distributed import Client, LocalCluster
 
 from src.conf.conf import get_config
-from src.conf.environment import log
+from src.conf.environment import detect_system, log
+from src.utils.dask_utils import close_dask, init_dask
 from src.utils.df_utils import global_grid_df, grid_df_to_raster
 from src.utils.trait_utils import clean_species_name, filter_pft
 
@@ -24,24 +25,40 @@ def cwm(df: pd.DataFrame, col: str) -> pd.DataFrame:
                 np.average(g[col], weights=g["Rel_Abund_Plot"]),
             ],
             index=["cwm"],
-        )
+        ),
+        # meta={"cwm": "f8"},
     )
 
     return result
 
 
-def main(cfg: ConfigBox = get_config()) -> None:
-    """Match sPlot data with filtered trait data, calculate CWMs, and grid it."""
+def cli() -> argparse.Namespace:
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Match sPlot data with filtered trait data, calculate CWMs, and grid it."
+    )
+    parser.add_argument(
+        "-r", "--resume", action="store_true", help="Resume from last run."
+    )
+    return parser.parse_args()
 
+
+def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> None:
+    """Match sPlot data with filtered trait data, calculate CWMs, and grid it."""
+    sys_cfg = cfg[detect_system()][cfg.model_res]["build_splot_maps"]
     # Setup ################
     splot_dir = (
         Path(cfg.interim_dir, cfg.splot.interim.dir) / cfg.splot.interim.extracted
     )
-    npartitions = 60
-    cluster = LocalCluster(
-        n_workers=40, memory_limit="40GB", dashboard_address=":39143"
-    )
-    client = Client(cluster)
+
+    def _repartition_if_set(df: dd.DataFrame, npartitions: int | None) -> dd.DataFrame:
+        return (
+            df.repartition(npartitions=npartitions) if npartitions is not None else df
+        )
+
+    # create dict of dask kws, but only if they are not None
+    dask_kws = {k: v for k, v in sys_cfg.dask.items() if v is not None}
+    client, cluster = init_dask(dashboard_address=cfg.dask_dashboard, **dask_kws)
     # /Setup ################
 
     # Load header and set plot IDs as index for later joining with vegetation data
@@ -50,7 +67,7 @@ def main(cfg: ConfigBox = get_config()) -> None:
             splot_dir / "header.parquet",
             columns=["PlotObservationID", "Longitude", "Latitude"],
         )
-        .repartition(npartitions=npartitions)
+        .pipe(_repartition_if_set, sys_cfg.npartitions)
         .astype({"Longitude": np.float64, "Latitude": np.float64})
         .set_index("PlotObservationID")
     )
@@ -60,14 +77,15 @@ def main(cfg: ConfigBox = get_config()) -> None:
         dd.read_parquet(
             Path(cfg.interim_dir, cfg.trydb.interim.dir) / cfg.trydb.interim.filtered
         )
-        .repartition(npartitions=npartitions)
+        .pipe(_repartition_if_set, sys_cfg.npartitions)
         .set_index("speciesname")
     )
 
     # Load PFT data, filter by desired PFT, clean species names, and set them as index
     # for joining
     pfts = (
-        dd.read_csv(cfg.trydb.raw.pfts, encoding="latin-1")
+        dd.read_csv(Path(cfg.raw_dir) / cfg.trydb.raw.pfts, encoding="latin-1")
+        .pipe(_repartition_if_set, sys_cfg.npartitions)
         .pipe(filter_pft, cfg.PFT)
         .drop(columns=["AccSpeciesID"])
         .dropna(subset=["AccSpeciesName"])
@@ -87,7 +105,7 @@ def main(cfg: ConfigBox = get_config()) -> None:
                 "Rel_Abund_Plot",
             ],
         )
-        .repartition(npartitions=npartitions)
+        .pipe(_repartition_if_set, sys_cfg.npartitions)
         .dropna(subset=["Species"])
         .pipe(clean_species_name, "Species", "speciesname")
         .drop(columns=["Species"])
@@ -96,6 +114,7 @@ def main(cfg: ConfigBox = get_config()) -> None:
         .join(traits, how="inner")
         .reset_index()
         .drop(columns=["pft", "speciesname"])
+        .persist()
     )
 
     out_dir = (
@@ -110,13 +129,18 @@ def main(cfg: ConfigBox = get_config()) -> None:
 
     try:
         for col in cols:
+            out_path = out_dir / f"{col}.tif"
+            if args.resume and out_path.exists():
+                log.info("%s.tif already exists, skipping...", col)
+                continue
+
             log.info("Processing trait %s...", col)
             # Calculate community-weighted means per plot, join with `header` to get
             # plot lat/lons, and grid at the configured resolution.
             gridded_cwms = (
                 merged[["PlotObservationID", "Rel_Abund_Plot", col]]
                 .set_index("PlotObservationID")
-                .persist()
+                # .persist()
                 .map_partitions(cwm, col, meta={"cwm": "f8"})
                 .join(header, how="inner")
                 .reset_index()
@@ -129,14 +153,13 @@ def main(cfg: ConfigBox = get_config()) -> None:
                 )
                 .compute()
             )
-
+            log.info("Writing %s.tif...", col)
             grid_df_to_raster(
                 gridded_cwms, cfg.target_resolution, out_dir / f"{col}.tif"
             )
             log.info("Wrote %s.tif.", col)
     finally:
-        client.close()
-        cluster.close()
+        close_dask(client, cluster)
         log.info("Done!")
 
 
