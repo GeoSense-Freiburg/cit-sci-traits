@@ -34,7 +34,7 @@ def main(cfg: ConfigBox = get_config()):
         columns=columns,
     ).repartition(npartitions=60)
 
-    pfts = dd.read_csv(Path(cfg.trydb.raw.pfts), encoding="latin-1")
+    pfts = dd.read_csv(Path(cfg.raw_dir, cfg.trydb.raw.pfts), encoding="latin-1")
 
     # 02. Preprocess GBIF data
     ddf = (
