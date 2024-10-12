@@ -228,8 +228,8 @@ stages:
       size: 3964944
     - path: src/data/build_splot_maps.py
       hash: md5
-      md5: 7231f3b987c9725ebb4f19764252f058
-      size: 5029
+      md5: 1819ec728fdb5b372be5ff932021cdfa
+      size: 5620
     params:
       params.yaml:
         PFT: Shrub_Tree_Grass
