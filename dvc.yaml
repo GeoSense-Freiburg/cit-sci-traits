@@ -38,7 +38,7 @@ stages:
           persist: false
 
   ######################################################################################
-  # END BASE STAGES (ALL PFTs) ---------------------------------------------------------
+  # PFT-DEPENDENT STAGES ---------------------------------------------------------------
   ######################################################################################
 
   get_TRY_mean_traits:
@@ -86,6 +86,22 @@ stages:
       - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.subsampled}:
           persist: true
 
+  extract_splot:
+    cmd: python src/data/extract_splot.py
+    deps:
+      - src/data/extract_splot.py
+      - ${raw_dir}/${datasets.Y.splot}
+    params:
+      - datasets.Y.splot
+      - splot.interim.dir
+    outs:
+      - ${interim_dir}/${splot.interim.dir}/${splot.interim.extracted}:
+          persist: true
+
+  ######################################################################################
+  # RESOLUTION-DEPENDENT STAGES --------------------------------------------------------
+  ######################################################################################
+  
   build_gbif_maps:
     cmd: python src/data/build_gbif_maps.py
     deps:
@@ -103,18 +119,6 @@ stages:
       - target_resolution
     outs:
       - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}:
-          persist: true
-
-  extract_splot:
-    cmd: python src/data/extract_splot.py
-    deps:
-      - src/data/extract_splot.py
-      - ${raw_dir}/${datasets.Y.splot}
-    params:
-      - datasets.Y.splot
-      - splot.interim.dir
-    outs:
-      - ${interim_dir}/${splot.interim.dir}/${splot.interim.extracted}:
           persist: true
 
   build_splot_maps:
