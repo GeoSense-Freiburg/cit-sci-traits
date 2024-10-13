@@ -37,7 +37,7 @@ def build_y_df(
     fns: list[Path], cfg: ConfigBox, syscfg: ConfigBox, trait_set: str
 ) -> pd.DataFrame:
     """Build dataframe of Y data for a given trait set."""
-    check_y_set(cfg, trait_set)
+    check_y_set(trait_set)
     log.info("Loading Y data (%s)...", trait_set)
     y_ds = load_rasters_parallel(
         fns, cfg.datasets.Y.trait_stat, syscfg.featurize_train.n_chunks
@@ -70,8 +70,8 @@ def main(cfg: ConfigBox = get_config()) -> None:
         memory_limit=syscfg.featurize_train.memory_limit,
     ), config.set({"array.slicing.split_large_chunks": False}):
 
-        gbif_trait_map_fns = get_trait_map_fns(cfg, "gbif")
-        splot_trait_map_fns = get_trait_map_fns(cfg, "splot")
+        gbif_trait_map_fns = get_trait_map_fns("gbif", cfg)
+        splot_trait_map_fns = get_trait_map_fns("splot", cfg)
 
         log.info("Combining sPlot and GBIF...")
         y_df = pd.concat(
