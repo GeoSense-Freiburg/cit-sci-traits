@@ -1,9 +1,9 @@
 version: "0.1.0"
-model_res: "001"
+model_res: "05"
 PFT: "Shrub_Tree_Grass"
 random_seed: 42
 base_resolution: 0.01 # Shared best resolution of all EO datasets (used for masking)
-target_resolution: 0.01 # Target resolution for model training
+target_resolution: 0.5 # Target resolution for model training
 extent: [-180, -60, 180, 90] # Extent of the final dataset
 raw_dir: data/raw
 interim_dir: data/interim
@@ -54,9 +54,14 @@ pylos:
     skcv_splits:
       n_workers: 60
   "05":
+    build_splot_maps:
+      npartitions: 60
+      dask:
+        n_workers: 60
+        memory_limit: 40GB
     featurize_train:
       n_chunks: 1
-      n_workers: 30
+      n_workers: 60
       memory_limit: null
     build_predict:
       n_chunks: 1
@@ -65,7 +70,7 @@ pylos:
       impute_chunks: 1
     calc_spatial_autocorr:
       n_workers: 60
-      n_workers_variogram: 5
+      n_workers_variogram: 30
     skcv_splits:
       n_workers: 60
   "1":
