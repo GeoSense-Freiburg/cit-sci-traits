@@ -41,7 +41,7 @@ pylos:
         memory_limit: 40GB
     featurize_train:
       n_chunks: 1
-      n_workers: 30
+      n_workers: 60
       memory_limit: null
     build_predict:
       n_chunks: 1
