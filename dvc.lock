@@ -398,3 +398,39 @@ stages:
       md5: 9941a156c738b2bcf49a21baf0b5cd64.dir
       size: 2112562018
       nfiles: 19947
+  predict:
+    cmd: python src/models/predict_traits.py -r
+    deps:
+    - path: data/features/predict/02/eo_predict_imputed.parquet
+      hash: md5
+      md5: e968d87bb5d391d278ac6b316007488f
+      size: 83062876
+    - path: data/features/predict/02/eo_predict_mask.parquet
+      hash: md5
+      md5: f8a4310375f4e1ebc395f2aee76277f3
+      size: 1411206
+    - path: models/Shrub_Tree_Grass/02
+      hash: md5
+      md5: 9941a156c738b2bcf49a21baf0b5cd64.dir
+      size: 2112562018
+      nfiles: 19947
+    - path: src/models/predict_traits.py
+      hash: md5
+      md5: 4cd3bebadcdc862806f4e1c525efaeb8
+      size: 10152
+    params:
+      params.yaml:
+        predict:
+          dir: predict
+          geos:
+            n_workers: 14
+            batches: 24
+          pylos:
+            n_workers: 4
+            batches: 24
+    outs:
+    - path: data/processed/Shrub_Tree_Grass/02/predict
+      hash: md5
+      md5: 01ccbce171b4b7adae22eabad991424f.dir
+      size: 113775721
+      nfiles: 66
