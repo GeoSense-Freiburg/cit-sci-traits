@@ -1,44 +1,6 @@
 stages:
   ######################################################################################
-  # BASE STAGES (ALL PFTs) -------------------------------------------------------------
-  ######################################################################################
-
-  harmonize_eo_data:
-    cmd: python src/data/harmonize_eo_data.py -n 12 # 12 is max procs w/ 250 GB RAM
-    deps:
-      - src/data/harmonize_eo_data.py
-    params:
-      - model_res
-      - mask
-      - datasets.X
-      - base_resolution
-      - target_resolution
-      - eo_data.interim.dir
-      - worldclim.bio_vars
-    outs:
-      - ${interim_dir}/${eo_data.interim.dir}/${model_res}:
-          persist: false
-
-  build_predict:
-    cmd: python src/features/featurize_predict.py
-    deps:
-      - src/features/featurize_predict.py
-      - ${interim_dir}/${eo_data.interim.dir}/${model_res}
-    params:
-      - model_res
-      - train.dir
-      - eo_data.interim.dir
-      - eo_data.predict.dir
-      - eo_data.predict.mask_fn
-      - eo_data.predict.imputed_fn
-    outs:
-      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.mask_fn}:
-          persist: false
-      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}:
-          persist: false
-
-  ######################################################################################
-  # PFT-DEPENDENT STAGES ---------------------------------------------------------------
+  # RES-IND., PFT-DEP. STAGES ----------------------------------------------------------
   ######################################################################################
 
   get_TRY_mean_traits:
@@ -99,7 +61,46 @@ stages:
           persist: true
 
   ######################################################################################
-  # RESOLUTION-DEPENDENT STAGES --------------------------------------------------------
+  # RES-DEP., PFT-IND. -----------------------------------------------------------------
+  ######################################################################################
+
+  harmonize_eo_data:
+    cmd: python src/data/harmonize_eo_data.py -n 12 # 12 is max procs w/ 250 GB RAM
+    deps:
+      - src/data/harmonize_eo_data.py
+    params:
+      - model_res
+      - mask
+      - datasets.X
+      - base_resolution
+      - target_resolution
+      - eo_data.interim.dir
+      - worldclim.bio_vars
+    outs:
+      - ${interim_dir}/${eo_data.interim.dir}/${model_res}:
+          persist: false
+
+  build_predict:
+    cmd: python src/features/featurize_predict.py
+    deps:
+      - src/features/featurize_predict.py
+      - ${interim_dir}/${eo_data.interim.dir}/${model_res}
+    params:
+      - model_res
+      - train.dir
+      - eo_data.interim.dir
+      - eo_data.predict.dir
+      - eo_data.predict.mask_fn
+      - eo_data.predict.imputed_fn
+    outs:
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.mask_fn}:
+          persist: false
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}:
+          persist: false
+
+
+  ######################################################################################
+  # RES DEP., PFT-DEP. STAGES ----------------------------------------------------------
   ######################################################################################
   
   build_gbif_maps:
