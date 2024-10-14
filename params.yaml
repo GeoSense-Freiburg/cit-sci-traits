@@ -96,7 +96,7 @@ pylos:
       impute_chunks: 1
     calc_spatial_autocorr:
       n_workers: 60
-      n_workers_variogram: 30
+      n_workers_variogram: 60
     skcv_splits:
       n_workers: 60
     aoa:
