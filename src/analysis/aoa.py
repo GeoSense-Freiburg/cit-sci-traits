@@ -13,7 +13,7 @@ from cuml.neighbors import NearestNeighbors
 from distributed import Client
 
 from src.conf.conf import get_config
-from src.conf.environment import log
+from src.conf.environment import detect_system, log
 from src.utils.cuda_utils import df_to_cupy
 from src.utils.dask_cuda_utils import init_dask_cuda
 from src.utils.dask_utils import close_dask, df_to_dd, init_dask
@@ -342,12 +342,17 @@ def calc_di_predict(
 
 
 def calc_aoa(
-    trait: str, trait_set: str, out_path: Path, cfg: ConfigBox, overwrite: bool = False
+    trait: str,
+    trait_set: str,
+    out_path: Path,
+    cfg: ConfigBox,
+    syscfg: ConfigBox,
+    overwrite: bool = False,
 ) -> None:
     """Calculate the Area of Applicability (AoA) for the given trait and trait set."""
     log.info("Calculating AoA for %s using %s...", trait, trait_set)
     train_fn = out_path.parent / f"{trait}_train_{trait_set}.parquet"
-    ts_cfg = cfg.aoa[trait_set]
+    ts_cfg = syscfg[trait_set]
 
     if train_fn.exists() and not overwrite:
         log.info("Loading existing training data...")
@@ -368,18 +373,18 @@ def calc_aoa(
     ).sample(frac=ts_cfg.train_sample, random_state=cfg.random_seed)
 
     log.info("Calculating average pairwise distance for training data...")
-    if trait_set == "splot":
+    if not syscfg[trait_set].chunked_dist:
         avg_train_dist = average_train_distance(
             train_df=train_scaled_weighted.drop(columns=["fold"]),
             batch_size=ts_cfg.avg_dist_batch_size,
-            device_ids=cfg.aoa.device_ids,
+            device_ids=syscfg.device_ids,
         )
     else:
         log.warning("Using chunked pairwise distance calculation for large dataset...")
         avg_train_dist = average_train_distance_chunked(
             train_df=train_scaled_weighted.drop(columns=["fold"]),
             num_chunks=40,
-            device_ids=cfg.aoa.device_ids,
+            device_ids=syscfg.device_ids,
         )
 
     log.info("Average Pairwise Distance for training data: %.4f", avg_train_dist)
@@ -388,7 +393,7 @@ def calc_aoa(
     di_threshold = calc_di_threshold(
         train_scaled_weighted.sample(frac=ts_cfg.train_sample),
         avg_train_dist,
-        cfg.aoa.device_ids,
+        syscfg.device_ids,
     )
     log.info("DI threshold: %.4f", di_threshold)
 
@@ -396,7 +401,7 @@ def calc_aoa(
     client, cluster = init_dask()
     pred_scaled_weighted = scale_and_weight_predict(
         df=load_predict_data(
-            npartitions=ts_cfg.predict_partitions, sample=cfg.aoa.predict_sample
+            npartitions=ts_cfg.predict_partitions, sample=syscfg.predict_sample
         ),
         fi=fi,
         means=train_means,
@@ -412,7 +417,7 @@ def calc_aoa(
         ),
         mean_distance=avg_train_dist,
         di_threshold=di_threshold,
-        device_ids=cfg.aoa.device_ids,
+        device_ids=syscfg.device_ids,
     )
 
     log.info("DI stats for %s (%s):", trait, trait_set)
@@ -434,6 +439,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
     """Main function for the AOA analysis."""
 
     aoa_dirs = [get_aoa_dir() / trait for trait in get_active_traits()]
+    syscfg = cfg[detect_system()][cfg.model_res]["aoa"]
 
     for d in aoa_dirs:
         trait = d.name
@@ -450,6 +456,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
                 trait_set=ts,
                 out_path=ts_aoa_fn,
                 cfg=cfg,
+                syscfg=syscfg,
                 overwrite=args.overwrite,
             )
 

@@ -1,75 +1,108 @@
 schema: '2.0'
 stages:
-  harmonize_eo_data:
-    cmd: python src/data/harmonize_eo_data.py -n 12
+  get_TRY_mean_traits:
+    cmd: python src/data/build_try_traits.py
     deps:
-    - path: src/data/harmonize_eo_data.py
+    - path: data/raw/TRY_5_GapFilledData_2020/TRY_5_GapFilledData_2020.zip
       hash: md5
-      md5: 0e3caf7e63c91a0ae189efd807abee3b
-      size: 7183
+      md5: b0b6e84693d252fb89037d45563d7e0e
+      size: 452814652
+    - path: src/data/build_try_traits.py
+      hash: md5
+      md5: 0f264e7b766291e81726a062c0858994
+      size: 2089
     params:
       params.yaml:
-        base_resolution: 0.01
-        datasets.X:
-          canopy_height: ETH_GlobalCanopyHeight_2020_v1_1km
-          modis: modis_sur_refl_monthly_avg_1km
-          soilgrids: soilgrids_v2-0_1km
-          vodca: vodca_mean-p5-p95_1km
-          worldclim: wc2-1_30s_bio
-        eo_data.interim.dir: eo_data
-        mask:
-          path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
-          keep_classes:
-          - 10
-          - 20
-          - 30
-          - 40
-          - 60
-          - 70
-          - 90
-          - 95
-          - 100
-        model_res: '001'
-        target_resolution: 0.01
-        worldclim.bio_vars:
-        - '1'
-        - '4'
-        - '7'
-        - '12'
-        - 13-14
-        - '15'
+        trydb.interim:
+          dir: try
+          extracted_csv: mean_gf_bt_sp.csv
+          quantile_range:
+          - 0.005
+          - 0.995
+          filtered: mean_gf_bt_sp_filt.parquet
+        trydb.raw.dir: TRY_5_GapFilledData_2020
+        trydb.raw.zip: TRY_5_GapFilledData_2020.zip
+        trydb.raw.zipfile_csv: 
+          TRY_50_2020_01/gapfilled_data/mean_gap_filled_back_transformed_incl_species_names.csv
     outs:
-    - path: data/interim/eo_data/001
+    - path: data/interim/try/mean_gf_bt_sp_filt.parquet
       hash: md5
-      md5: 33b4751370ba70d27e0b170fa13beb54.dir
-      size: 34856945252
-      nfiles: 150
-  build_predict:
-    cmd: python src/features/featurize_predict.py
+      md5: 510f410e0fed41ca18b417b0a716dda6
+      size: 13698859
+  match_gbif_pfts:
+    cmd: python src/data/match_gbif_pfts.py
     deps:
-    - path: data/interim/eo_data/001
+    - path: data/raw/all_tracheophyta_non-cult_2024-04-10
       hash: md5
-      md5: 33b4751370ba70d27e0b170fa13beb54.dir
-      size: 34856945252
-      nfiles: 150
-    - path: src/features/featurize_predict.py
+      md5: ada860692d425bd047bd09fd4531fdbf.dir
+      size: 30005038638
+      nfiles: 1584
+    - path: data/raw/try_pft_v1.csv
       hash: md5
-      md5: baf07e318781b89bdf67a8ef22992f17
-      size: 4432
+      md5: c8c8c94250a247ce30b76ce150bedf90
+      size: 3964944
+    - path: src/data/match_gbif_pfts.py
+      hash: md5
+      md5: f1da3d6b45002463dd3722d5dff2c6be
+      size: 2118
     params:
       params.yaml:
-        eo_data.interim.dir: eo_data
-        eo_data.predict.dir: predict
-        eo_data.predict.imputed_fn: eo_predict_imputed.parquet
-        eo_data.predict.mask_fn: eo_predict_mask.parquet
-        model_res: '001'
-        train.dir: data/features
+        datasets.Y.gbif: all_tracheophyta_non-cult_2024-04-10
+        gbif.interim.dir: gbif
+        gbif.interim.matched: gbif_pfts.parquet
+        gbif.raw.dir: all_tracheophyta_non-cult_2024-04-10
     outs:
-    - path: data/features/predict/001/eo_predict_imputed.parquet
+    - path: data/interim/gbif/gbif_pfts.parquet
       hash: md5
-      md5: 0d865c4fb80cfb31a2dca600ee87896f
-      size: 32491512883
-    - path: data/features/predict/001/eo_predict_mask.parquet
+      md5: 0fa511f0bb36456892bfe3dc7bb35637.dir
+      size: 6792826593
+      nfiles: 122
+  subsample_gbif:
+    cmd: python src/data/subsample_gbif.py
+    deps:
+    - path: data/interim/gbif/gbif_pfts.parquet
       hash: md5
-      md5: ccb875cc5b91fa8167876a9e075a3b47
-      size: 605125575
+      md5: 0fa511f0bb36456892bfe3dc7bb35637.dir
+      size: 6792826593
+      nfiles: 122
+    - path: src/data/subsample_gbif.py
+      hash: md5
+      md5: 73f61cc054c4830e6404dab9a5f08f0e
+      size: 2982
+    params:
+      params.yaml:
+        gbif.interim.dir: gbif
+        gbif.interim.matched: gbif_pfts.parquet
+        gbif.interim.subsample_binsize: 4
+        gbif.interim.subsample_n_max: 10000
+        gbif.interim.subsampled: gbif_subsampled.parquet
+        random_seed: 42
+    outs:
+    - path: data/interim/gbif/gbif_subsampled.parquet
+      hash: md5
+      md5: b532b313f20180543b078aa0aa8a90ec.dir
+      size: 904490983
+      nfiles: 64
+  extract_splot:
+    cmd: python src/data/extract_splot.py
+    deps:
+    - path: data/raw/splot4-0
+      hash: md5
+      md5: 99990a51d13fe4485f72dd03590d44a6.dir
+      size: 521575464
+      nfiles: 3
+    - path: src/data/extract_splot.py
+      hash: md5
+      md5: 2a89310e584294f1661965d542a50d18
+      size: 3108
+    params:
+      params.yaml:
+        datasets.Y.splot: splot4-0
+        splot.interim.dir: splot
+    outs:
+    - path: data/interim/splot/extracted
+      hash: md5
+      md5: 79e5388fb25a0c2fa5af8eb08c26498e.dir
+      size: 508142149
+      nfiles: 3
+  
