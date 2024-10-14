@@ -33,6 +33,19 @@ pylos:
       n_workers_variogram: 5
     skcv_splits:
       n_workers: 60
+    aoa:
+      device_ids: [0, 1]
+      predict_sample: 0.5
+      splot:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        chunked_dist: true
+        train_sample: 0.5
+        avg_dist_batch_size: 5000
+        predict_partitions: null
   "02":
     build_splot_maps:
       npartitions: 60
@@ -53,6 +66,19 @@ pylos:
       n_workers_variogram: 5
     skcv_splits:
       n_workers: 60
+    aoa:
+      device_ids: [0, 1]
+      predict_sample: 1
+      splot:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
   "05":
     featurize_train:
       n_chunks: 1
@@ -68,6 +94,19 @@ pylos:
       n_workers_variogram: 5
     skcv_splits:
       n_workers: 60
+    aoa:
+      device_ids: [0, 1]
+      predict_sample: 1
+      splot:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
   "1":
     featurize_train:
       n_chunks: 1
@@ -83,6 +122,19 @@ pylos:
       n_workers_variogram: 5
     skcv_splits:
       n_workers: 60
+    aoa:
+      device_ids: [0, 1]
+      predict_sample: 1
+      splot:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
   "2":
     featurize_train:
       n_chunks: 1
@@ -98,6 +150,19 @@ pylos:
       n_workers_variogram: 5
     skcv_splits:
       n_workers: 60
+    aoa:
+      device_ids: [0, 1]
+      predict_sample: 1
+      splot:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
 geos:
   "001":
     featurize_train:
@@ -114,6 +179,17 @@ geos:
       n_workers_variogram: 20
     skcv_splits:
       n_workers: 80
+    aoa:
+      device_ids: [0, 1, 2, 3]
+      predict_sample: 0.5
+      splot:
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        train_sample: 0.5
+        avg_dist_batch_size: 5000
+        predict_partitions: null
   "02":
     featurize_train:
       n_chunks: 1
@@ -129,6 +205,17 @@ geos:
       n_workers_variogram: 20
     skcv_splits:
       n_workers: 80
+    aoa:
+      device_ids: [0, 1, 2, 3]
+      predict_sample: 0.5
+      splot:
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        train_sample: 0.5
+        avg_dist_batch_size: 5000
+        predict_partitions: null
   "05":
     featurize_train:
       n_chunks: 1
@@ -144,6 +231,17 @@ geos:
       n_workers_variogram: 20
     skcv_splits:
       n_workers: 80
+    aoa:
+      device_ids: [0, 1, 2, 3]
+      predict_sample: 0.5
+      splot:
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        train_sample: 0.5
+        avg_dist_batch_size: 5000
+        predict_partitions: null
   "1":
     featurize_train:
       n_chunks: 1
@@ -159,6 +257,17 @@ geos:
       n_workers_variogram: 20
     skcv_splits:
       n_workers: 80
+    aoa:
+      device_ids: [0, 1, 2, 3]
+      predict_sample: 0.5
+      splot:
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        train_sample: 0.5
+        avg_dist_batch_size: 5000
+        predict_partitions: null
   "2":
     featurize_train:
       n_chunks: 1
@@ -174,6 +283,17 @@ geos:
       n_workers_variogram: 20
     skcv_splits:
       n_workers: 80
+    aoa:
+      device_ids: [0, 1, 2, 3]
+      predict_sample: 0.5
+      splot:
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        train_sample: 0.5
+        avg_dist_batch_size: 5000
+        predict_partitions: null
 
 mask:
   path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
@@ -329,16 +449,6 @@ models:
 
 aoa:
   dir: aoa
-  device_ids: [0, 1, 2, 3]
-  predict_sample: 0.5
-  splot:
-    train_sample: 1
-    avg_dist_batch_size: 10000
-    predict_partitions: null
-  splot_gbif:
-    train_sample: 0.5
-    avg_dist_batch_size: 5000
-    predict_partitions: null
   
 predict:
   dir: predict
