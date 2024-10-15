@@ -14,6 +14,8 @@ trait_stat_mapping: "reference/trait_stat_mapping.json"
 
 pylos:
   "001":
+    harmonize_eo_data:
+      n_workers: 12
     build_splot_maps:
       npartitions: 60
       dask:
@@ -47,6 +49,8 @@ pylos:
         avg_dist_batch_size: 5000
         predict_partitions: null
   "02":
+    harmonize_eo_data:
+      n_workers: 20
     build_splot_maps:
       npartitions: 60
       dask:
@@ -80,6 +84,8 @@ pylos:
         avg_dist_batch_size: 10000
         predict_partitions: null
   "05":
+    harmonize_eo_data:
+      n_workers: 18
     build_splot_maps:
       npartitions: 60
       dask:
@@ -113,6 +119,8 @@ pylos:
         avg_dist_batch_size: 10000
         predict_partitions: null
   "1":
+    harmonize_eo_data:
+      n_workers: 48
     featurize_train:
       n_chunks: 1
       n_workers: 30
@@ -141,6 +149,8 @@ pylos:
         avg_dist_batch_size: 10000
         predict_partitions: null
   "2":
+    harmonize_eo_data:
+      n_workers: 60
     featurize_train:
       n_chunks: 1
       n_workers: 30

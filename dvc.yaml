@@ -65,7 +65,7 @@ stages:
   ######################################################################################
 
   harmonize_eo_data:
-    cmd: python src/data/harmonize_eo_data.py -n 12 # 12 is max procs w/ 250 GB RAM
+    cmd: python src/data/harmonize_eo_data.py
     deps:
       - src/data/harmonize_eo_data.py
     params:
