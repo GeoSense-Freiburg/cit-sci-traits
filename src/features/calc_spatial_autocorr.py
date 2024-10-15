@@ -6,11 +6,11 @@ import pandas as pd
 import utm
 from box import ConfigBox
 from dask import compute, delayed
-from dask.distributed import Client
 from pykrige.ok import OrdinaryKriging
 
 from src.conf.conf import get_config
 from src.conf.environment import detect_system, log
+from src.utils.dask_utils import close_dask, init_dask
 from src.utils.dataset_utils import get_autocorr_ranges_fn, get_y_fn
 
 
@@ -106,6 +106,10 @@ def calculate_variogram(group: pd.DataFrame, data_col: str, **kwargs) -> float |
 
 def main(cfg: ConfigBox = get_config()) -> None:
     """Main function for calculating spatial autocorrelation."""
+    # TODO: handle low res cases where many UTM zones have 1 or only a few points.
+    # E.g. consider using web mercator in these instances...
+    # TODO: Question: should we even be calculating spatial autorcorrelation separately
+    # for each resolution? Or should we just calculate it once for the highest resolution?
     syscfg = cfg[detect_system()][cfg.model_res]
 
     y_fn = get_y_fn(cfg)
@@ -128,31 +132,37 @@ def main(cfg: ConfigBox = get_config()) -> None:
         )
 
         log.info("Adding UTM coordinates...")
-        with Client(
+        client, cluster = init_dask(
             dashboard_address=cfg.dask_dashboard,
             n_workers=syscfg.calc_spatial_autocorr.n_workers,
-        ):
-            trait_df = add_utm(trait_df).drop(columns=["x", "y"])
+        )
+
+        trait_df = add_utm(trait_df).drop(columns=["x", "y"])
+
+        close_dask(client, cluster)
 
         log.info("Calculating variogram ranges...")
-        with Client(
+        client, cluster = init_dask(
             dashboard_address=cfg.dask_dashboard,
             n_workers=syscfg.calc_spatial_autocorr.n_workers_variogram,
-        ):
-            kwargs = {
-                "n_max": 18000,
-                "variogram_model": "spherical",
-                "nlags": 15,
-                "anisotropy_scaling": 1,
-                "anisotropy_angle": 0,
-            }
+        )
 
-            results = [
-                calculate_variogram(group, trait_col, **kwargs)
-                for _, group in trait_df.groupby("zone")
-            ]
+        kwargs = {
+            # "n_max": 18000,
+            "variogram_model": "spherical",
+            "nlags": 15,
+            "anisotropy_scaling": 1,
+            "anisotropy_angle": 0,
+        }
 
-            autocorr_ranges = list(compute(*results))
+        results = [
+            calculate_variogram(group, trait_col, **kwargs)
+            for _, group in trait_df.groupby("zone")
+        ]
+
+        autocorr_ranges = list(compute(*results))
+
+        close_dask(client, cluster)
 
         filt_ranges = [r for r in autocorr_ranges if r != 0]
 
