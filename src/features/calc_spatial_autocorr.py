@@ -1,6 +1,10 @@
 """Calculates spatial autocorrelation for each trait in a feature set."""
 
+import shutil
+from pathlib import Path
+
 import dask.dataframe as dd
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import utm
@@ -104,13 +108,30 @@ def calculate_variogram(group: pd.DataFrame, data_col: str, **kwargs) -> float |
     return ok_vgram.variogram_model_parameters[1]
 
 
+def copy_ref_to_dvc(cfg: ConfigBox) -> None:
+    """Copy the reference ranges file to the DVC-tracked location."""
+    fn = (
+        f"{Path(cfg.train.spatial_autocorr).stem }_"
+        f"{cfg.calc_spatial_autocorr.use_existing}"
+        f"{Path(cfg.train.spatial_autocorr).suffix}"
+    )
+    ranges_fn_ref = Path("reference", fn)
+    log.info("Using existing spatial autocorrelation ranges from %s...", ranges_fn_ref)
+    ranges_fn_dvc = get_autocorr_ranges_fn(cfg)
+
+    if ranges_fn_dvc.exists():
+        log.info("Overwriting existing spatial autocorrelation ranges...")
+        ranges_fn_dvc.unlink()
+    shutil.copy(ranges_fn_ref, ranges_fn_dvc)
+
+
 def main(cfg: ConfigBox = get_config()) -> None:
     """Main function for calculating spatial autocorrelation."""
-    # TODO: handle low res cases where many UTM zones have 1 or only a few points.
-    # E.g. consider using web mercator in these instances...
-    # TODO: Question: should we even be calculating spatial autorcorrelation separately
-    # for each resolution? Or should we just calculate it once for the highest resolution?
     syscfg = cfg[detect_system()][cfg.model_res]
+
+    if cfg.calc_spatial_autocorr.use_existing:
+        copy_ref_to_dvc(cfg)
+        return
 
     y_fn = get_y_fn(cfg)
 
@@ -122,6 +143,14 @@ def main(cfg: ConfigBox = get_config()) -> None:
     )
     y_cols = y_ddf.columns.difference(["x", "y"]).to_list()
 
+    vgram_kwargs = {
+        "n_max": 18000,
+        "variogram_model": "spherical",
+        "nlags": 15,
+        "anisotropy_scaling": 1,
+        "anisotropy_angle": 0,
+    }
+
     for i, trait_col in enumerate(y_cols):
         log.info("Calculating spatial autocorrelation for %s...", trait_col)
         trait_df = (
@@ -131,48 +160,74 @@ def main(cfg: ConfigBox = get_config()) -> None:
             .reset_index(drop=True)
         )
 
-        log.info("Adding UTM coordinates...")
-        client, cluster = init_dask(
-            dashboard_address=cfg.dask_dashboard,
-            n_workers=syscfg.calc_spatial_autocorr.n_workers,
-        )
+        if cfg.target_resolution > 0.2:
+            log.info(
+                "Target resolution of > 0.2 deg detected. Using web mercator "
+                "coordinates instead of UTM zones..."
+            )
+            trait_df_wmerc = (
+                gpd.GeoDataFrame(  # pyright: ignore[reportCallIssue]
+                    trait_df.drop(columns=["x", "y"]),
+                    geometry=gpd.points_from_xy(trait_df.x, trait_df.y),
+                    crs="EPSG:4326",
+                )
+                .to_crs("EPSG:3857")
+                .pipe(  # pyright: ignore[reportOptionalMemberAccess]
+                    # Technically not easting/northing but it's needed to work w/ vgram fn
+                    lambda _df: _df.assign(
+                        easting=_df.geometry.x, northing=_df.geometry.y
+                    ).drop(columns=["geometry"])
+                )
+            )
 
-        trait_df = add_utm(trait_df).drop(columns=["x", "y"])
+            log.info("Calculating variogram ranges...")
+            client, cluster = init_dask(
+                dashboard_address=cfg.dask_dashboard,
+                n_workers=syscfg.calc_spatial_autocorr.n_workers_variogram,
+            )
+            results = [calculate_variogram(trait_df_wmerc, trait_col, **vgram_kwargs)]
 
-        close_dask(client, cluster)
+        else:
+            log.info("Adding UTM coordinates...")
+            client, cluster = init_dask(
+                dashboard_address=cfg.dask_dashboard,
+                n_workers=syscfg.calc_spatial_autocorr.n_workers,
+            )
 
-        log.info("Calculating variogram ranges...")
-        client, cluster = init_dask(
-            dashboard_address=cfg.dask_dashboard,
-            n_workers=syscfg.calc_spatial_autocorr.n_workers_variogram,
-        )
+            trait_df = add_utm(trait_df).drop(columns=["x", "y"])
 
-        kwargs = {
-            # "n_max": 18000,
-            "variogram_model": "spherical",
-            "nlags": 15,
-            "anisotropy_scaling": 1,
-            "anisotropy_angle": 0,
-        }
+            close_dask(client, cluster)
 
-        results = [
-            calculate_variogram(group, trait_col, **kwargs)
-            for _, group in trait_df.groupby("zone")
-        ]
+            log.info("Calculating variogram ranges...")
+            client, cluster = init_dask(
+                dashboard_address=cfg.dask_dashboard,
+                n_workers=syscfg.calc_spatial_autocorr.n_workers_variogram,
+            )
+
+            results = [
+                calculate_variogram(group, trait_col, **vgram_kwargs)
+                for _, group in trait_df.groupby("zone")
+            ]
 
         autocorr_ranges = list(compute(*results))
 
         close_dask(client, cluster)
 
         filt_ranges = [r for r in autocorr_ranges if r != 0]
-
         log.info("Saving range statistics to DataFrame...")
-        # Define the file path
-        ranges_fn = get_autocorr_ranges_fn(cfg)
+
+        # Path to be checked into DVC
+        ranges_fn_dvc = get_autocorr_ranges_fn(cfg)
+
+        # Path to be used as reference when computing ranges for other resolutions.
+        # Tracked with git.
+        ranges_fn_ref = Path(
+            "reference", f"{ranges_fn_dvc.stem}_{cfg.model_res}{ranges_fn_dvc.suffix}"
+        )
 
         # Try to read the existing DataFrame, or create a new one if this is the first trait
         ranges_df = (
-            pd.read_parquet(ranges_fn)
+            pd.read_parquet(ranges_fn_dvc)
             if i > 0
             else pd.DataFrame(columns=["trait", "mean", "std", "median", "q05", "q95"])
         )
@@ -198,7 +253,8 @@ def main(cfg: ConfigBox = get_config()) -> None:
         )
 
         # Write the DataFrame back to disk
-        ranges_df.to_parquet(ranges_fn)
+        ranges_df.to_parquet(ranges_fn_dvc)
+        ranges_df.to_parquet(ranges_fn_ref)
 
 
 if __name__ == "__main__":
