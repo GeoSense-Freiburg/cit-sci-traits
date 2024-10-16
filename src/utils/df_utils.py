@@ -195,13 +195,13 @@ def filter_outliers(
 
 
 def global_grid_df(
-    df: dd.DataFrame,
+    df: pd.DataFrame,
     col: str,
     lon: str = "decimallongitude",
     lat: str = "decimallatitude",
     res: int | float = 0.5,
     stats: list | None = None,
-) -> dd.DataFrame:
+) -> pd.DataFrame:
     """
     Calculate gridded statistics for a given DataFrame.
 
@@ -211,9 +211,9 @@ def global_grid_df(
         lon (str, optional): The column name for longitude values. Defaults to "decimallongitude".
         lat (str, optional): The column name for latitude values. Defaults to "decimallatitude".
         res (int | float, optional): The resolution of the grid. Defaults to 0.5.
-
+        stats (list, optional): The list of statistics to calculate. Defaults to None.
     Returns:
-        dd.DataFrame: A DataFrame containing gridded statistics.
+        pd.DataFrame: A DataFrame containing gridded statistics.
 
     """
 
@@ -247,7 +247,7 @@ def global_grid_df(
 def grid_df_to_raster(
     df: pd.DataFrame,
     res: int | float,
-    out: Path | None,
+    out: Path | None = None,
     name: str = "trait",
     *args: Any,
     **kwargs: Any,
