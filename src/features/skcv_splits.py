@@ -1,5 +1,6 @@
 """Split the data into train and test sets using spatial k-fold cross-validation."""
 
+import argparse
 import logging
 import warnings
 from typing import Sequence
@@ -153,7 +154,18 @@ def get_splits(
     return splits
 
 
-def main(cfg: ConfigBox = get_config()) -> None:
+def cli() -> argparse.Namespace:
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Generate spatial k-fold cross-validation splits."
+    )
+    parser.add_argument(
+        "-o", "--overwrite", action="store_true", help="Overwrite existing splits"
+    )
+    return parser.parse_args()
+
+
+def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> None:
     """Main function to generate spatial k-fold cross-validation splits."""
     syscfg = cfg[detect_system()][cfg.model_res]
 
@@ -173,8 +185,15 @@ def main(cfg: ConfigBox = get_config()) -> None:
     )
 
     for trait_col in trait_cols:
-        log.info("Processing trait: %s", trait_col)
+        splits_dir = get_cv_splits_dir()
+        splits_dir.mkdir(parents=True, exist_ok=True)
+        splits_fn = splits_dir / f"{trait_col}.parquet"
 
+        if splits_fn.exists() and not args.overwrite:
+            log.info("Splits for trait %s already exist. Skipping...", trait_col)
+            continue
+
+        log.info("Processing trait: %s", trait_col)
         with Client(
             dashboard_address=cfg.dask_dashboard, n_workers=syscfg.skcv_splits.n_workers
         ):
@@ -186,10 +205,23 @@ def main(cfg: ConfigBox = get_config()) -> None:
             trait_range = ranges[ranges["trait"] == trait_col][
                 cfg.train.cv_splits.range_stat
             ]
+            trait_range_deg = trait_range.values[0] / 111320
+            if trait_range_deg <= cfg.target_resolution:
+                log.warning(
+                    "Trait range of %.2f m is less than or equal to the existing map"
+                    "resolution of %.2f m. "
+                    "Using the map resolution for hexagon assignment...",
+                    trait_range,
+                    cfg.target_resolution,
+                )
+                trait_range = cfg.target_resolution * 111320
+
             h3_res = acr_to_h3_res(trait_range)
 
             df = (
-                assign_hexagons(traits[["x", "y", trait_col]], h3_res, dask=True)
+                assign_hexagons(
+                    traits[["x", "y", trait_col]], h3_res, dask=True
+                )  # pyright: ignore[reportCallIssue]
                 .compute()
                 .reset_index(drop=True)
             )
@@ -200,10 +232,6 @@ def main(cfg: ConfigBox = get_config()) -> None:
         )
 
         splits = df[["x", "y", "fold"]].drop_duplicates().reset_index(drop=True)
-
-        splits_dir = get_cv_splits_dir()
-        splits_dir.mkdir(parents=True, exist_ok=True)
-        splits_fn = splits_dir / f"{trait_col}.parquet"
 
         log.info("Saving splits to %s", splits_fn.absolute())
         splits.to_parquet(splits_fn, compression="zstd")

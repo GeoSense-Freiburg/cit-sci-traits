@@ -14,6 +14,8 @@ trait_stat_mapping: "reference/trait_stat_mapping.json"
 
 pylos:
   "001":
+    harmonize_eo_data:
+      n_workers: 12
     build_splot_maps:
       npartitions: 60
       dask:
@@ -47,6 +49,8 @@ pylos:
         avg_dist_batch_size: 5000
         predict_partitions: null
   "02":
+    harmonize_eo_data:
+      n_workers: 20
     build_splot_maps:
       npartitions: 60
       dask:
@@ -80,9 +84,16 @@ pylos:
         avg_dist_batch_size: 10000
         predict_partitions: null
   "05":
+    harmonize_eo_data:
+      n_workers: 18
+    build_splot_maps:
+      npartitions: 60
+      dask:
+        n_workers: 60
+        memory_limit: 40GB
     featurize_train:
       n_chunks: 1
-      n_workers: 30
+      n_workers: 60
       memory_limit: null
     build_predict:
       n_chunks: 1
@@ -91,7 +102,7 @@ pylos:
       impute_chunks: 1
     calc_spatial_autocorr:
       n_workers: 60
-      n_workers_variogram: 5
+      n_workers_variogram: 60
     skcv_splits:
       n_workers: 60
     aoa:
@@ -108,6 +119,13 @@ pylos:
         avg_dist_batch_size: 10000
         predict_partitions: null
   "1":
+    harmonize_eo_data:
+      n_workers: 48
+    build_splot_maps:
+      npartitions: 60
+      dask:
+        n_workers: 60
+        memory_limit: 40GB
     featurize_train:
       n_chunks: 1
       n_workers: 30
@@ -136,6 +154,13 @@ pylos:
         avg_dist_batch_size: 10000
         predict_partitions: null
   "2":
+    harmonize_eo_data:
+      n_workers: 60
+    build_splot_maps:
+      npartitions: 60
+      dask:
+        n_workers: 60
+        memory_limit: 40GB
     featurize_train:
       n_chunks: 1
       n_workers: 30
@@ -165,6 +190,13 @@ pylos:
         predict_partitions: null
 geos:
   "001":
+    harmonize_eo_data:
+      n_workers: 48
+    build_splot_maps:
+      npartitions: 60
+      dask:
+        n_workers: 60
+        memory_limit: 40GB
     featurize_train:
       n_chunks: 2
       n_workers: 100
@@ -191,6 +223,13 @@ geos:
         avg_dist_batch_size: 5000
         predict_partitions: null
   "02":
+    harmonize_eo_data:
+      n_workers: 48
+    build_splot_maps:
+      npartitions: 80
+      dask:
+        n_workers: 80
+        memory_limit: 40GB
     featurize_train:
       n_chunks: 1
       n_workers: 100
@@ -217,6 +256,13 @@ geos:
         avg_dist_batch_size: 5000
         predict_partitions: null
   "05":
+    harmonize_eo_data:
+      n_workers: 48
+    build_splot_maps:
+      npartitions: 80
+      dask:
+        n_workers: 80
+        memory_limit: 40GB
     featurize_train:
       n_chunks: 1
       n_workers: 100
@@ -243,6 +289,13 @@ geos:
         avg_dist_batch_size: 5000
         predict_partitions: null
   "1":
+    harmonize_eo_data:
+      n_workers: 80
+    build_splot_maps:
+      npartitions: 80
+      dask:
+        n_workers: 80
+        memory_limit: 40GB
     featurize_train:
       n_chunks: 1
       n_workers: 100
@@ -254,7 +307,7 @@ geos:
       impute_chunks: 1
     calc_spatial_autocorr:
       n_workers: 100
-      n_workers_variogram: 20
+      n_workers_variogram: 40
     skcv_splits:
       n_workers: 80
     aoa:
@@ -265,10 +318,17 @@ geos:
         avg_dist_batch_size: 10000
         predict_partitions: null
       splot_gbif:
-        train_sample: 0.5
-        avg_dist_batch_size: 5000
+        train_sample: 1
+        avg_dist_batch_size: 10000
         predict_partitions: null
   "2":
+    harmonize_eo_data:
+      n_workers: 80
+    build_splot_maps:
+      npartitions: 80
+      dask:
+        n_workers: 80
+        memory_limit: 40GB
     featurize_train:
       n_chunks: 1
       n_workers: 100
@@ -280,7 +340,7 @@ geos:
       impute_chunks: 1
     calc_spatial_autocorr:
       n_workers: 100
-      n_workers_variogram: 20
+      n_workers_variogram: 40
     skcv_splits:
       n_workers: 80
     aoa:
@@ -291,8 +351,8 @@ geos:
         avg_dist_batch_size: 10000
         predict_partitions: null
       splot_gbif:
-        train_sample: 0.5
-        avg_dist_batch_size: 5000
+        train_sample: 1
+        avg_dist_batch_size: 10000
         predict_partitions: null
 
 mask:
@@ -402,6 +462,10 @@ trydb:
     extracted_csv: mean_gf_bt_sp.csv
     quantile_range: [0.005, 0.995]
     filtered: mean_gf_bt_sp_filt.parquet
+
+calc_spatial_autocorr:
+  # Use existing spatial autocorrelation data from this model_res. To recompute, set to false.
+  use_existing: "001"
 
 train:
   dir: data/features

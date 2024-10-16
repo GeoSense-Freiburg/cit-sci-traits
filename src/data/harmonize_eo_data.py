@@ -13,7 +13,7 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 
 from src.conf.conf import get_config
-from src.conf.environment import log
+from src.conf.environment import detect_system, log
 from src.data.mask import get_mask, mask_raster
 from src.utils.dataset_utils import get_eo_fns_dict
 from src.utils.raster_utils import (
@@ -24,25 +24,6 @@ from src.utils.raster_utils import (
 )
 
 
-def cli() -> argparse.Namespace:
-    """Command line interface."""
-    parser = argparse.ArgumentParser(description="Reproject EO data to a DataFrame.")
-    parser.add_argument(
-        "-n",
-        "--n-workers",
-        type=int,
-        default=1,
-        help="Number of workers. Use -1 for all CPUs.",
-    )
-    parser.add_argument("-d", "--dry-run", action="store_true", help="Dry run.")
-    args = parser.parse_args()
-
-    if args.n_workers <= 0 and args.n_workers != -1:
-        raise ValueError("Number of workers must be either -1 or greater than 0.")
-
-    return args
-
-
 def process_file(
     filename: str | os.PathLike,
     dataset: str,
@@ -50,6 +31,7 @@ def process_file(
     out_dir: str | Path,
     target_raster: xr.DataArray,
     dry_run: bool = False,
+    overwrite: bool = False,
 ):
     """
     Process a file by reprojecting and masking a raster, converting it to a GeoDataFrame,
@@ -57,14 +39,23 @@ def process_file(
 
     Args:
         filename (str or os.PathLike): The path to the input raster file.
+        dataset (str): The dataset to which the raster belongs.
         mask (xr.DataArray): The mask to apply to the raster.
         out_dir (str or Path): The directory where the output Parquet file will be saved.
         target_raster (xr.DataArray): The target raster to match the resolution of the
             masked raster.
         dry_run (bool, optional): If True, the function will only perform a dry run
             without writing the output file. Defaults to False.
+        overwrite (bool, optional): If True, the function will overwrite the output file.
     """
     filename = Path(filename)
+    out_path = Path(out_dir) / dataset / f"{Path(filename).stem}.tif"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if out_path.exists() and not overwrite:
+        log.info(f"Skipping {filename}...")
+        return
+
     rast = open_raster(filename).sel(band=1).rio.reproject_match(mask)
     rast_masked = mask_raster(rast, mask)
 
@@ -101,9 +92,6 @@ def process_file(
 
     if "long_name" not in rast_masked.attrs:
         rast_masked.attrs["long_name"] = Path(filename).stem
-
-    out_path = Path(out_dir) / dataset / f"{Path(filename).stem}.tif"
-    out_path.parent.mkdir(parents=True, exist_ok=True)
 
     if not dry_run:
         xr_to_raster(
@@ -189,9 +177,25 @@ def prune_worldclim(out_dir: Path, bio_vars: List[str], dry_run: bool = False) -
             fn.unlink()
 
 
+def cli() -> argparse.Namespace:
+    """Command line interface."""
+    parser = argparse.ArgumentParser(description="Reproject EO data to a DataFrame.")
+    parser.add_argument("-d", "--dry-run", action="store_true", help="Dry run.")
+    parser.add_argument(
+        "-o", "--overwrite", action="store_true", help="Overwrite files."
+    )
+    args = parser.parse_args()
+
+    return args
+
+
 def main(args: argparse.Namespace) -> None:
     """Main function."""
     cfg = get_config()
+    syscfg = cfg[detect_system()][cfg.model_res].harmonize_eo_data
+
+    if syscfg.n_workers == -1:
+        syscfg.n_workers = os.cpu_count()
 
     log.info("Collecting files...")
     filenames = get_eo_fns_dict(stage="raw")
@@ -214,12 +218,18 @@ def main(args: argparse.Namespace) -> None:
     log.info("Harmonizing rasters...")
     tasks = [
         delayed(process_file)(
-            filename, dataset, mask, out_dir, target_sample_raster, args.dry_run
+            filename,
+            dataset,
+            mask,
+            out_dir,
+            target_sample_raster,
+            args.dry_run,
+            args.overwrite,
         )
         for dataset, ds_fns in filenames.items()
         for filename in ds_fns
     ]
-    Parallel(n_jobs=args.n_workers)(tqdm(tasks, total=len(tasks)))
+    Parallel(n_jobs=syscfg.n_workers)(tqdm(tasks, total=len(tasks)))
 
     if "modis" in cfg.datasets.X:
         log.info("Calculating MODIS NDVI...")
