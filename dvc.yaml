@@ -169,7 +169,8 @@ stages:
     params:
       - train.cv_splits
     outs:
-      - ${train.dir}/${PFT}/${model_res}/${train.cv_splits.dir}
+      - ${train.dir}/${PFT}/${model_res}/${train.cv_splits.dir}:
+          persist: true
 
   train_models:
     cmd: python src/models/train_models.py -r && python src/models/cv_stats.py

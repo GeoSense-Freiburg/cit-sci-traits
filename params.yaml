@@ -418,6 +418,10 @@ trydb:
     quantile_range: [0.005, 0.995]
     filtered: mean_gf_bt_sp_filt.parquet
 
+calc_spatial_autocorr:
+  # Use existing spatial autocorrelation data from this model_res. To recompute, set to false.
+  use_existing: "001"
+
 train:
   dir: data/features
   Y:
