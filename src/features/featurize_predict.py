@@ -69,7 +69,7 @@ def eo_ds_to_ddf(ds: xr.Dataset, thresh: float, sample: float = 1.0) -> dd.DataF
 
 def main(cfg: ConfigBox = get_config(), args: argparse.Namespace = cli()) -> None:
     """Main function for featurizing EO data for prediction and AoA calculation."""
-    syscfg = cfg[detect_system()]
+    syscfg = cfg[detect_system()][cfg.model_res]
 
     if args.debug:
         log.info("Running in debug mode...")

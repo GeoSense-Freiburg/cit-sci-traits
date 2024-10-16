@@ -1,44 +1,6 @@
 stages:
   ######################################################################################
-  # BASE STAGES (ALL PFTs) -------------------------------------------------------------
-  ######################################################################################
-
-  harmonize_eo_data:
-    cmd: python src/data/harmonize_eo_data.py -n 12 # 12 is max procs w/ 250 GB RAM
-    deps:
-      - src/data/harmonize_eo_data.py
-    params:
-      - model_res
-      - mask
-      - datasets.X
-      - base_resolution
-      - target_resolution
-      - eo_data.interim.dir
-      - worldclim.bio_vars
-    outs:
-      - ${interim_dir}/${eo_data.interim.dir}/${model_res}:
-          persist: false
-
-  build_predict:
-    cmd: python src/features/featurize_predict.py
-    deps:
-      - src/features/featurize_predict.py
-      - ${interim_dir}/${eo_data.interim.dir}/${model_res}
-    params:
-      - model_res
-      - train.dir
-      - eo_data.interim.dir
-      - eo_data.predict.dir
-      - eo_data.predict.mask_fn
-      - eo_data.predict.imputed_fn
-    outs:
-      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.mask_fn}:
-          persist: false
-      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}:
-          persist: false
-
-  ######################################################################################
-  # END BASE STAGES (ALL PFTs) ---------------------------------------------------------
+  # RES-IND., PFT-DEP. STAGES ----------------------------------------------------------
   ######################################################################################
 
   get_TRY_mean_traits:
@@ -86,6 +48,61 @@ stages:
       - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.subsampled}:
           persist: true
 
+  extract_splot:
+    cmd: python src/data/extract_splot.py
+    deps:
+      - src/data/extract_splot.py
+      - ${raw_dir}/${datasets.Y.splot}
+    params:
+      - datasets.Y.splot
+      - splot.interim.dir
+    outs:
+      - ${interim_dir}/${splot.interim.dir}/${splot.interim.extracted}:
+          persist: true
+
+  ######################################################################################
+  # RES-DEP., PFT-IND. -----------------------------------------------------------------
+  ######################################################################################
+
+  harmonize_eo_data:
+    cmd: python src/data/harmonize_eo_data.py
+    deps:
+      - src/data/harmonize_eo_data.py
+    params:
+      - model_res
+      - mask
+      - datasets.X
+      - base_resolution
+      - target_resolution
+      - eo_data.interim.dir
+      - worldclim.bio_vars
+    outs:
+      - ${interim_dir}/${eo_data.interim.dir}/${model_res}:
+          persist: false
+
+  build_predict:
+    cmd: python src/features/featurize_predict.py
+    deps:
+      - src/features/featurize_predict.py
+      - ${interim_dir}/${eo_data.interim.dir}/${model_res}
+    params:
+      - model_res
+      - train.dir
+      - eo_data.interim.dir
+      - eo_data.predict.dir
+      - eo_data.predict.mask_fn
+      - eo_data.predict.imputed_fn
+    outs:
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.mask_fn}:
+          persist: false
+      - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}:
+          persist: false
+
+
+  ######################################################################################
+  # RES DEP., PFT-DEP. STAGES ----------------------------------------------------------
+  ######################################################################################
+  
   build_gbif_maps:
     cmd: python src/data/build_gbif_maps.py
     deps:
@@ -103,18 +120,6 @@ stages:
       - target_resolution
     outs:
       - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}:
-          persist: true
-
-  extract_splot:
-    cmd: python src/data/extract_splot.py
-    deps:
-      - src/data/extract_splot.py
-      - ${raw_dir}/${datasets.Y.splot}
-    params:
-      - datasets.Y.splot
-      - splot.interim.dir
-    outs:
-      - ${interim_dir}/${splot.interim.dir}/${splot.interim.extracted}:
           persist: true
 
   build_splot_maps:
@@ -167,7 +172,7 @@ stages:
       - ${train.dir}/${PFT}/${model_res}/${train.cv_splits.dir}
 
   train_models:
-    cmd: python src/models/train_models.py -r & python src/models/cv_stats.py
+    cmd: python src/models/train_models.py -r && python src/models/cv_stats.py
     deps:
       - src/models/train_models.py
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.mask_fn}
