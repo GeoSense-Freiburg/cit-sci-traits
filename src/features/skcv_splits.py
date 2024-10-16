@@ -205,7 +205,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
             trait_range = ranges[ranges["trait"] == trait_col][
                 cfg.train.cv_splits.range_stat
             ]
-            trait_range_deg = trait_range / 111320
+            trait_range_deg = trait_range.values[0] / 111320
             if trait_range_deg <= cfg.target_resolution:
                 log.warning(
                     "Trait range of %.2f m is less than or equal to the existing map"
