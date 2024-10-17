@@ -230,6 +230,8 @@ def global_grid_df(
         stat_funcs = {k: v for k, v in stat_funcs.items() if k in stats}
 
     # Calculate the bin for each row directly
+    df = df.copy()
+    # if the copy warning still persists, set y and x with df.loc[:, "y"], etc.
     df["y"] = (df[lat] + 90) // res * res - 90 + res / 2
     df["x"] = (df[lon] + 180) // res * res - 180 + res / 2
 
