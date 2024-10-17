@@ -367,6 +367,18 @@ def get_trait_map_fns(y_set: str, config: ConfigBox = cfg) -> list[Path]:
     return sorted(list(trait_maps_dir.glob("*.tif")))
 
 
+def read_trait_map(
+    trait_id: str, y_set: str, config: ConfigBox = cfg, band: int | None = None
+) -> xr.DataArray | xr.Dataset:
+    """Get the path to a specific trait map."""
+    check_y_set(y_set)
+    fn = get_trait_maps_dir(y_set, config) / f"{trait_id}.tif"
+
+    if band is not None:
+        return open_raster(fn).sel(band=band)
+    return open_raster(fn)
+
+
 def get_predict_dir(config: ConfigBox = cfg) -> Path:
     """Get the path to the predicted trait directory for a specific configuration."""
     return get_processed_dir(config) / config.predict.dir

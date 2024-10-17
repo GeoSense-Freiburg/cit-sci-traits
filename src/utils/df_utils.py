@@ -13,7 +13,11 @@ import xarray as xr
 
 from src.conf.environment import log
 from src.utils.log_utils import setup_logger
-from src.utils.raster_utils import create_sample_raster, xr_to_raster
+from src.utils.raster_utils import (
+    coord_decimal_places,
+    create_sample_raster,
+    xr_to_raster,
+)
 
 log = setup_logger(__name__, "INFO")
 
@@ -230,6 +234,8 @@ def global_grid_df(
         stat_funcs = {k: v for k, v in stat_funcs.items() if k in stats}
 
     # Calculate the bin for each row directly
+    df = df.copy()
+    # if the copy warning still persists, set y and x with df.loc[:, "y"], etc.
     df["y"] = (df[lat] + 90) // res * res - 90 + res / 2
     df["x"] = (df[lon] + 180) // res * res - 180 + res / 2
 
@@ -264,8 +270,7 @@ def grid_df_to_raster(
         None
     """
     ref = create_sample_raster(resolution=res)
-
-    decimals = int(np.ceil(-np.log10(res / 2)))
+    decimals = coord_decimal_places(res)
 
     ds = (
         df.to_xarray()
