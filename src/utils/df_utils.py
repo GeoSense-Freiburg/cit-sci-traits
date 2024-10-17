@@ -205,6 +205,7 @@ def global_grid_df(
     lat: str = "decimallatitude",
     res: int | float = 0.5,
     stats: list | None = None,
+    n_min: int = 1,
 ) -> pd.DataFrame:
     """
     Calculate gridded statistics for a given DataFrame.
@@ -230,8 +231,8 @@ def global_grid_df(
         "count": "count",
     }
 
-    if stats is not None:
-        stat_funcs = {k: v for k, v in stat_funcs.items() if k in stats}
+    # if stats is not None:
+    #     stat_funcs = {k: v for k, v in stat_funcs.items() if k in stats}
 
     # Calculate the bin for each row directly
     df = df.copy()
@@ -246,6 +247,12 @@ def global_grid_df(
     )
 
     gridded_df.columns = list(stat_funcs.keys())
+
+    if n_min > 1:
+        gridded_df = gridded_df[gridded_df["count"] >= n_min]
+
+    if stats is not None:
+        return gridded_df[stats]
 
     return gridded_df
 
