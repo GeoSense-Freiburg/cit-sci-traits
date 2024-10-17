@@ -110,7 +110,7 @@ def assign_hexagons(
         return _df
 
     if dask:
-        return df.map_partitions(_assign_hex_to_df)
+        return df.map_partitions(_assign_hex_to_df)  # pyright: ignore[reportCallIssue]
 
     return _assign_hex_to_df(df)
 
