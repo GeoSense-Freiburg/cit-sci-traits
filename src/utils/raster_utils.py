@@ -56,7 +56,7 @@ def xr_to_raster(
     dtype: np.dtype | str | None = None,
     compress: str = "ZSTD",
     num_threads: int = -1,
-    **kwargs: dict[str, Any]
+    **kwargs: dict[str, Any],
 ) -> None:
     """Write a DataArray to a raster file."""
     if isinstance(data, xr.DataArray):
@@ -140,6 +140,19 @@ def open_raster(
     return ds
 
 
+def coord_decimal_places(resolution: int | float):
+    """Returns the number of decimal places needed to express the centroid of a grid cell
+    at the target resolution"""
+    centroid_step = resolution / 2
+
+    result_str = f"{centroid_step:.20f}".rstrip("0")  # Keep only significant digits
+    if "." in result_str:
+        decimal_part = result_str.split(".")[1]
+        return len(decimal_part)
+
+    return 0
+
+
 def create_sample_raster(
     extent: list[int] | list[float] | None = None, resolution: int | float = 1
 ) -> xr.Dataset:
@@ -151,7 +164,7 @@ def create_sample_raster(
     width = int((xmax - xmin) / resolution)
     height = int((ymax - ymin) / resolution)
     half_res = resolution * 0.5
-    decimals = int(np.ceil(-np.log10(half_res)))
+    decimals = coord_decimal_places(resolution)
 
     x_data = np.round(
         np.linspace(xmin + half_res, xmax - half_res, width, dtype=np.float64), decimals
