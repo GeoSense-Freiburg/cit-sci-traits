@@ -1,12 +1,12 @@
 schema: '2.0'
 stages:
   harmonize_eo_data:
-    cmd: python src/data/harmonize_eo_data.py -n 12
+    cmd: python src/data/harmonize_eo_data.py
     deps:
     - path: src/data/harmonize_eo_data.py
       hash: md5
-      md5: 0e3caf7e63c91a0ae189efd807abee3b
-      size: 7183
+      md5: d278ce74489e0e62f7b291a9913c730c
+      size: 7524
     params:
       params.yaml:
         base_resolution: 0.01
@@ -279,18 +279,18 @@ stages:
       size: 73299426
     - path: src/features/calc_spatial_autocorr.py
       hash: md5
-      md5: b307348d7326305d392200a59ce65f29
-      size: 6053
+      md5: 3d875417dc61ada871d690ab9d00290b
+      size: 8519
     params:
       params.yaml:
         train.spatial_autocorr: spatial_autocorr.parquet
     outs:
     - path: data/features/Shrub_Tree_Grass/02/spatial_autocorr.parquet
       hash: md5
-      md5: 69a8b480e657310f5ad77da5d190d846
-      size: 6340
+      md5: a4be75634474fa8aa26d2774ca108cc0
+      size: 6351
   build_cv_splits:
-    cmd: python src/features/skcv_splits.py
+    cmd: python src/features/skcv_splits.py -o
     deps:
     - path: data/features/Shrub_Tree_Grass/02/Y.parquet
       hash: md5
@@ -298,12 +298,12 @@ stages:
       size: 73299426
     - path: data/features/Shrub_Tree_Grass/02/spatial_autocorr.parquet
       hash: md5
-      md5: 69a8b480e657310f5ad77da5d190d846
-      size: 6340
+      md5: a4be75634474fa8aa26d2774ca108cc0
+      size: 6351
     - path: src/features/skcv_splits.py
       hash: md5
-      md5: 2740002b7d390fdcd272616c849fa367
-      size: 7191
+      md5: 470d31538336d67f729d65a00b40d1dd
+      size: 8315
     params:
       params.yaml:
         train.cv_splits:
@@ -314,8 +314,8 @@ stages:
     outs:
     - path: data/features/Shrub_Tree_Grass/02/skcv_splits
       hash: md5
-      md5: 27e6c0829efce67afe2602557cce32c0.dir
-      size: 6011724
+      md5: ff4370e42521739170974d3e4eaa6fb1.dir
+      size: 6354653
       nfiles: 33
   train_models:
     cmd: python src/models/train_models.py -r && python src/models/cv_stats.py
@@ -326,8 +326,8 @@ stages:
       size: 73299426
     - path: data/features/Shrub_Tree_Grass/02/skcv_splits
       hash: md5
-      md5: 27e6c0829efce67afe2602557cce32c0.dir
-      size: 6011724
+      md5: ff4370e42521739170974d3e4eaa6fb1.dir
+      size: 6354653
       nfiles: 33
     - path: data/features/predict/02/eo_predict_imputed.parquet
       hash: md5
