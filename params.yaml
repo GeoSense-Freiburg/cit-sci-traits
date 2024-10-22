@@ -155,11 +155,11 @@ pylos:
         predict_partitions: null
   "2":
     harmonize_eo_data:
-      n_workers: 60
+      n_workers: 30
     build_splot_maps:
       npartitions: 60
       dask:
-        n_workers: 60
+        n_workers: 30
         memory_limit: 40GB
     featurize_train:
       n_chunks: 1
@@ -171,10 +171,10 @@ pylos:
       memory_limit: 100GB
       impute_chunks: 1
     calc_spatial_autocorr:
-      n_workers: 60
+      n_workers: 20
       n_workers_variogram: 5
     skcv_splits:
-      n_workers: 60
+      n_workers: 30
     aoa:
       device_ids: [0, 1]
       predict_sample: 1
@@ -503,7 +503,7 @@ autogluon:
   cv_fit_time_limit: 3600
   full_fit_time_limit: 12600 # 3.5 hours per trait
   num_gpus: "auto"
-  num_cpus: 64
+  num_cpus: 48
   feature_importance: true
   FI_time_limit: 1800
   FI_num_shuffle_sets: 10
