@@ -13,7 +13,11 @@ import xarray as xr
 
 from src.conf.environment import log
 from src.utils.log_utils import setup_logger
-from src.utils.raster_utils import create_sample_raster, xr_to_raster
+from src.utils.raster_utils import (
+    coord_decimal_places,
+    create_sample_raster,
+    xr_to_raster,
+)
 
 log = setup_logger(__name__, "INFO")
 
@@ -195,13 +199,14 @@ def filter_outliers(
 
 
 def global_grid_df(
-    df: dd.DataFrame,
+    df: pd.DataFrame,
     col: str,
     lon: str = "decimallongitude",
     lat: str = "decimallatitude",
     res: int | float = 0.5,
     stats: list | None = None,
-) -> dd.DataFrame:
+    n_min: int = 1,
+) -> pd.DataFrame:
     """
     Calculate gridded statistics for a given DataFrame.
 
@@ -211,9 +216,9 @@ def global_grid_df(
         lon (str, optional): The column name for longitude values. Defaults to "decimallongitude".
         lat (str, optional): The column name for latitude values. Defaults to "decimallatitude".
         res (int | float, optional): The resolution of the grid. Defaults to 0.5.
-
+        stats (list, optional): The list of statistics to calculate. Defaults to None.
     Returns:
-        dd.DataFrame: A DataFrame containing gridded statistics.
+        pd.DataFrame: A DataFrame containing gridded statistics.
 
     """
 
@@ -226,10 +231,12 @@ def global_grid_df(
         "count": "count",
     }
 
-    if stats is not None:
-        stat_funcs = {k: v for k, v in stat_funcs.items() if k in stats}
+    # if stats is not None:
+    #     stat_funcs = {k: v for k, v in stat_funcs.items() if k in stats}
 
     # Calculate the bin for each row directly
+    df = df.copy()
+    # if the copy warning still persists, set y and x with df.loc[:, "y"], etc.
     df["y"] = (df[lat] + 90) // res * res - 90 + res / 2
     df["x"] = (df[lon] + 180) // res * res - 180 + res / 2
 
@@ -241,13 +248,19 @@ def global_grid_df(
 
     gridded_df.columns = list(stat_funcs.keys())
 
+    if n_min > 1:
+        gridded_df = gridded_df[gridded_df["count"] >= n_min]
+
+    if stats is not None:
+        return gridded_df[stats]
+
     return gridded_df
 
 
 def grid_df_to_raster(
     df: pd.DataFrame,
     res: int | float,
-    out: Path | None,
+    out: Path | None = None,
     name: str = "trait",
     *args: Any,
     **kwargs: Any,
@@ -264,8 +277,7 @@ def grid_df_to_raster(
         None
     """
     ref = create_sample_raster(resolution=res)
-
-    decimals = int(np.ceil(-np.log10(res / 2)))
+    decimals = coord_decimal_places(res)
 
     ds = (
         df.to_xarray()
