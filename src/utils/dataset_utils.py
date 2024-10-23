@@ -13,6 +13,7 @@ from dask import compute, delayed
 from tqdm import trange
 
 from src.conf.conf import get_config
+from src.conf.environment import log
 from src.utils.raster_utils import open_raster
 
 cfg = get_config()
@@ -385,6 +386,38 @@ def get_model_performance(
         / cfg.train.eval_results
     )
     return pd.read_csv(fn)
+
+
+def get_all_model_perf_fn(config: ConfigBox = cfg, debug: bool = False) -> Path:
+    """Get the path to the model performance file for a specific configuration."""
+    if debug:
+        return Path(config.analysis.dir, "debug", config.analysis.multires_results_fn)
+    return Path(config.analysis.dir, config.analysis.multires_results_fn)
+
+
+def get_all_model_perf(config: ConfigBox = cfg, debug: bool = False) -> pd.DataFrame:
+    """Load the model performance DataFrame for all traits."""
+    try:
+        return pd.read_parquet(get_all_model_perf_fn(config, debug=debug))
+    except FileNotFoundError:
+        log.warning("Results file not found, returning empty DataFrame.")
+        return pd.DataFrame()
+
+
+def get_all_fi_fn(config: ConfigBox = cfg, debug: bool = False) -> Path:
+    """Get the path to the feature importance file for a specific configuration."""
+    if debug:
+        return Path(config.analysis.dir, "debug", config.analysis.multires_fi_fn)
+    return Path(config.analysis.dir, config.analysis.multires_fi_fn)
+
+
+def get_all_fi(config: ConfigBox = cfg, debug: bool = False) -> pd.DataFrame:
+    """Load the feature importance DataFrame for all traits."""
+    try:
+        return pd.read_parquet(get_all_fi_fn(config, debug=debug))
+    except FileNotFoundError:
+        log.warning("Feature importance file not found, returning empty DataFrame.")
+        return pd.DataFrame()
 
 
 def get_feature_importance(
