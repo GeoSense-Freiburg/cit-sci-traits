@@ -215,16 +215,6 @@ stages:
       - ${processed.dir}/${PFT}/${model_res}/${predict.dir}:
           persist: true
 
-  # splot_corr:
-  #   cmd: python src/analysis/splot_correlation.py -n 4
-  #   deps:
-  #     - src/analysis/splot_correlation.py
-  #     - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
-  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.predict_dir}
-  #   outs:
-  #     - ${processed.dir}/${PFT}/${model_res}/${datasets.Y.use}/${processed.splot_corr}:
-  #         persist: true
-
   cov:
     cmd: python src/models/predict_traits.py -r --cov
     deps:
@@ -253,3 +243,12 @@ stages:
     outs:
       - ${processed.dir}/${PFT}/${model_res}/${public.local_dir}:
           persist: true
+
+  aggregate_all_stats:
+    cmd: python src/models/multires_stats.py
+    deps:
+      - src/models/multires_stats.py
+      - ${models.dir}/${PFT}/${model_res}
+    params:
+      - analysis
+      
