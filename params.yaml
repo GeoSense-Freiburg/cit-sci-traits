@@ -566,4 +566,6 @@ public:
   sftp_dir: PANOPS/cit-sci-traits/trait_maps
 
 analysis:
-  multires_results_fn: all_results.csv
+  dir: results
+  multires_results_fn: all_results.parquet
+  multires_fi_fn: all_fi.parquet
