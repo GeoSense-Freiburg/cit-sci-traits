@@ -1,9 +1,9 @@
-version: "0.1.0"
-model_res: "1"
+version: "1.0.0"
+model_res: "001"
 PFT: "Shrub_Tree_Grass"
 random_seed: 42
 base_resolution: 0.01 # Shared best resolution of all EO datasets (used for masking)
-target_resolution: 1 # Target resolution for model training
+target_resolution: 0.01 # Target resolution for model training
 extent: [-180, -60, 180, 90] # Extent of the final dataset
 raw_dir: data/raw
 interim_dir: data/interim
@@ -48,6 +48,9 @@ pylos:
         train_sample: 0.5
         avg_dist_batch_size: 5000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "02":
     harmonize_eo_data:
       n_workers: 20
@@ -83,6 +86,9 @@ pylos:
         train_sample: 1
         avg_dist_batch_size: 10000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "05":
     harmonize_eo_data:
       n_workers: 18
@@ -118,6 +124,9 @@ pylos:
         train_sample: 1
         avg_dist_batch_size: 10000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "1":
     harmonize_eo_data:
       n_workers: 48
@@ -153,6 +162,9 @@ pylos:
         train_sample: 1
         avg_dist_batch_size: 10000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "2":
     harmonize_eo_data:
       n_workers: 30
@@ -188,6 +200,9 @@ pylos:
         train_sample: 1
         avg_dist_batch_size: 10000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
 geos:
   "001":
     harmonize_eo_data:
@@ -219,9 +234,13 @@ geos:
         avg_dist_batch_size: 10000
         predict_partitions: null
       splot_gbif:
+        chunked_dist: true
         train_sample: 0.5
         avg_dist_batch_size: 5000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "02":
     harmonize_eo_data:
       n_workers: 48
@@ -252,9 +271,13 @@ geos:
         avg_dist_batch_size: 10000
         predict_partitions: null
       splot_gbif:
+        chunked_dist: false
         train_sample: 0.5
         avg_dist_batch_size: 5000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "05":
     harmonize_eo_data:
       n_workers: 48
@@ -285,9 +308,13 @@ geos:
         avg_dist_batch_size: 10000
         predict_partitions: null
       splot_gbif:
+        chunked_dist: false
         train_sample: 0.5
         avg_dist_batch_size: 5000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "1":
     harmonize_eo_data:
       n_workers: 80
@@ -318,9 +345,13 @@ geos:
         avg_dist_batch_size: 10000
         predict_partitions: null
       splot_gbif:
+        chunked_dist: false
         train_sample: 1
         avg_dist_batch_size: 10000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "2":
     harmonize_eo_data:
       n_workers: 80
@@ -351,9 +382,13 @@ geos:
         avg_dist_batch_size: 10000
         predict_partitions: null
       splot_gbif:
+        chunked_dist: false
         train_sample: 1
         avg_dist_batch_size: 10000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
 
 mask:
   path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
@@ -527,4 +562,5 @@ cov:
   dir: cov
   
 public:
-  dir: PANOPS/cit-sci-traits/trait_maps
+  local_dir: final
+  sftp_dir: PANOPS/cit-sci-traits/trait_maps
