@@ -1,6 +1,7 @@
 """Get the filenames of datasets based on the specified stage of processing."""
 
 from pathlib import Path
+from typing import Generator
 
 import dask.dataframe as dd
 import numpy as np
@@ -256,6 +257,13 @@ def get_models_dir(config: ConfigBox = cfg) -> Path:
 def get_trait_models_dir(trait: str, config: ConfigBox = cfg) -> Path:
     """Get the path to the models directory for a specific trait and ML architecture."""
     return get_models_dir(config) / trait / config.train.arch
+
+
+def get_all_trait_models(config: ConfigBox = cfg) -> Generator[Path, None, None]:
+    """Get all trait models from each trait_set for a specific configuration."""
+    for model_dir in get_models_dir().glob("X*"):
+        for ts_dir in get_latest_run(model_dir / config.train.arch).iterdir():
+            yield ts_dir
 
 
 def get_latest_run(runs_path: Path) -> Path:
