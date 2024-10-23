@@ -1,6 +1,7 @@
 """Get the filenames of datasets based on the specified stage of processing."""
 
 from pathlib import Path
+from typing import Generator
 
 import dask.dataframe as dd
 import numpy as np
@@ -12,6 +13,7 @@ from dask import compute, delayed
 from tqdm import trange
 
 from src.conf.conf import get_config
+from src.conf.environment import log
 from src.utils.raster_utils import open_raster
 
 cfg = get_config()
@@ -258,6 +260,13 @@ def get_trait_models_dir(trait: str, config: ConfigBox = cfg) -> Path:
     return get_models_dir(config) / trait / config.train.arch
 
 
+def get_all_trait_models(config: ConfigBox = cfg) -> Generator[Path, None, None]:
+    """Get all trait models from each trait_set for a specific configuration."""
+    for model_dir in get_models_dir().glob("X*"):
+        for ts_dir in get_latest_run(model_dir / config.train.arch).iterdir():
+            yield ts_dir
+
+
 def get_latest_run(runs_path: Path) -> Path:
     """Get latest run from a specified trait models path."""
     sorted_runs = sorted(
@@ -377,6 +386,50 @@ def get_model_performance(
         / cfg.train.eval_results
     )
     return pd.read_csv(fn)
+
+
+def get_all_model_perf_fn(config: ConfigBox = cfg, debug: bool = False) -> Path:
+    """Get the path to the model performance file for a specific configuration."""
+    if debug:
+        return Path(config.analysis.dir, "debug", config.analysis.multires_results_fn)
+    return Path(config.analysis.dir, config.analysis.multires_results_fn)
+
+
+def get_all_model_perf(config: ConfigBox = cfg, debug: bool = False) -> pd.DataFrame:
+    """Load the model performance DataFrame for all traits."""
+    try:
+        return pd.read_parquet(get_all_model_perf_fn(config, debug=debug))
+    except FileNotFoundError:
+        log.warning("Results file not found, returning empty DataFrame.")
+        return pd.DataFrame()
+
+
+def get_all_fi_fn(config: ConfigBox = cfg, debug: bool = False) -> Path:
+    """Get the path to the feature importance file for a specific configuration."""
+    if debug:
+        return Path(config.analysis.dir, "debug", config.analysis.multires_fi_fn)
+    return Path(config.analysis.dir, config.analysis.multires_fi_fn)
+
+
+def get_all_fi(config: ConfigBox = cfg, debug: bool = False) -> pd.DataFrame:
+    """Load the feature importance DataFrame for all traits."""
+    try:
+        return pd.read_parquet(get_all_fi_fn(config, debug=debug))
+    except FileNotFoundError:
+        log.warning("Feature importance file not found, returning empty DataFrame.")
+        return pd.DataFrame()
+
+
+def get_feature_importance(
+    trait_id: str, trait_set: str, config: ConfigBox = cfg
+) -> pd.DataFrame:
+    """Get the feature importance for a specific trait and dataset."""
+    fn = (
+        get_latest_run(get_trait_models_dir(trait_id, config))
+        / trait_set
+        / cfg.train.feature_importance
+    )
+    return pd.read_csv(fn, index_col=0, header=[0, 1])
 
 
 def read_trait_map(
