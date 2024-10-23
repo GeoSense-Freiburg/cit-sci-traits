@@ -564,3 +564,6 @@ cov:
 public:
   local_dir: final
   sftp_dir: PANOPS/cit-sci-traits/trait_maps
+
+analysis:
+  multires_results_fn: all_results.csv
