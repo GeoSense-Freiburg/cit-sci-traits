@@ -379,6 +379,18 @@ def get_model_performance(
     return pd.read_csv(fn)
 
 
+def get_feature_importance(
+    trait_id: str, trait_set: str, config: ConfigBox = cfg
+) -> pd.DataFrame:
+    """Get the feature importance for a specific trait and dataset."""
+    fn = (
+        get_latest_run(get_trait_models_dir(trait_id, config))
+        / trait_set
+        / cfg.train.feature_importance
+    )
+    return pd.read_csv(fn, index_col=0, header=[0, 1])
+
+
 def read_trait_map(
     trait_id: str, y_set: str, config: ConfigBox = cfg, band: int | None = None
 ) -> xr.DataArray | xr.Dataset:
