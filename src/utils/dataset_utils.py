@@ -367,6 +367,18 @@ def get_trait_map_fns(y_set: str, config: ConfigBox = cfg) -> list[Path]:
     return sorted(list(trait_maps_dir.glob("*.tif")))
 
 
+def get_model_performance(
+    trait_id: str, trait_set: str, config: ConfigBox = cfg
+) -> pd.DataFrame:
+    """Get the model performance metrics for a specific trait and dataset."""
+    fn = (
+        get_latest_run(get_trait_models_dir(trait_id, config))
+        / trait_set
+        / cfg.train.eval_results
+    )
+    return pd.read_csv(fn)
+
+
 def read_trait_map(
     trait_id: str, y_set: str, config: ConfigBox = cfg, band: int | None = None
 ) -> xr.DataArray | xr.Dataset:
