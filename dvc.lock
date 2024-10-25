@@ -621,3 +621,21 @@ stages:
       md5: 28068067b112aa917b71ccd619cfc317.dir
       size: 32959988061
       nfiles: 66
+  aggregate_all_stats:
+    cmd: python src/models/multires_stats.py -mfc
+    deps:
+    - path: models/Shrub_Tree_Grass/001
+      hash: md5
+      md5: 3772f172da6d2560f8b1922c7300ee46.dir
+      size: 18793377357
+      nfiles: 20420
+    - path: src/models/multires_stats.py
+      hash: md5
+      md5: 447519e9cc7bf2b760da4e258d1cdc85
+      size: 10227
+    params:
+      params.yaml:
+        analysis:
+          dir: results
+          multires_results_fn: all_results.parquet
+          multires_fi_fn: all_fi.parquet
