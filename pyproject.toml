@@ -41,6 +41,7 @@ rpy2 = "^3.5.16"
 cudf-cu11 = { version = "24.10.*", source = "nvidia" }
 cuml-cu11 = { version = "24.10.*", source = "nvidia" }
 cupy-cuda11x = "^13.3.0"
+rio-cogeo = "^5.3.6"
 
 
 [tool.poetry.group.dev.dependencies]

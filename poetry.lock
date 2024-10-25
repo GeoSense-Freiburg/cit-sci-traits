@@ -3201,6 +3201,28 @@ lint = ["black", "check-manifest", "flake8", "isort", "mypy"]
 test = ["Cython", "greenlet", "ipython", "packaging", "pytest", "pytest-cov", "pytest-textual-snapshot", "setuptools", "textual (>=0.43,!=0.65.2,!=0.66)"]
 
 [[package]]
+name = "morecantile"
+version = "5.4.2"
+description = "Construct and use map tile grids (a.k.a TileMatrixSet / TMS)."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "morecantile-5.4.2-py3-none-any.whl", hash = "sha256:2f09ab980aa4ff519cd3891018d963e4a2c42e232f854b441137cc727359322d"},
+    {file = "morecantile-5.4.2.tar.gz", hash = "sha256:19b5a1550b2151e9abeffd348f987587f98b08cd7dce4af9362466fc74e3f3e6"},
+]
+
+[package.dependencies]
+attrs = "*"
+pydantic = ">=2.0,<3.0"
+pyproj = ">=3.1,<4.0"
+
+[package.extras]
+dev = ["bump-my-version", "pre-commit"]
+docs = ["mkdocs", "mkdocs-material", "pygments"]
+rasterio = ["rasterio (>=1.2.1)"]
+test = ["mercantile", "pytest", "pytest-cov", "rasterio (>=1.2.1)"]
+
+[[package]]
 name = "mpmath"
 version = "1.3.0"
 description = "Python library for arbitrary-precision floating-point arithmetic"
@@ -5421,6 +5443,28 @@ pygments = ">=2.13.0,<3.0.0"
 jupyter = ["ipywidgets (>=7.5.1,<9)"]
 
 [[package]]
+name = "rio-cogeo"
+version = "5.3.6"
+description = "Cloud Optimized GeoTIFF (COGEO) creation plugin for rasterio"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "rio_cogeo-5.3.6-py3-none-any.whl", hash = "sha256:dcb41fe85d9b1fb4e0b479213b24b59178a6e000afe1130d5e4a7cd1c7109766"},
+    {file = "rio_cogeo-5.3.6.tar.gz", hash = "sha256:d41e5b73c6e8988469cf453bf08b261989fd4752382e31b99b634effa7594dc1"},
+]
+
+[package.dependencies]
+click = ">=7.0"
+morecantile = ">=5.0,<6.0"
+pydantic = ">=2.0,<3.0"
+rasterio = ">=1.3.3"
+
+[package.extras]
+dev = ["pre-commit"]
+docs = ["mkdocs", "mkdocs-material"]
+test = ["cogdumper", "pytest", "pytest-cov"]
+
+[[package]]
 name = "rioxarray"
 version = "0.15.7"
 description = "geospatial xarray extension powered by rasterio"
@@ -6992,4 +7036,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "517b28fa7eecc8002830a5f695a8d983a9badd8f2a4149a528653bce6e6061a5"
+content-hash = "0dedef0e2e7df9fd04e5b9e95e2efd46efc13e4c34eb23a8d4f43351a6936001"
