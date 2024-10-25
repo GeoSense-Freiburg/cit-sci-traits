@@ -1,4 +1,4 @@
-version: "0.1.0"
+version: "1.0.0"
 model_res: "02"
 PFT: "Shrub_Tree_Grass"
 random_seed: 42
@@ -48,6 +48,9 @@ pylos:
         train_sample: 0.5
         avg_dist_batch_size: 5000
         predict_partitions: null
+    build_final_product:
+      n_workers: 3
+      threads_per_worker: 1
   "02":
     harmonize_eo_data:
       n_workers: 20
@@ -83,6 +86,9 @@ pylos:
         train_sample: 1
         avg_dist_batch_size: 10000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "05":
     harmonize_eo_data:
       n_workers: 18
@@ -118,6 +124,9 @@ pylos:
         train_sample: 1
         avg_dist_batch_size: 10000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "1":
     harmonize_eo_data:
       n_workers: 48
@@ -153,13 +162,16 @@ pylos:
         train_sample: 1
         avg_dist_batch_size: 10000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "2":
     harmonize_eo_data:
-      n_workers: 60
+      n_workers: 30
     build_splot_maps:
       npartitions: 60
       dask:
-        n_workers: 60
+        n_workers: 30
         memory_limit: 40GB
     featurize_train:
       n_chunks: 1
@@ -171,10 +183,10 @@ pylos:
       memory_limit: 100GB
       impute_chunks: 1
     calc_spatial_autocorr:
-      n_workers: 60
+      n_workers: 20
       n_workers_variogram: 5
     skcv_splits:
-      n_workers: 60
+      n_workers: 30
     aoa:
       device_ids: [0, 1]
       predict_sample: 1
@@ -188,6 +200,9 @@ pylos:
         train_sample: 1
         avg_dist_batch_size: 10000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
 geos:
   "001":
     harmonize_eo_data:
@@ -219,9 +234,13 @@ geos:
         avg_dist_batch_size: 10000
         predict_partitions: null
       splot_gbif:
+        chunked_dist: true
         train_sample: 0.5
         avg_dist_batch_size: 5000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "02":
     harmonize_eo_data:
       n_workers: 48
@@ -252,9 +271,13 @@ geos:
         avg_dist_batch_size: 10000
         predict_partitions: null
       splot_gbif:
+        chunked_dist: false
         train_sample: 0.5
         avg_dist_batch_size: 5000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "05":
     harmonize_eo_data:
       n_workers: 48
@@ -285,9 +308,13 @@ geos:
         avg_dist_batch_size: 10000
         predict_partitions: null
       splot_gbif:
+        chunked_dist: false
         train_sample: 0.5
         avg_dist_batch_size: 5000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "1":
     harmonize_eo_data:
       n_workers: 80
@@ -318,9 +345,13 @@ geos:
         avg_dist_batch_size: 10000
         predict_partitions: null
       splot_gbif:
+        chunked_dist: false
         train_sample: 1
         avg_dist_batch_size: 10000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "2":
     harmonize_eo_data:
       n_workers: 80
@@ -351,9 +382,13 @@ geos:
         avg_dist_batch_size: 10000
         predict_partitions: null
       splot_gbif:
+        chunked_dist: false
         train_sample: 1
         avg_dist_batch_size: 10000
         predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
 
 mask:
   path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
@@ -503,7 +538,7 @@ autogluon:
   cv_fit_time_limit: 3600
   full_fit_time_limit: 12600 # 3.5 hours per trait
   num_gpus: "auto"
-  num_cpus: 64
+  num_cpus: 48
   feature_importance: true
   FI_time_limit: 1800
   FI_num_shuffle_sets: 10
@@ -527,4 +562,11 @@ cov:
   dir: cov
   
 public:
-  dir: PANOPS/cit-sci-traits/trait_maps
+  destination: "both"
+  local_dir: final
+  sftp_dir: PANOPS/cit-sci-traits/trait_maps
+
+analysis:
+  dir: results
+  multires_results_fn: all_results.parquet
+  multires_fi_fn: all_fi.parquet
