@@ -222,7 +222,9 @@ def map_to_trait_dfs(
     return df
 
 
-def copy_cv_obs_pred(model_dir: Path, config: ConfigBox) -> None:
+def copy_cv_obs_pred(
+    model_dir: Path, config: ConfigBox, overwrite: bool = False
+) -> None:
     """Copy CV obs. vs pred. data to the all results directory."""
     obs_pred = model_dir / "cv_obs_vs_pred.parquet"
     out_dir = (
@@ -234,9 +236,25 @@ def copy_cv_obs_pred(model_dir: Path, config: ConfigBox) -> None:
         / model_dir.parent.name
     )
     out_dir.mkdir(parents=True, exist_ok=True)
+    out_fn = out_dir / obs_pred.name
+    if out_fn.exists() and not overwrite:
+        log.info("File already exists: %s", out_fn)
+        return
     if obs_pred.exists():
         log.info("Copying %s -> %s", obs_pred, out_dir)
-        shutil.copy(obs_pred, out_dir / obs_pred.name)
+        temp_out_fn = out_fn.with_suffix(out_fn.suffix + ".bak")
+        if out_fn.exists():
+            out_fn.rename(temp_out_fn)
+        try:
+            shutil.copy(obs_pred, out_fn)
+            if temp_out_fn.exists():
+                temp_out_fn.unlink()
+        except Exception as e:
+            if temp_out_fn.exists():
+                temp_out_fn.rename(out_fn)
+            log.error("Failed to copy file: %s", e)
+            raise
+    return
 
 
 def identity(x: Any) -> Any:
@@ -269,6 +287,9 @@ def cli() -> argparse.Namespace:
     )
     parser.add_argument(
         "-c", "--cv-obs-pred", action="store_true", help="Copy CV obs. vs pred. data."
+    )
+    parser.add_argument(
+        "-o", "--overwrite", action="store_true", help="Overwrite data."
     )
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode.")
     return parser.parse_args()
