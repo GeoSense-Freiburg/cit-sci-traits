@@ -207,8 +207,8 @@ stages:
     outs:
     - path: data/interim/gbif/trait_maps/Shrub_Tree_Grass/05
       hash: md5
-      md5: 0cc58ebec3421225ddc2f671a78a14f0.dir
-      size: 83416813
+      md5: 355db60f22d87f6b2b6d3a2d588712ac.dir
+      size: 83404693
       nfiles: 33
   build_splot_maps:
     cmd: python src/data/build_splot_maps.py
@@ -242,8 +242,8 @@ stages:
     outs:
     - path: data/interim/splot/trait_maps/Shrub_Tree_Grass/05
       hash: md5
-      md5: 6a520a48dcae4e1c6cd018fa0d328503.dir
-      size: 26660031
+      md5: a70372602c9d949d528cecfaa05daf58.dir
+      size: 26647917
       nfiles: 33
   build_y:
     cmd: python src/features/build_y.py
