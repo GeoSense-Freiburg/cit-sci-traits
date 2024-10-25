@@ -1,9 +1,13 @@
 """Updates (or creates) model performance and feature importance data for all trait models."""
 
 import argparse
+import collections
+import shutil
 from functools import partial
+from multiprocessing import Pool, cpu_count
 from pathlib import Path
-from typing import Callable
+from re import I
+from typing import Any, Callable, Iterable
 
 import pandas as pd
 from box import ConfigBox
@@ -218,13 +222,55 @@ def map_to_trait_dfs(
     return df
 
 
+def copy_cv_obs_pred(model_dir: Path, config: ConfigBox) -> None:
+    """Copy CV obs. vs pred. data to the all results directory."""
+    obs_pred = model_dir / "cv_obs_vs_pred.parquet"
+    out_dir = (
+        Path(config.analysis.dir)
+        / config.PFT
+        / config.model_res
+        / model_dir.parents[2].name
+        / model_dir.name
+        / model_dir.parent.name
+    )
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if obs_pred.exists():
+        log.info("Copying %s -> %s", obs_pred, out_dir)
+        shutil.copy(obs_pred, out_dir / obs_pred.name)
+
+
+def identity(x: Any) -> Any:
+    """Return the input argument."""
+    return x
+
+
+def consume(iterator: Iterable, use_multiprocessing: bool = False) -> None:
+    """Consume an iterator and return None. Optionally use multiprocessing."""
+    if use_multiprocessing:
+        with Pool(cpu_count()) as pool:
+            pool.map(identity, iterator)
+    else:
+        collections.deque(iterator, maxlen=0)
+
+
 def cli() -> argparse.Namespace:
     """Simple CLI"""
     parser = argparse.ArgumentParser(
         description="Update model performance and feature importance data for all trait models."
     )
+    parser.add_argument(
+        "-m", "--model-perf", action="store_true", help="Update model performance data."
+    )
+    parser.add_argument(
+        "-f",
+        "--feature-importance",
+        action="store_true",
+        help="Update feature importance data.",
+    )
+    parser.add_argument(
+        "-c", "--cv-obs-pred", action="store_true", help="Copy CV obs. vs pred. data."
+    )
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode.")
-
     return parser.parse_args()
 
 
@@ -235,21 +281,30 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
 
     Probably went a little overboard with the abstraction/composition here.
     """
-    log.info("Updating model performance...")
-    map_to_trait_dfs(
-        update_model_perf,
-        get_all_model_perf_df(debug=args.debug),
-        cfg,
-        get_all_model_perf_fn(cfg, debug=args.debug),
-    )
+    if args.model_perf:
+        log.info("Updating model performance...")
+        map_to_trait_dfs(
+            update_model_perf,
+            get_all_model_perf_df(debug=args.debug),
+            cfg,
+            get_all_model_perf_fn(cfg, debug=args.debug),
+        )
 
-    log.info("Updating feature importance...")
-    map_to_trait_dfs(
-        update_fi,
-        get_all_fi_df(debug=args.debug),
-        cfg,
-        get_all_fi_fn(cfg, debug=args.debug),
-    )
+    if args.feature_importance:
+        log.info("Updating feature importance...")
+        map_to_trait_dfs(
+            update_fi,
+            get_all_fi_df(debug=args.debug),
+            cfg,
+            get_all_fi_fn(cfg, debug=args.debug),
+        )
+
+    if args.cv_obs_pred:
+        log.info("Copying CV Obs. vs Pred....")
+        consume(
+            iterator=map(partial(copy_cv_obs_pred, config=cfg), get_all_trait_models()),
+            use_multiprocessing=True,
+        )
 
     log.info("Done!")
 

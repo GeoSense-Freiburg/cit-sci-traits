@@ -245,7 +245,7 @@ stages:
           persist: true
 
   aggregate_all_stats:
-    cmd: python src/models/multires_stats.py
+    cmd: python src/models/multires_stats.py -mfc
     deps:
       - src/models/multires_stats.py
       - ${models.dir}/${PFT}/${model_res}
