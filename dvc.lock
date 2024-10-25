@@ -1,12 +1,12 @@
 schema: '2.0'
 stages:
   harmonize_eo_data:
-    cmd: python src/data/harmonize_eo_data.py -n 12
+    cmd: python src/data/harmonize_eo_data.py
     deps:
     - path: src/data/harmonize_eo_data.py
       hash: md5
-      md5: 0e3caf7e63c91a0ae189efd807abee3b
-      size: 7183
+      md5: d278ce74489e0e62f7b291a9913c730c
+      size: 7524
     params:
       params.yaml:
         base_resolution: 0.01
@@ -80,8 +80,8 @@ stages:
       size: 3964944
     - path: src/data/match_gbif_pfts.py
       hash: md5
-      md5: 72e06889328d99142a3df936a895d793
-      size: 2105
+      md5: f1da3d6b45002463dd3722d5dff2c6be
+      size: 2118
     params:
       params.yaml:
         datasets.Y.gbif: all_tracheophyta_non-cult_2024-04-10
@@ -91,17 +91,17 @@ stages:
     outs:
     - path: data/interim/gbif/gbif_pfts.parquet
       hash: md5
-      md5: 78f983f8785ca9ee69666a4eb7b61c88.dir
-      size: 6797540635
-      nfiles: 122
+      md5: 3577e77a30c5116dd88c1c869df7c3df.dir
+      size: 6840401179
+      nfiles: 123
   subsample_gbif:
     cmd: python src/data/subsample_gbif.py
     deps:
     - path: data/interim/gbif/gbif_pfts.parquet
       hash: md5
-      md5: 78f983f8785ca9ee69666a4eb7b61c88.dir
-      size: 6797540635
-      nfiles: 122
+      md5: 3577e77a30c5116dd88c1c869df7c3df.dir
+      size: 6840401179
+      nfiles: 123
     - path: src/data/subsample_gbif.py
       hash: md5
       md5: 73f61cc054c4830e6404dab9a5f08f0e
@@ -199,8 +199,8 @@ stages:
       size: 3964944
     - path: src/data/build_splot_maps.py
       hash: md5
-      md5: 120dd2ef0cbe3620dbd004be868bf55e
-      size: 4482
+      md5: 1819ec728fdb5b372be5ff932021cdfa
+      size: 5620
     params:
       params.yaml:
         PFT: Shrub_Tree_Grass
@@ -225,8 +225,8 @@ stages:
       size: 1316913887
     - path: src/features/calc_spatial_autocorr.py
       hash: md5
-      md5: 24a50475871d60a1fa284add2aa126f3
-      size: 6038
+      md5: 3d875417dc61ada871d690ab9d00290b
+      size: 8519
     params:
       params.yaml:
         train.spatial_autocorr: spatial_autocorr.parquet
@@ -236,7 +236,7 @@ stages:
       md5: a4be75634474fa8aa26d2774ca108cc0
       size: 6351
   build_cv_splits:
-    cmd: python src/features/skcv_splits.py
+    cmd: python src/features/skcv_splits.py -o
     deps:
     - path: data/features/Shrub_Tree_Grass/001/Y.parquet
       hash: md5
@@ -248,8 +248,8 @@ stages:
       size: 6351
     - path: src/features/skcv_splits.py
       hash: md5
-      md5: f1b6b13f4256d7f5093ef845207fc20b
-      size: 7176
+      md5: 470d31538336d67f729d65a00b40d1dd
+      size: 8315
     params:
       params.yaml:
         train.cv_splits:
@@ -264,7 +264,7 @@ stages:
       size: 345848304
       nfiles: 33
   train_models:
-    cmd: python src/models/train_models.py -r & python src/models/cv_stats.py
+    cmd: python src/models/train_models.py -r && python src/models/cv_stats.py
     deps:
     - path: data/features/Shrub_Tree_Grass/001/Y.parquet
       hash: md5
@@ -299,7 +299,7 @@ stages:
           cv_fit_time_limit: 3600
           full_fit_time_limit: 12600
           num_gpus: auto
-          num_cpus: 64
+          num_cpus: 48
           feature_importance: true
           FI_time_limit: 1800
           FI_num_shuffle_sets: 10
@@ -354,8 +354,8 @@ stages:
       nfiles: 150
     - path: src/features/featurize_predict.py
       hash: md5
-      md5: baf07e318781b89bdf67a8ef22992f17
-      size: 4432
+      md5: dc08fdc5ee733649106d8f2a12602f01
+      size: 4447
     params:
       params.yaml:
         eo_data.interim.dir: eo_data
@@ -472,31 +472,45 @@ stages:
   build_final_product:
     cmd: python src/data/build_final_product.py
     deps:
-    - path: data/processed/Shrub_Tree_Grass/001/splot_gbif/cov
+    - path: data/processed/Shrub_Tree_Grass/001/aoa
       hash: md5
-      md5: 330d9b51b7b89ee11d427f188a84b416.dir
-      size: 22953495610
-      nfiles: 33
-    - path: data/processed/Shrub_Tree_Grass/001/splot_gbif/predict
+      md5: 28068067b112aa917b71ccd619cfc317.dir
+      size: 32959988061
+      nfiles: 66
+    - path: data/processed/Shrub_Tree_Grass/001/cov
       hash: md5
-      md5: 0925e8abb6d4fb4cda8262e90ddb09e1.dir
-      size: 21624371949
-      nfiles: 33
+      md5: a3f34140e3e30d0cd0b62e4aeb3793ea.dir
+      size: 44567507181
+      nfiles: 66
+    - path: data/processed/Shrub_Tree_Grass/001/predict
+      hash: md5
+      md5: 03f4388f75c78ed4175d4cf6d85603d4.dir
+      size: 42349891101
+      nfiles: 66
     - path: reference/trait_mapping.json
       hash: md5
-      md5: aaf617f304ffc9cb990c73cf3a0b4333
-      size: 4581
+      md5: d88e5e7f2326b9476aa36de2ec5457b5
+      size: 4602
     - path: reference/trait_stat_mapping.json
       hash: md5
       md5: 849cf0970f8069d7351f66056f8c5ff5
       size: 104
     - path: src/data/build_final_product.py
       hash: md5
-      md5: ff66238084f2579be5fda84959e6d5ce
-      size: 5294
+      md5: bcaca95b3489915f98d18eae67e8f788
+      size: 14841
     params:
       params.yaml:
-        public.dir: PANOPS/cit-sci-traits/trait_maps
+        public:
+          destination: both
+          local_dir: final
+          sftp_dir: PANOPS/cit-sci-traits/trait_maps
+    outs:
+    - path: data/processed/Shrub_Tree_Grass/001/final
+      hash: md5
+      md5: f2787cbf8b7a02d16471b87a7b34c694.dir
+      size: 27891922629
+      nfiles: 33
   impute_missing:
     cmd: python src/data/impute_missing.py -c 2
     deps:
@@ -533,8 +547,8 @@ stages:
       nfiles: 33
     - path: src/features/build_y.py
       hash: md5
-      md5: 32e5f638dae1b5300a9847d13c9e01db
-      size: 2568
+      md5: 0b29a0de1fd27ad9aa9c20691c0a4690
+      size: 2578
     params:
       params.yaml:
         datasets.Y.trait_stat: 1
@@ -561,26 +575,12 @@ stages:
       nfiles: 20420
     - path: src/analysis/aoa.py
       hash: md5
-      md5: 53ae38e7bc0e3e808c924f7caf7054af
-      size: 15513
+      md5: f851f1f0fe263a9c24e48975f766d403
+      size: 15663
     params:
       params.yaml:
         aoa:
           dir: aoa
-          device_ids:
-          - 0
-          - 1
-          - 2
-          - 3
-          predict_sample: 0.5
-          splot:
-            train_sample: 1
-            avg_dist_batch_size: 10000
-            predict_partitions:
-          splot_gbif:
-            train_sample: 0.5
-            avg_dist_batch_size: 5000
-            predict_partitions:
         datasets.Y.traits:
         - 4
         - 6
