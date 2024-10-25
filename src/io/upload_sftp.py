@@ -37,12 +37,13 @@ def upload_file_sftp(
             sftp.close()
             ssh.close()
             return
-        except paramiko.SSHException:
+        except paramiko.SSHException as e:
             retries += 1
             log.warning(
-                "SSHException encountered. Retrying in 60 seconds... (Attempt %d/%d)",
+                "SSHException encountered. Retrying in 60 seconds... (Attempt %d/%d), %s",
                 retries,
                 max_retries,
+                e,
             )
             time.sleep(60)
         except Exception as e:

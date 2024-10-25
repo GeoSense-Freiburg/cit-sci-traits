@@ -1,6 +1,7 @@
 """Combines final data products (e.g. predicted traits and CoV), adds nice metadata,
 and uploads to a target destination for sharing."""
 
+import argparse
 import json
 import shutil
 import subprocess
@@ -154,12 +155,21 @@ def process_single_trait_map(
     trait_mapping: dict,
     trait_agg: dict,
     destination: str = "local",
+    overwrite: bool = False,
 ) -> None:
     """Process a single trait map."""
     log.info("Processing %s", trait_map)
 
     if destination not in ["sftp", "local", "both"]:
         raise ValueError("Invalid destination. Must be one of 'sftp', 'local', 'both'.")
+
+    output_file_name = f"{trait_map.stem}_{cfg.PFT}_{cfg.model_res}_deg.tif"
+
+    if destination in ("local", "both") and not overwrite:
+        local_dest_dir = get_processed_dir() / cfg.public.local_dir
+        if (local_dest_dir / output_file_name).exists():
+            log.info("File already exists. Skipping...")
+            return
 
     trait_num = get_trait_number_from_id(trait_map.stem)
     trait_meta = trait_mapping[trait_num]
@@ -324,10 +334,10 @@ def process_single_trait_map(
         )
 
         if destination in ("local", "both"):
-            dest_dir = get_processed_dir() / cfg.public.local_dir
-            dest_dir.mkdir(parents=True, exist_ok=True)
+            local_dest_dir = get_processed_dir() / cfg.public.local_dir
+            local_dest_dir.mkdir(parents=True, exist_ok=True)
             # shutil move
-            shutil.move(cog_path, dest_dir / new_file_path.name)
+            shutil.move(cog_path, local_dest_dir / new_file_path.name)
             # copy(cog_path, dest_dir / new_file_path.name, driver="COG")
 
         if destination in ("sftp", "both"):
@@ -350,7 +360,21 @@ def process_single_trait_map(
         aoa_dataset.close()
 
 
-def main(cfg: ConfigBox = get_config()) -> None:
+def cli() -> argparse.Namespace:
+    """Command-line interface."""
+    parser = argparse.ArgumentParser(
+        description="Build final product from predicted trait maps."
+    )
+
+    parser.add_argument(
+        "-o", "--overwrite", action="store_true", help="Overwrite existing files."
+    )
+    parser.add_argument("-d", "--dest", default="both", help="Destination for output.")
+
+    return parser.parse_args()
+
+
+def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> None:
     """Main function."""
     syscfg = cfg[detect_system()][cfg.model_res]["build_final_product"]
     predict_dir = get_predict_dir()
@@ -397,7 +421,7 @@ def main(cfg: ConfigBox = get_config()) -> None:
 
     tasks = [
         process_single_trait_map(
-            trait_map, trait_set, cfg, metadata, trait_mapping, trait_stats, "both"
+            trait_map, trait_set, cfg, metadata, trait_mapping, trait_stats, args.dest
         )
         for trait_map in list(predict_dir.glob("*"))
     ]
