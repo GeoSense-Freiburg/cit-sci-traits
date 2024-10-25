@@ -458,5 +458,10 @@ def add_cv_splits_to_column(
     return df
 
 
+def get_final_fns(config: ConfigBox = cfg) -> Generator[Path, None, None]:
+    """Get the filenames of the final trait maps."""
+    return Path(get_processed_dir(config) / config.public.local_dir).glob("*.tif")
+
+
 if __name__ == "__main__":
     print(get_eo_fns_dict("interim"))

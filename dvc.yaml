@@ -239,7 +239,7 @@ stages:
       - ${processed.dir}/${PFT}/${model_res}/${cov.dir}
       - ${processed.dir}/${PFT}/${model_res}/${aoa.dir}
     params:
-      - public.dir
+      - public
     outs:
       - ${processed.dir}/${PFT}/${model_res}/${public.local_dir}:
           persist: true
