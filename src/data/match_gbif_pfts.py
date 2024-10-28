@@ -28,6 +28,7 @@ def main(cfg: ConfigBox = get_config()):
         "taxonrank",
         "decimallatitude",
         "decimallongitude",
+        "occurrencestatus",
     ]
     ddf = dd.read_parquet(
         gbif_raw_dir / "all_tracheophyta_non-cult_2024-04-10.parquet/*", columns=columns
@@ -37,8 +38,8 @@ def main(cfg: ConfigBox = get_config()):
 
     # 02. Preprocess GBIF data
     ddf = (
-        ddf[ddf["taxonrank"] == "SPECIES"]
-        .drop(columns=["taxonrank"])
+        ddf.query("taxonrank == 'SPECIES' and occurrencestatus == 'PRESENT'")
+        .drop(columns=["taxonrank", "occurrencestatus"])
         .dropna(subset=["species"])
         .pipe(clean_species_name, "species", "speciesname")
         .drop(columns=["species"])
