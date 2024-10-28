@@ -4,15 +4,16 @@ from pathlib import Path
 
 import dask.dataframe as dd
 from box import ConfigBox
-from dask.distributed import Client, LocalCluster
 
 from src.conf.conf import get_config
+from src.conf.environment import detect_system, log
 from src.utils.dask_utils import close_dask, init_dask
 from src.utils.trait_utils import clean_species_name
 
 
 def main(cfg: ConfigBox = get_config()):
     """Match GBIF and PFT data and save to disk."""
+    syscfg = cfg[detect_system()]["match_gbif_pfts"]
     # 00. Initialize Dask client
     client, cluster = init_dask(
         dashboard_address=cfg.dask_dashboard, n_workers=syscfg.n_workers
@@ -29,9 +30,8 @@ def main(cfg: ConfigBox = get_config()):
         "decimallongitude",
     ]
     ddf = dd.read_parquet(
-        gbif_raw_dir / "all_tracheophyta_non-cult_2024-04-10.parquet/*",
-        columns=columns,
-    ).repartition(npartitions=60)
+        gbif_raw_dir / "all_tracheophyta_non-cult_2024-04-10.parquet/*", columns=columns
+    )
 
     pfts = dd.read_csv(Path(cfg.raw_dir, cfg.trydb.raw.pfts), encoding="latin-1")
 

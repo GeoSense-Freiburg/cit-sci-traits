@@ -16,6 +16,9 @@ pylos:
   "001":
     harmonize_eo_data:
       n_workers: 12
+    match_gbif_pfts:
+      n_workers: 80
+      n_partitions: 80
     build_splot_maps:
       npartitions: 60
       dask:
@@ -54,6 +57,9 @@ pylos:
   "02":
     harmonize_eo_data:
       n_workers: 20
+    match_gbif_pfts:
+      n_workers: 80
+      n_partitions: 80
     build_splot_maps:
       npartitions: 60
       dask:
@@ -92,6 +98,9 @@ pylos:
   "05":
     harmonize_eo_data:
       n_workers: 18
+    match_gbif_pfts:
+      n_workers: 80
+      n_partitions: 80
     build_splot_maps:
       npartitions: 60
       dask:
@@ -130,6 +139,9 @@ pylos:
   "1":
     harmonize_eo_data:
       n_workers: 48
+    match_gbif_pfts:
+      n_workers: 80
+      n_partitions: 80
     build_splot_maps:
       npartitions: 60
       dask:
@@ -168,6 +180,9 @@ pylos:
   "2":
     harmonize_eo_data:
       n_workers: 30
+    match_gbif_pfts:
+      n_workers: 80
+      n_partitions: 80
     build_splot_maps:
       npartitions: 60
       dask:
@@ -207,6 +222,9 @@ geos:
   "001":
     harmonize_eo_data:
       n_workers: 48
+    match_gbif_pfts:
+      n_workers: 60
+      n_partitions: 80
     build_splot_maps:
       npartitions: 60
       dask:
@@ -244,6 +262,9 @@ geos:
   "02":
     harmonize_eo_data:
       n_workers: 48
+    match_gbif_pfts:
+      n_workers: 60
+      n_partitions: 80
     build_splot_maps:
       npartitions: 80
       dask:
@@ -281,6 +302,9 @@ geos:
   "05":
     harmonize_eo_data:
       n_workers: 48
+    match_gbif_pfts:
+      n_workers: 60
+      n_partitions: 80
     build_splot_maps:
       npartitions: 80
       dask:
@@ -318,6 +342,9 @@ geos:
   "1":
     harmonize_eo_data:
       n_workers: 80
+    match_gbif_pfts:
+      n_workers: 60
+      n_partitions: 80
     build_splot_maps:
       npartitions: 80
       dask:
@@ -355,6 +382,9 @@ geos:
   "2":
     harmonize_eo_data:
       n_workers: 80
+    match_gbif_pfts:
+      n_workers: 60
+      n_partitions: 80
     build_splot_maps:
       npartitions: 80
       dask:
