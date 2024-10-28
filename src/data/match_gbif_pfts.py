@@ -7,17 +7,16 @@ from box import ConfigBox
 from dask.distributed import Client, LocalCluster
 
 from src.conf.conf import get_config
-from src.conf.environment import log
+from src.utils.dask_utils import close_dask, init_dask
 from src.utils.trait_utils import clean_species_name
 
 
 def main(cfg: ConfigBox = get_config()):
     """Match GBIF and PFT data and save to disk."""
     # 00. Initialize Dask client
-    cluster = LocalCluster(
-        dashboard_address=":39143", n_workers=40, memory_limit="48GB"
+    client, cluster = init_dask(
+        dashboard_address=cfg.dask_dashboard, n_workers=syscfg.n_workers
     )
-    client = Client(cluster)
 
     # 01. Load data
     gbif_raw_dir = Path(cfg.raw_dir, cfg.gbif.raw.dir)
@@ -65,8 +64,7 @@ def main(cfg: ConfigBox = get_config()):
         )
     finally:
         log.info("Shutting down Dask client...")
-        client.close()
-        cluster.close()
+        close_dask(client, cluster)
 
 
 if __name__ == "__main__":
