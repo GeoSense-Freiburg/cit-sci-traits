@@ -44,7 +44,7 @@ def write_df(
     df: pd.DataFrame | gpd.GeoDataFrame,
     out_path: str | Path,
     writer: str = "parquet",
-    dask: bool = False,
+    use_dask: bool = False,
     **kwargs,
 ) -> None:
     """Write a DataFrame to a file."""
@@ -54,7 +54,7 @@ def write_df(
         if "engine" not in kwargs:
             kwargs["engine"] = "pyarrow"
 
-        if dask:
+        if use_dask:
             npartitions = 64
             if isinstance(df, gpd.GeoDataFrame):
                 dgdf = dgpd.from_geopandas(df, npartitions=npartitions)
