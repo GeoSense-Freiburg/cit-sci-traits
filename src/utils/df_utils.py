@@ -1,23 +1,23 @@
 """Utility functions for working with DataFrames and GeoDataFrames."""
 
 import gc
+import warnings
 from pathlib import Path
 from typing import Any
 
+import dask
 import dask.dataframe as dd
 import dask_geopandas as dgpd
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pyproj
 import xarray as xr
+from affine import Affine
 
 from src.conf.environment import log
 from src.utils.log_utils import setup_logger
-from src.utils.raster_utils import (
-    coord_decimal_places,
-    create_sample_raster,
-    xr_to_raster,
-)
+from src.utils.raster_utils import create_sample_raster, xr_to_raster
 
 log = setup_logger(__name__, "INFO")
 
@@ -198,6 +198,243 @@ def filter_outliers(
     return df[comb_mask]
 
 
+def reproject_geo_to_xy(
+    df: pd.DataFrame, crs: str = "EPSG:6933", x: str = "x", y: str = "y"
+):
+    """
+    Reprojects geographical coordinates to a specified coordinate reference system (CRS).
+
+    Parameters:
+    df (pd.DataFrame): DataFrame containing the geographical coordinates.
+    crs (str): Coordinate reference system to reproject to. Default is "EPSG:6933".
+    x (str): Name of the column containing the x (longitude) coordinates. Default is "x".
+    y (str): Name of the column containing the y (latitude) coordinates. Default is "y".
+
+    Returns:
+    pd.DataFrame: DataFrame with reprojected x and y coordinates.
+    """
+    proj = pyproj.Proj(pyproj.CRS(crs))
+    xy = proj(df[x], df[y])
+    df["x"] = xy[0]
+    df["y"] = xy[1]
+    return df
+
+
+def point_to_cell_index(
+    x: pd.Series | np.ndarray, y: pd.Series | np.ndarray, transform: Affine
+) -> tuple[int, int]:
+    """
+    Converts point coordinates to cell indices based on a given affine transform.
+
+    Args:
+        x (pd.Series | np.ndarray): The x-coordinates of the points.
+        y (pd.Series | np.ndarray): The y-coordinates of the points.
+        transform (Affine): The affine transformation to apply.
+
+    Returns:
+        tuple[int, int]: The column and row indices corresponding to the input points.
+    """
+    cols, rows = ~transform * (x, y)  # pyright: ignore[reportOperatorIssue]
+    return cols.astype(int), rows.astype(int)
+
+
+def xy_to_rowcol_df(
+    df: pd.DataFrame,
+    transform: Affine | tuple[float, float, float, float, float, float],
+    x: str = "x",
+    y: str = "y",
+) -> pd.DataFrame:
+    """
+    Converts x, y coordinates in a DataFrame to row, column indices based on a given
+    affine transform.
+
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        The input DataFrame containing x, y coordinates.
+    transform : Affine or tuple
+        The affine transformation or a tuple representing the affine transformation
+        parameters.
+    x : str, optional
+        The column name for x coordinates in the DataFrame. Default is "x".
+    y : str, optional
+        The column name for y coordinates in the DataFrame. Default is "y".
+
+    Returns:
+    --------
+    pd.DataFrame
+        A DataFrame with additional columns 'col' and 'row' representing the column and
+        row indices.
+    """
+    df = df.copy()
+    if isinstance(transform, tuple):
+        transform = Affine.from_gdal(*transform)
+
+    idx = point_to_cell_index(df[x], df[y], transform)
+    df["col"] = idx[0]
+    df["row"] = idx[1]
+    return df
+
+
+def agg_df(
+    df: pd.DataFrame,
+    by: str | list[str],
+    data: str,
+    funcs: dict[str, Any] | None = None,
+    n_min: int = 1,
+    n_max: int | None = None,
+) -> pd.DataFrame:
+    """
+    Aggregate a DataFrame by specified columns and apply aggregation functions.
+
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        The DataFrame to be aggregated.
+    by : str or list of str
+        Column(s) to group by.
+    data : str
+        The column to aggregate.
+    funcs : dict of str to Any, optional
+        A dictionary where keys are the names of the resulting columns and values are
+        the aggregation functions.
+        If None, the default aggregation functions are used: mean, std, median, q05, q95,
+        count.
+    n_min : int, optional
+        Minimum count threshold to filter groups. Default is 1.
+    n_max : int, optional
+        Maximum count threshold to filter groups. Default is None.
+
+    Returns:
+    --------
+    pd.DataFrame
+        The aggregated DataFrame with the specified aggregation functions applied.
+    """
+    if funcs is None:
+        funcs = {
+            "mean": "mean",
+            "std": "std",
+            "median": "median",
+            "q05": lambda x: x.quantile(0.05, interpolation="nearest"),
+            "q95": lambda x: x.quantile(0.95, interpolation="nearest"),
+            "count": "count",
+        }
+
+    df = df.groupby(by, observed=False)[[data]].agg(list(funcs.values()))
+
+    df.columns = list(funcs.keys())
+
+    if "count" in df.columns:
+        if n_min > 1:
+            df = df[df["count"] >= n_min]
+
+        if n_max is not None:
+            df = df[df["count"] <= n_max]
+
+    return df.reset_index()
+
+
+def rasterize_points(
+    df: pd.DataFrame,
+    data: str,
+    x: str = "x",
+    y: str = "y",
+    raster: xr.DataArray | xr.Dataset | None = None,
+    res: int | float | None = None,
+    crs: str | None = None,
+    nodata: int | float = np.nan,
+    funcs: dict[str, Any] | None = None,
+    n_min: int = 1,
+    n_max: int | None = None,
+) -> xr.Dataset:
+    """
+    Rasterizes point data from a DataFrame into a raster dataset.
+
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        DataFrame containing the point data to be rasterized.
+    data : str
+        Column name in the DataFrame containing the data values to be rasterized.
+    x : str, optional
+        Column name for the x-coordinates, by default "x".
+    y : str, optional
+        Column name for the y-coordinates, by default "y".
+    raster : xr.DataArray or xr.Dataset, optional
+        Existing raster to use as a reference. If None, a new raster will be created.
+    res : int or float, optional
+        Resolution of the new raster if `raster` is None.
+    crs : str, optional
+        Coordinate reference system of the new raster if `raster` is None.
+    nodata : int or float, optional
+        Value to use for no-data cells, by default np.nan.
+    funcs : dict[str, Any], optional
+        Aggregation functions to apply to the data, by default None.
+    n_min : int, optional
+        Minimum number of points required to aggregate, by default 1.
+    n_max : int, optional
+        Maximum number of points to aggregate, by default None.
+
+    Returns:
+    --------
+    xr.Dataset
+        Raster dataset with the rasterized point data.
+
+    Raises:
+    -------
+    ValueError
+        If neither `raster` nor both `res` and `crs` are provided.
+        If `res` and `crs` are provided when `raster` is also provided.
+    """
+    if raster is None:
+        if res is None or crs is None:
+            raise ValueError(
+                "Either 'raster' or both 'res' and 'crs' must be provided."
+            )
+        # Generate a sample raster with the specified resolution and CRS
+        ref = create_sample_raster(resolution=res, crs=crs)
+
+    elif res is not None or crs is not None:
+        raise ValueError(
+            "'res' and 'crs' must not be provided if 'raster' is provided."
+        )
+    else:
+        # Create an empty raster with the same shape, CRS, resolution, and nodata value
+        ref = raster.copy()
+        # Drop all existing data variables
+        for var in ref.data_vars:
+            ref = ref.drop_vars(var)  # pyright: ignore[reportArgumentType]
+
+    transform = ref.rio.transform().to_gdal()
+
+    grid_df = (
+        xy_to_rowcol_df(df, transform, x=x, y=y)
+        .drop(columns=["x", "y"])
+        .pipe(
+            agg_df, by=["row", "col"], data=data, funcs=funcs, n_min=n_min, n_max=n_max
+        )
+    )
+
+    if dask.is_dask_collection(grid_df):
+        grid_df = grid_df.compute()  # pyright: ignore[reportCallIssue]
+
+    # Write each column of the DataFrame to a separate data variable in the raster
+    for col in grid_df.columns:
+        if str(col) in ("row", "col"):
+            continue
+        ref[col] = (("y", "x"), np.full(ref.rio.shape, nodata))
+        ref[col].values[grid_df["row"].values, grid_df["col"].values] = grid_df[
+            col
+        ].values
+
+        if np.isnan(nodata):
+            ref[col] = ref[col].rio.write_nodata(nodata, encoded=False)
+        else:
+            ref[col] = ref[col].rio.write_nodata(nodata, encoded=True)
+
+    return ref  # pyright: ignore[reportReturnType]
+
+
 def global_grid_df(
     df: pd.DataFrame,
     col: str,
@@ -221,6 +458,11 @@ def global_grid_df(
         pd.DataFrame: A DataFrame containing gridded statistics.
 
     """
+    warnings.warn(
+        "'global_grid_df' is deprecated and will be removed in a future "
+        "version. Use 'rasterize_points' instead.",
+        DeprecationWarning,
+    )
 
     stat_funcs = {
         "mean": "mean",
