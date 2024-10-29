@@ -12,8 +12,11 @@ import pandas as pd
 import rasterio
 import rioxarray as riox
 import xarray as xr
+from ease_grid import EASE2_grid
 from rasterio.enums import Resampling
 from rioxarray.merge import merge_arrays, merge_datasets
+
+from src.conf.environment import log
 
 
 def encode_nodata(da: xr.DataArray, dtype: str | np.dtype) -> xr.DataArray:
@@ -153,10 +156,10 @@ def coord_decimal_places(resolution: int | float):
     return 0
 
 
-def create_sample_raster(
-    extent: list[int] | list[float] | None = None, resolution: int | float = 1
-) -> xr.Dataset:
-    """Generate a sample raster at a given resolution."""
+def generate_epsg4326_grid(
+    resolution: int | float, extent: list[int | float] | None = None
+) -> tuple[np.ndarray, np.ndarray]:
+    """Generate a grid of x and y coordinates in EPSG:4326."""
     if extent is None:
         extent = [-180, -90, 180, 90]
 
@@ -166,17 +169,90 @@ def create_sample_raster(
     half_res = resolution * 0.5
     decimals = coord_decimal_places(resolution)
 
-    x_data = np.round(
-        np.linspace(xmin + half_res, xmax - half_res, width, dtype=np.float64), decimals
+    x_coords = np.round(
+        np.linspace(xmin + half_res, xmax - half_res, width, dtype=np.float64),
+        decimals,
     )
-    y_data = np.round(
+    y_coords = np.round(
         np.linspace(ymax - half_res, ymin + half_res, height, dtype=np.float64),
         decimals,
     )
 
-    ds = xr.Dataset({"y": (("y"), y_data), "x": (("x"), x_data)})
+    return x_coords, y_coords
 
-    return ds.rio.write_crs("EPSG:4326")
+
+def generate_epsg6933_grid(
+    resolution: int | float, extent: list[int | float] | None = None
+) -> tuple[np.ndarray, np.ndarray]:
+    """Generate a grid of x and y coordinates in EPSG:6933."""
+    ease_grid = EASE2_grid(res=resolution)
+
+    if extent is None:
+        extent = [
+            ease_grid.x_min,
+            ease_grid.y_min,
+            ease_grid.x_max,
+            ease_grid.y_max,
+        ]
+
+    xmin, ymin, xmax, ymax = extent
+    half_res_x = ease_grid.x_pixel / 2
+    half_res_y = ease_grid.y_pixel / 2
+    decimals_x = coord_decimal_places(ease_grid.x_pixel)
+    decimals_y = coord_decimal_places(ease_grid.y_pixel)
+
+    x_coords = np.round(
+        np.linspace(
+            xmin + half_res_x,
+            xmax - half_res_x,
+            ease_grid.shape[1],
+        ),
+        decimals_x,
+    )
+    y_coords = np.round(
+        np.linspace(
+            ymax - half_res_y,
+            ymin + half_res_y,
+            ease_grid.shape[0],
+        ),
+        decimals_y,
+    )
+
+    return x_coords, y_coords
+
+
+def create_sample_raster(
+    extent: list[int | float] | None = None,
+    resolution: int | float = 1,
+    crs: str = "EPSG:4326",
+) -> xr.Dataset:
+    """
+    Generate a sample raster at a given resolution and CRS.
+
+    Parameters:
+    extent (list[int | float] | None): The spatial extent of the raster in the format
+        [min_x, min_y, max_x, max_y]. If None, a default extent will be used based on
+        the CRS.
+    resolution (int | float): The resolution of the raster grid cells.
+    crs (str): The coordinate reference system (CRS) of the raster. Default is "EPSG:4326".
+
+    Returns:
+    xr.Dataset: An xarray Dataset containing the generated raster with the specified CRS.
+
+    Raises:
+    ValueError: If the CRS is not "EPSG:4326" or "EPSG:6933" and extent is not provided.
+    """
+
+    if crs == "EPSG:4326":
+        x_coords, y_coords = generate_epsg4326_grid(resolution, extent)
+    elif crs == "EPSG:6933":
+        x_coords, y_coords = generate_epsg6933_grid(resolution, extent)
+    else:
+        raise ValueError("Extent must be provided for non-EPSG:4326 CRS.")
+
+    ds = xr.Dataset({"y": (("y"), y_coords), "x": (("x"), x_coords)})
+
+    return ds.rio.write_crs(crs)
 
 
 def raster_to_df(
