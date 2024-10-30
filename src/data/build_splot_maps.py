@@ -11,11 +11,12 @@ from box import ConfigBox
 from src.conf.conf import get_config
 from src.conf.environment import detect_system, log
 from src.utils.dask_utils import close_dask, init_dask
-from src.utils.df_utils import global_grid_df, grid_df_to_raster
+from src.utils.df_utils import rasterize_points, reproject_geo_to_xy
+from src.utils.raster_utils import xr_to_raster
 from src.utils.trait_utils import clean_species_name, filter_pft
 
 
-def cwm(df: pd.DataFrame, col: str) -> pd.DataFrame:
+def _cwm(df: pd.DataFrame, col: str) -> pd.DataFrame:
     """Calculate community-weighted means per plot."""
     grouped = df.groupby("PlotObservationID")
 
@@ -114,6 +115,8 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
         .join(traits, how="inner")
         .reset_index()
         .drop(columns=["pft", "speciesname"])
+        .map_partitions(reproject_geo_to_xy, crs=cfg.crs, x="Longitude", y="Latitude")
+        .drop(columns=["Longitude", "Latitude"])
         .persist()
     )
 
@@ -140,24 +143,18 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
             gridded_cwms = (
                 merged[["PlotObservationID", "Rel_Abund_Plot", col]]
                 .set_index("PlotObservationID")
-                # .persist()
-                .map_partitions(cwm, col, meta={"cwm": "f8"})
+                .map_partitions(_cwm, col, meta={"cwm": "f8"})
                 .join(header, how="inner")
                 .reset_index()
                 .pipe(
-                    global_grid_df,
-                    "cwm",
-                    "Longitude",
-                    "Latitude",
-                    cfg.target_resolution,
+                    rasterize_points, data="cwm", res=cfg.target_resolution, crs=cfg.crs
                 )
-                .compute()
             )
-            log.info("Writing %s.tif...", col)
-            grid_df_to_raster(
-                gridded_cwms, cfg.target_resolution, out_dir / f"{col}.tif"
-            )
-            log.info("Wrote %s.tif.", col)
+
+            out_fn = out_dir / f"{col}.tif"
+            log.info("Writing %s to disk...", col)
+            xr_to_raster(gridded_cwms, out_fn)
+            log.info("Wrote %s.", out_fn)
     finally:
         close_dask(client, cluster)
         log.info("Done!")
