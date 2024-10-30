@@ -53,7 +53,7 @@ def process_file(
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     if out_path.exists() and not overwrite:
-        log.info(f"Skipping {filename}...")
+        log.info("Skipping %s...", filename)
         return
 
     rast = open_raster(filename).sel(band=1).rio.reproject_match(mask)
@@ -207,10 +207,12 @@ def main(args: argparse.Namespace) -> None:
         return
 
     log.info("Building reference rasters...")
-    target_sample_raster = create_sample_raster(resolution=cfg.target_resolution)
+    target_sample_raster = create_sample_raster(
+        resolution=cfg.target_resolution, crs=cfg.crs
+    )
 
     log.info("Building landcover mask...")
-    mask = get_mask(cfg.mask.path, cfg.mask.keep_classes, cfg.base_resolution)
+    mask = get_mask(cfg.mask.path, cfg.mask.keep_classes, cfg.base_resolution, cfg.crs)
 
     if not args.dry_run:
         out_dir.mkdir(parents=True, exist_ok=True)

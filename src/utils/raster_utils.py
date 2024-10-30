@@ -5,6 +5,7 @@ import multiprocessing
 import os
 from pathlib import Path
 from typing import Any, Optional
+from uu import encode
 
 import geopandas as gpd
 import numpy as np
@@ -380,3 +381,51 @@ def pack_data(
         raise
 
     return scale, offset, nodata_value, data_int16
+
+
+def pack_xr(
+    data: xr.DataArray | xr.Dataset, nbits: int = 16, signed: bool = True
+) -> xr.DataArray | xr.Dataset:
+    """
+    Pack the given xarray DataArray or Dataset into a specified integer format with optional scaling and offset.
+    Parameters:
+    -----------
+    data : xr.DataArray | xr.Dataset
+        The input xarray DataArray or Dataset to be packed.
+    nbits : int, optional
+        The number of bits for the integer representation (default is 16).
+    signed : bool, optional
+        Whether to use a signed integer type (default is True).
+    Returns:
+    --------
+    xr.DataArray | xr.Dataset
+        The packed xarray DataArray or Dataset in the specified integer format.
+    Raises:
+    -------
+    FloatingPointError
+        If there is an invalid floating point operation during the packing process.
+    Notes:
+    ------
+    This function scales and offsets the input data to fit into the specified integer format.
+    It handles NaN values by replacing them with a designated nodata value.
+    """
+    data = data.copy()
+
+    if isinstance(data, xr.DataArray):
+        scale, offset, nodata_value, data_int16 = pack_data(data.values, nbits, signed)
+        data.values = data_int16
+        data.attrs["Scale"] = scale
+        data.attrs["Offset"] = offset
+        data = data.rio.write_nodata(nodata_value, encoded=True)
+        return data
+
+    for var in data.data_vars:
+        scale, offset, nodata_value, data_int16 = pack_data(
+            data[var].values, nbits, signed
+        )
+        data[var].values = data_int16
+        data[var].attrs["Scale"] = scale
+        data[var].attrs["Offset"] = offset
+        data[var] = data[var].rio.write_nodata(nodata_value, encoded=True)
+
+    return data
