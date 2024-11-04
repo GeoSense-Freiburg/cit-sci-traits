@@ -53,7 +53,7 @@ def process_file(
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     if out_path.exists() and not overwrite:
-        log.info(f"Skipping {filename}...")
+        log.info("Skipping %s...", filename)
         return
 
     rast = open_raster(filename).sel(band=1).rio.reproject_match(mask)
