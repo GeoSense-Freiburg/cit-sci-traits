@@ -12,8 +12,11 @@ import pandas as pd
 import rasterio
 import rioxarray as riox
 import xarray as xr
+from ease_grid import EASE2_grid
 from rasterio.enums import Resampling
 from rioxarray.merge import merge_arrays, merge_datasets
+
+from src.conf.environment import log
 
 
 def encode_nodata(da: xr.DataArray, dtype: str | np.dtype) -> xr.DataArray:
@@ -117,6 +120,8 @@ def merge_rasters(
         merged = merge_datasets(rasters)  # pyright: ignore[reportArgumentType]
     elif isinstance(rasters[0], list):
         raise ValueError("Nested lists are not supported.")
+    else:
+        raise ValueError("Raster type not recognized.")
 
     xr_to_raster(merged, out_file)
 
@@ -153,10 +158,10 @@ def coord_decimal_places(resolution: int | float):
     return 0
 
 
-def create_sample_raster(
-    extent: list[int] | list[float] | None = None, resolution: int | float = 1
-) -> xr.Dataset:
-    """Generate a sample raster at a given resolution."""
+def generate_epsg4326_grid(
+    resolution: int | float, extent: list[int | float] | None = None
+) -> tuple[np.ndarray, np.ndarray]:
+    """Generate a grid of x and y coordinates in EPSG:4326."""
     if extent is None:
         extent = [-180, -90, 180, 90]
 
@@ -166,17 +171,90 @@ def create_sample_raster(
     half_res = resolution * 0.5
     decimals = coord_decimal_places(resolution)
 
-    x_data = np.round(
-        np.linspace(xmin + half_res, xmax - half_res, width, dtype=np.float64), decimals
+    x_coords = np.round(
+        np.linspace(xmin + half_res, xmax - half_res, width, dtype=np.float64),
+        decimals,
     )
-    y_data = np.round(
+    y_coords = np.round(
         np.linspace(ymax - half_res, ymin + half_res, height, dtype=np.float64),
         decimals,
     )
 
-    ds = xr.Dataset({"y": (("y"), y_data), "x": (("x"), x_data)})
+    return x_coords, y_coords
 
-    return ds.rio.write_crs("EPSG:4326")
+
+def generate_epsg6933_grid(
+    resolution: int | float, extent: list[int | float] | None = None
+) -> tuple[np.ndarray, np.ndarray]:
+    """Generate a grid of x and y coordinates in EPSG:6933."""
+    ease_grid = EASE2_grid(res=resolution)
+
+    if extent is None:
+        extent = [
+            ease_grid.x_min,
+            ease_grid.y_min,
+            ease_grid.x_max,
+            ease_grid.y_max,
+        ]
+
+    xmin, ymin, xmax, ymax = extent
+    half_res_x = ease_grid.x_pixel / 2
+    half_res_y = ease_grid.y_pixel / 2
+    decimals_x = coord_decimal_places(ease_grid.x_pixel)
+    decimals_y = coord_decimal_places(ease_grid.y_pixel)
+
+    x_coords = np.round(
+        np.linspace(
+            xmin + half_res_x,
+            xmax - half_res_x,
+            ease_grid.shape[1],
+        ),
+        decimals_x,
+    )
+    y_coords = np.round(
+        np.linspace(
+            ymax - half_res_y,
+            ymin + half_res_y,
+            ease_grid.shape[0],
+        ),
+        decimals_y,
+    )
+
+    return x_coords, y_coords
+
+
+def create_sample_raster(
+    extent: list[int | float] | None = None,
+    resolution: int | float = 1,
+    crs: str = "EPSG:4326",
+) -> xr.Dataset:
+    """
+    Generate a sample raster at a given resolution and CRS.
+
+    Parameters:
+    extent (list[int | float] | None): The spatial extent of the raster in the format
+        [min_x, min_y, max_x, max_y]. If None, a default extent will be used based on
+        the CRS.
+    resolution (int | float): The resolution of the raster grid cells.
+    crs (str): The coordinate reference system (CRS) of the raster. Default is "EPSG:4326".
+
+    Returns:
+    xr.Dataset: An xarray Dataset containing the generated raster with the specified CRS.
+
+    Raises:
+    ValueError: If the CRS is not "EPSG:4326" or "EPSG:6933" and extent is not provided.
+    """
+
+    if crs == "EPSG:4326":
+        x_coords, y_coords = generate_epsg4326_grid(resolution, extent)
+    elif crs == "EPSG:6933":
+        x_coords, y_coords = generate_epsg6933_grid(resolution, extent)
+    else:
+        raise ValueError("Extent must be provided for non-EPSG:4326 CRS.")
+
+    ds = xr.Dataset({"y": (("y"), y_coords), "x": (("x"), x_coords)})
+
+    return ds.rio.write_crs(crs)
 
 
 def raster_to_df(
@@ -227,3 +305,128 @@ def raster_to_df(
         )
 
     return df
+
+
+def pack_data(
+    data: np.ndarray, nbits: int = 16, signed: bool = True
+) -> tuple[np.float64, np.float64, int, np.ndarray]:
+    """
+    Packs the given data into a specified integer format with optional scaling and offset.
+    Parameters:
+    -----------
+    data : np.ndarray
+        The input data array to be packed.
+    nbits : int, optional
+        The number of bits for the integer representation (default is 16).
+    signed : bool, optional
+        Whether to use a signed integer type (default is True).
+    Returns:
+    --------
+    tuple[np.float64, np.float64, int, np.ndarray]
+        A tuple containing:
+        - scale (np.float64): The scale factor used for packing.
+        - offset (np.float64): The offset value used for packing.
+        - nodata_value (int): The value used to represent missing data.
+        - data_int16 (np.ndarray): The packed data array in the specified integer format.
+    Raises:
+    -------
+    FloatingPointError
+        If there is an invalid floating point operation during the packing process.
+    Notes:
+    ------
+    This function scales and offsets the input data to fit into the specified integer format.
+    It handles NaN values by replacing them with a designated nodata value.
+    """
+
+    data_min = np.nanmin(data)
+    data_max = np.nanmax(data)
+    dtype = f"int{nbits}" if signed else f"uint{nbits}"
+
+    nodata_value: int = -(2 ** (nbits - 1)) if signed else 0
+    scale = (data_max - data_min) / (2**nbits - 2)
+    scale = np.float64(scale)
+    offset = (data_max + data_min) / 2 if signed else data_min - scale
+    offset = np.float64(offset)
+
+    np.seterr(invalid="raise")
+    try:
+        data_int16 = np.where(
+            np.isnan(data), nodata_value, np.round((data - offset) / scale)
+        ).astype(dtype)
+    except FloatingPointError as e:
+        log.error("FloatingPointError: %s", e)
+        log.error("data_min: %s", data_min)
+        log.error("data_max: %s", data_max)
+        log.error("scale: %s", scale)
+        log.error("offset: %s", offset)
+
+        offset_data = np.subtract(data, offset)
+        log.error("offset_data stats:")
+        log.error("min: %s", np.nanmin(offset_data))
+        log.error("max: %s", np.nanmax(offset_data))
+
+        scaled_data = np.divide(offset_data, scale)
+        log.error("scaled data stats:")
+        log.error("min: %s", np.nanmin(scaled_data))
+        log.error("max: %s", np.nanmax(scaled_data))
+
+        rounded_data = scaled_data.round()
+        log.error("rounded_data stats:")
+        log.error("min: %s", np.nanmin(rounded_data))
+        log.error("max: %s", np.nanmax(rounded_data))
+
+        cast_data = rounded_data.astype(dtype)
+        log.error("cast_data stats:")
+        log.error("min: %s", np.nanmin(cast_data))
+        log.error("max: %s", np.nanmax(cast_data))
+        raise
+
+    return scale, offset, nodata_value, data_int16
+
+
+def pack_xr(
+    data: xr.DataArray | xr.Dataset, nbits: int = 16, signed: bool = True
+) -> xr.DataArray | xr.Dataset:
+    """
+    Pack the given xarray DataArray or Dataset into a specified integer format with optional scaling and offset.
+    Parameters:
+    -----------
+    data : xr.DataArray | xr.Dataset
+        The input xarray DataArray or Dataset to be packed.
+    nbits : int, optional
+        The number of bits for the integer representation (default is 16).
+    signed : bool, optional
+        Whether to use a signed integer type (default is True).
+    Returns:
+    --------
+    xr.DataArray | xr.Dataset
+        The packed xarray DataArray or Dataset in the specified integer format.
+    Raises:
+    -------
+    FloatingPointError
+        If there is an invalid floating point operation during the packing process.
+    Notes:
+    ------
+    This function scales and offsets the input data to fit into the specified integer format.
+    It handles NaN values by replacing them with a designated nodata value.
+    """
+    data = data.copy()
+
+    if isinstance(data, xr.DataArray):
+        scale, offset, nodata_value, data_int16 = pack_data(data.values, nbits, signed)
+        data.values = data_int16
+        data.attrs["Scale"] = scale
+        data.attrs["Offset"] = offset
+        data = data.rio.write_nodata(nodata_value, encoded=True)
+        return data
+
+    for var in data.data_vars:
+        scale, offset, nodata_value, data_int16 = pack_data(
+            data[var].values, nbits, signed
+        )
+        data[var].values = data_int16
+        data[var].attrs["Scale"] = scale
+        data[var].attrs["Offset"] = offset
+        data[var] = data[var].rio.write_nodata(nodata_value, encoded=True)
+
+    return data
