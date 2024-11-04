@@ -3,6 +3,7 @@ Match subsampled GBIF data with filtered trait data, grid it, generate grid cell
 statistics, and write each trait's corresponding raster stack to GeoTIFF files.
 """
 
+import argparse
 from pathlib import Path
 
 import dask.dataframe as dd
@@ -16,14 +17,27 @@ from src.utils.raster_utils import xr_to_raster
 from src.utils.trait_utils import filter_pft
 
 
-def main(cfg: ConfigBox = get_config()) -> None:
+def cli() -> argparse.Namespace:
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Match subsampled GBIF data with filtered trait data, grid it, generate grid cell statistics, and write each trait's corresponding raster stack to GeoTIFF files."
+    )
+    parser.add_argument(
+        "-o", "--overwrite", action="store_true", help="Overwrite existing files."
+    )
+    return parser.parse_args()
+
+
+def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> None:
     """Main function."""
     syscfg = cfg[detect_system()][cfg.model_res]["build_gbif_maps"]
 
     # Initialize Dask client
     log.info("Initializing Dask client...")
     client, cluster = init_dask(
-        dashboard_address=cfg.dask_dashboard, n_workers=syscfg.n_workers
+        dashboard_address=cfg.dask_dashboard,
+        n_workers=syscfg.n_workers,
+        memory_limit=syscfg.memory_limit,
     )
 
     out_dir = (
@@ -63,18 +77,21 @@ def main(cfg: ConfigBox = get_config()) -> None:
 
     try:
         for col in cols:
-            log.info("Processing trait %s...", col)
+            out_fn = out_dir / f"{col}.tif"
+            if out_fn.exists() and not args.overwrite:
+                log.info("%s.tif already exists. Skipping...", col)
+                continue
 
+            log.info("Processing trait %s...", col)
             raster = rasterize_points(
                 merged[["x", "y", col]],
                 data=str(col),
                 res=cfg.target_resolution,
                 crs=cfg.crs,
-                n_min=cfg.min_count,
-                n_max=cfg.max_count,
+                n_min=cfg.gbif.interim.min_count,
+                n_max=cfg.gbif.interim.max_count,
             )
 
-            out_fn = out_dir / f"{col}.tif"
             log.info("Writing to disk...")
             xr_to_raster(raster, out_fn)
             log.info("Wrote %s.tif.", col)
