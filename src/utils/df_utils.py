@@ -15,6 +15,7 @@ import pyproj
 import xarray as xr
 from affine import Affine
 
+from src.conf.conf import get_config
 from src.conf.environment import log
 from src.utils.log_utils import setup_logger
 from src.utils.raster_utils import create_sample_raster, xr_to_raster
@@ -320,6 +321,13 @@ def agg_df(
             "count": "count",
         }
 
+    if n_max is not None:
+        # Randomly subsample a maximum of n_max points from each group
+        seed = get_config().random_seed
+        df = df.groupby(by, observed=False, group_keys=False).apply(
+            lambda x: x.sample(n=min(n_max, len(x)), random_state=seed)
+        )
+
     df = df.groupby(by, observed=False)[[data]].agg(list(funcs.values()))
 
     df.columns = list(funcs.keys())
@@ -327,9 +335,6 @@ def agg_df(
     if "count" in df.columns:
         if n_min > 1:
             df = df[df["count"] >= n_min]
-
-        if n_max is not None:
-            df = df[df["count"] <= n_max]
 
     return df.reset_index()
 
