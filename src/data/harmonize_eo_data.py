@@ -207,10 +207,12 @@ def main(args: argparse.Namespace) -> None:
         return
 
     log.info("Building reference rasters...")
-    target_sample_raster = create_sample_raster(resolution=cfg.target_resolution)
+    target_sample_raster = create_sample_raster(
+        resolution=cfg.target_resolution, crs=cfg.crs
+    )
 
     log.info("Building landcover mask...")
-    mask = get_mask(cfg.mask.path, cfg.mask.keep_classes, cfg.base_resolution)
+    mask = get_mask(cfg.mask.path, cfg.mask.keep_classes, cfg.base_resolution, cfg.crs)
 
     if not args.dry_run:
         out_dir.mkdir(parents=True, exist_ok=True)
