@@ -13,7 +13,7 @@ from src.utils.trait_utils import clean_species_name
 
 def main(cfg: ConfigBox = get_config()):
     """Match GBIF and PFT data and save to disk."""
-    syscfg = cfg[detect_system()]["match_gbif_pfts"]
+    syscfg = cfg[detect_system()][cfg.model_res]["match_gbif_pfts"]
     # 00. Initialize Dask client
     client, cluster = init_dask(
         dashboard_address=cfg.dask_dashboard, n_workers=syscfg.n_workers
