@@ -120,6 +120,8 @@ def merge_rasters(
         merged = merge_datasets(rasters)  # pyright: ignore[reportArgumentType]
     elif isinstance(rasters[0], list):
         raise ValueError("Nested lists are not supported.")
+    else:
+        raise ValueError("Raster type not recognized.")
 
     xr_to_raster(merged, out_file)
 
