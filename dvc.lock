@@ -43,8 +43,8 @@ stages:
       size: 3964944
     - path: src/data/match_gbif_pfts.py
       hash: md5
-      md5: f1da3d6b45002463dd3722d5dff2c6be
-      size: 2118
+      md5: d46c0f918ff0aa9bf84e0f7829d95ca0
+      size: 2220
     params:
       params.yaml:
         datasets.Y.gbif: all_tracheophyta_non-cult_2024-04-10
@@ -54,9 +54,9 @@ stages:
     outs:
     - path: data/interim/gbif/gbif_pfts.parquet
       hash: md5
-      md5: 0fa511f0bb36456892bfe3dc7bb35637.dir
-      size: 6792826593
-      nfiles: 122
+      md5: 808425a21170d42c6f1c9078555864eb.dir
+      size: 4474658309
+      nfiles: 159
   subsample_gbif:
     cmd: python src/data/subsample_gbif.py
     deps:
@@ -105,4 +105,47 @@ stages:
       md5: 79e5388fb25a0c2fa5af8eb08c26498e.dir
       size: 508142149
       nfiles: 3
-  
+  harmonize_eo_data:
+    cmd: python src/data/harmonize_eo_data.py
+    deps:
+    - path: src/data/harmonize_eo_data.py
+      hash: md5
+      md5: b3483593372cd82f6c3097f5d4f542af
+      size: 7561
+    params:
+      params.yaml:
+        base_resolution: 1000
+        datasets.X:
+          canopy_height: ETH_GlobalCanopyHeight_2020_v1_1km
+          modis: modis_sur_refl_monthly_avg_1km
+          soilgrids: soilgrids_v2-0_1km
+          vodca: vodca_mean-p5-p95_1km
+          worldclim: wc2-1_30s_bio
+        eo_data.interim.dir: eo_data
+        mask:
+          path: data/raw/esa_worldcover_v100_1km/esa_worldcover_v100_1km.tif
+          keep_classes:
+          - 10
+          - 20
+          - 30
+          - 40
+          - 60
+          - 70
+          - 90
+          - 95
+          - 100
+        model_res: 1km
+        target_resolution: 1000
+        worldclim.bio_vars:
+        - '1'
+        - '4'
+        - '7'
+        - '12'
+        - 13-14
+        - '15'
+    outs:
+    - path: data/interim/eo_data/1km
+      hash: md5
+      md5: bf7b4d5a30b61bfc1e41036eaa8690d7.dir
+      size: 29066745758
+      nfiles: 150
