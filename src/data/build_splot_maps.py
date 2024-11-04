@@ -2,10 +2,12 @@
 
 import argparse
 from pathlib import Path
+from typing import Any
 
 import dask.dataframe as dd
 import numpy as np
 import pandas as pd
+import xarray as xr
 from box import ConfigBox
 
 from src.conf.conf import get_config
@@ -16,21 +18,48 @@ from src.utils.raster_utils import xr_to_raster
 from src.utils.trait_utils import clean_species_name, filter_pft
 
 
-def _cwm(df: pd.DataFrame, col: str) -> pd.DataFrame:
-    """Calculate community-weighted means per plot."""
-    grouped = df.groupby("PlotObservationID")
-
-    result = grouped.apply(
-        lambda g: pd.Series(
-            [
-                np.average(g[col], weights=g["Rel_Abund_Plot"]),
-            ],
-            index=["cwm"],
-        ),
-        # meta={"cwm": "f8"},
+def _cw_stats(g: pd.DataFrame, col: str) -> pd.Series:
+    """Calculate all community-weighted stats per plot."""
+    # Normalize the abundances to sum to 1. Important when not all species in a plot are
+    # present in the trait data.
+    normalized_abund = g["Rel_Abund_Plot"] / g["Rel_Abund_Plot"].sum()
+    if g.empty:
+        log.warning("Empty group detected, returning NaNs...")
+        return pd.Series(
+            [np.nan, np.nan, np.nan, np.nan, np.nan],
+            index=["cwm", "cw_std", "cw_med", "cw_q05", "cw_q95"],
+        )
+    return pd.Series(
+        [
+            _cwm(g[col], normalized_abund),
+            _cw_std(g[col], normalized_abund),
+            _cw_quantile(g[col].to_numpy(), normalized_abund.to_numpy(), 0.5),
+            _cw_quantile(g[col].to_numpy(), normalized_abund.to_numpy(), 0.05),
+            _cw_quantile(g[col].to_numpy(), normalized_abund.to_numpy(), 0.95),
+        ],
+        index=["cwm", "cw_std", "cw_med", "cw_q05", "cw_q95"],
     )
 
-    return result
+
+def _cwm(data: pd.Series, weights: pd.Series) -> float | Any:
+    """Calculate the community-weighted mean."""
+    return np.average(data, weights=weights)
+
+
+def _cw_std(data: pd.Series, weights: pd.Series) -> float:
+    """Calculate the community-weighted standard deviation."""
+    return np.sqrt(np.average((data - data.mean()) ** 2, weights=weights))
+
+
+def _cw_quantile(data: np.ndarray, weights: np.ndarray, quantile: float) -> float:
+    """Calculate the community-weighted quantile."""
+    sorted_indices = np.argsort(data)
+    sorted_data = data[sorted_indices]
+    sorted_weights = weights[sorted_indices]
+
+    cumsum = np.cumsum(sorted_weights)
+    quantile_value = sorted_data[cumsum >= quantile][0]
+    return quantile_value
 
 
 def cli() -> argparse.Namespace:
@@ -71,6 +100,8 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
         .pipe(_repartition_if_set, sys_cfg.npartitions)
         .astype({"Longitude": np.float64, "Latitude": np.float64})
         .set_index("PlotObservationID")
+        .map_partitions(reproject_geo_to_xy, crs=cfg.crs, x="Longitude", y="Latitude")
+        .drop(columns=["Longitude", "Latitude"])
     )
 
     # Load pre-cleaned and filtered TRY traits and set species as index
@@ -115,8 +146,6 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
         .join(traits, how="inner")
         .reset_index()
         .drop(columns=["pft", "speciesname"])
-        .map_partitions(reproject_geo_to_xy, crs=cfg.crs, x="Longitude", y="Latitude")
-        .drop(columns=["Longitude", "Latitude"])
         .persist()
     )
 
@@ -140,20 +169,58 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
             log.info("Processing trait %s...", col)
             # Calculate community-weighted means per plot, join with `header` to get
             # plot lat/lons, and grid at the configured resolution.
-            gridded_cwms = (
+            df = (
                 merged[["PlotObservationID", "Rel_Abund_Plot", col]]
                 .set_index("PlotObservationID")
-                .map_partitions(_cwm, col, meta={"cwm": "f8"})
-                .join(header, how="inner")
-                .reset_index()
-                .pipe(
-                    rasterize_points, data="cwm", res=cfg.target_resolution, crs=cfg.crs
+                .groupby("PlotObservationID")
+                .apply(
+                    _cw_stats,
+                    col,
+                    meta={
+                        "cwm": "f8",
+                        "cw_std": "f8",
+                        "cw_med": "f8",
+                        "cw_q05": "f8",
+                        "cw_q95": "f8",
+                    },
                 )
+                .join(header, how="inner")
+                .reset_index(drop=True)
+                .compute()
             )
+
+            mean = {"mean": "mean"}
+            mean_and_count = {"mean": "mean", "count": "count"}
+            stat_cols = ["cwm", "cw_std", "cw_med", "cw_q05", "cw_q95"]
+            stat_names = ["mean", "std", "median", "q05", "q95"]
+
+            grids = []
+            for stat_col, stat_name in zip(stat_cols, stat_names):
+                log.info("Rasterizing %s...", stat_col)
+                funcs = mean
+                if stat_col == "cwm":
+                    funcs = mean_and_count
+
+                ds = rasterize_points(
+                    df,
+                    data=stat_col,
+                    res=cfg.target_resolution,
+                    crs=cfg.crs,
+                    funcs=funcs,
+                )
+
+                if stat_col != "cwm":
+                    ds = ds.rename({"mean": stat_name})
+
+                grids.append(ds)
+
+            # Merge all of the gridded data into a single dataset
+            log.info("Merging gridded data...")
+            gridded_trait = xr.merge(grids)
 
             out_fn = out_dir / f"{col}.tif"
             log.info("Writing %s to disk...", col)
-            xr_to_raster(gridded_cwms, out_fn)
+            xr_to_raster(gridded_trait, out_fn)
             log.info("Wrote %s.", out_fn)
     finally:
         close_dask(client, cluster)

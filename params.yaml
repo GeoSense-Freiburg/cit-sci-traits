@@ -292,7 +292,7 @@ geos:
     build_splot_maps:
       npartitions: 60
       dask:
-        n_workers: 60
+        n_workers: 80
         memory_limit: 40GB
     featurize_train:
       n_chunks: 2
