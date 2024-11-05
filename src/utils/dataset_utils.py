@@ -162,10 +162,13 @@ def load_x_or_y_raster(
     Raises:
         ValueError: If multiple files are found while opening the raster dataset.
     """
-    res = get_res(fn)
+    # res = get_res(fn)
+    da = open_raster(fn)
+    width, height = da.rio.width, da.rio.height
+    da.close()
     da = open_raster(
         fn,
-        chunks={"x": (360 / res) // nchunks, "y": (180 / res) // nchunks},
+        chunks={"x": width // nchunks, "y": height // nchunks},
         mask_and_scale=True,
     ).sel(band=band)
 
