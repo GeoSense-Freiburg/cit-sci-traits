@@ -18,6 +18,7 @@ from src.utils.dataset_utils import (
     get_y_fn,
     load_rasters_parallel,
 )
+from src.utils.trait_utils import get_trait_number_from_id
 
 
 def ds_to_ddf(ds: xr.Dataset) -> dd.DataFrame:
@@ -70,8 +71,17 @@ def main(cfg: ConfigBox = get_config()) -> None:
         memory_limit=syscfg.featurize_train.memory_limit,
     ), config.set({"array.slicing.split_large_chunks": False}):
 
-        gbif_trait_map_fns = get_trait_map_fns("gbif", cfg)
-        splot_trait_map_fns = get_trait_map_fns("splot", cfg)
+        valid_traits = cfg.datasets.Y.traits
+        gbif_trait_map_fns = [
+            fn
+            for fn in get_trait_map_fns("gbif", cfg)
+            if get_trait_number_from_id(fn.stem) in valid_traits
+        ]
+        splot_trait_map_fns = [
+            fn
+            for fn in get_trait_map_fns("splot", cfg)
+            if get_trait_number_from_id(fn.stem) in valid_traits
+        ]
 
         log.info("Combining sPlot and GBIF...")
         y_df = pd.concat(

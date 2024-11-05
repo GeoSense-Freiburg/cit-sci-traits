@@ -21,25 +21,27 @@ from src.conf.environment import log
 
 def encode_nodata(da: xr.DataArray, dtype: str | np.dtype) -> xr.DataArray:
     """Encode the nodata value of a DataArray."""
-    nodata = (
-        np.iinfo(dtype).max if np.issubdtype(dtype, np.integer) else np.finfo(dtype).max
-    )
-    if da.max() == nodata and not da.max() == da.rio.nodata:
-        # use min_val as nodata
-        nodata = (
-            np.iinfo(dtype).min
-            if np.issubdtype(dtype, np.integer)
-            else np.finfo(dtype).min
-        )
+    da = da.copy()
+    nodata = np.iinfo(dtype).min if np.issubdtype(dtype, np.integer) else np.nan
 
-    if dtype != da.dtype:
+    if da.rio.nodata == nodata and da.rio.encoded_nodata is None:
+        return da
+
+    if da.rio.nodata is not None:
+        if np.isnan(da.rio.nodata) and np.isnan(nodata):
+            return da
+
+        if np.isnan(nodata) and not np.isnan(da.rio.nodata):
+            da = da.rio.write_nodata(nodata, encoded=False)
+            return da
+
+    # If the da nodata value is set to nan but the data should be of integer type
+    # Fill the nans with the nodata value and set the data type
+    if da.isnull().any():
         da = da.fillna(nodata)
-        da = da.astype(dtype)
-
-    if np.issubdtype(dtype, np.integer):
-        return da.rio.write_nodata(nodata)
-
-    return da.rio.write_nodata(nodata, encoded=True)
+    da = da.astype(dtype)
+    da = da.rio.write_nodata(nodata, encoded=False)
+    return da
 
 
 def scale_data(
@@ -417,7 +419,7 @@ def pack_xr(
         data.values = data_int16
         data.attrs["Scale"] = scale
         data.attrs["Offset"] = offset
-        data = data.rio.write_nodata(nodata_value, encoded=True)
+        data = data.rio.write_nodata(nodata_value, encoded=False)
         return data
 
     for var in data.data_vars:
@@ -427,6 +429,6 @@ def pack_xr(
         data[var].values = data_int16
         data[var].attrs["Scale"] = scale
         data[var].attrs["Offset"] = offset
-        data[var] = data[var].rio.write_nodata(nodata_value, encoded=True)
+        data[var] = data[var].rio.write_nodata(nodata_value, encoded=False)
 
     return data
