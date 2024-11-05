@@ -24,6 +24,7 @@ from src.utils.dataset_utils import (
     get_predict_dir,
     get_processed_dir,
 )
+from src.utils.raster_utils import pack_data
 from src.utils.trait_utils import get_trait_number_from_id
 
 
@@ -67,83 +68,6 @@ def interpolate_like(
     filled_raster[interpolation_mask] = interpolated_values
 
     return filled_raster
-
-
-def pack_data(
-    data: np.ndarray, nbits: int = 16, signed: bool = True
-) -> tuple[np.float64, np.float64, int, np.ndarray]:
-    """
-    Packs the given data into a specified integer format with optional scaling and offset.
-    Parameters:
-    -----------
-    data : np.ndarray
-        The input data array to be packed.
-    nbits : int, optional
-        The number of bits for the integer representation (default is 16).
-    signed : bool, optional
-        Whether to use a signed integer type (default is True).
-    Returns:
-    --------
-    tuple[np.float64, np.float64, int, np.ndarray]
-        A tuple containing:
-        - scale (np.float64): The scale factor used for packing.
-        - offset (np.float64): The offset value used for packing.
-        - nodata_value (int): The value used to represent missing data.
-        - data_int16 (np.ndarray): The packed data array in the specified integer format.
-    Raises:
-    -------
-    FloatingPointError
-        If there is an invalid floating point operation during the packing process.
-    Notes:
-    ------
-    This function scales and offsets the input data to fit into the specified integer format.
-    It handles NaN values by replacing them with a designated nodata value.
-    """
-
-    data_min = np.nanmin(data)
-    data_max = np.nanmax(data)
-    dtype = f"int{nbits}" if signed else f"uint{nbits}"
-
-    nodata_value: int = -(2 ** (nbits - 1)) if signed else 0
-    scale = (data_max - data_min) / (2**nbits - 2)
-    scale = np.float64(scale)
-    offset = (data_max + data_min) / 2 if signed else data_min - scale
-    offset = np.float64(offset)
-
-    np.seterr(invalid="raise")
-    try:
-        data_int16 = np.where(
-            np.isnan(data), nodata_value, np.round((data - offset) / scale)
-        ).astype(dtype)
-    except FloatingPointError as e:
-        log.error("FloatingPointError: %s", e)
-        log.error("data_min: %s", data_min)
-        log.error("data_max: %s", data_max)
-        log.error("scale: %s", scale)
-        log.error("offset: %s", offset)
-
-        offset_data = np.subtract(data, offset)
-        log.error("offset_data stats:")
-        log.error("min: %s", np.nanmin(offset_data))
-        log.error("max: %s", np.nanmax(offset_data))
-
-        scaled_data = np.divide(offset_data, scale)
-        log.error("scaled data stats:")
-        log.error("min: %s", np.nanmin(scaled_data))
-        log.error("max: %s", np.nanmax(scaled_data))
-
-        rounded_data = scaled_data.round()
-        log.error("rounded_data stats:")
-        log.error("min: %s", np.nanmin(rounded_data))
-        log.error("max: %s", np.nanmax(rounded_data))
-
-        cast_data = rounded_data.astype(dtype)
-        log.error("cast_data stats:")
-        log.error("min: %s", np.nanmin(cast_data))
-        log.error("max: %s", np.nanmax(cast_data))
-        raise
-
-    return scale, offset, nodata_value, data_int16
 
 
 @delayed

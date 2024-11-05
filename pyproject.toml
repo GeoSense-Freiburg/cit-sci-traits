@@ -44,6 +44,8 @@ cupy-cuda11x = "^13.3.0"
 rio-cogeo = "^5.3.6"
 
 
+ease-grid = "^0.2"
+verstack = "^4.1.4"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.6.2"
 pytest = "^8.1.1"

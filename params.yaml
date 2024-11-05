@@ -1,10 +1,11 @@
-version: "1.0.0"
+version: "1.1.0"
 model_res: "001"
 PFT: "Shrub_Tree_Grass"
 random_seed: 42
 base_resolution: 0.01 # Shared best resolution of all EO datasets (used for masking)
 target_resolution: 0.01 # Target resolution for model training
 extent: [-180, -60, 180, 90] # Extent of the final dataset
+crs: "EPSG:4326" # WGS84
 raw_dir: data/raw
 interim_dir: data/interim
 processed_dir: data/processed
@@ -13,9 +14,59 @@ trait_mapping: "reference/trait_mapping.json"
 trait_stat_mapping: "reference/trait_stat_mapping.json"
 
 pylos:
+  "1km":
+    harmonize_eo_data:
+      n_workers: 12
+    match_gbif_pfts:
+      n_workers: 80
+      n_partitions: 80
+    build_gbif_maps:
+      n_workers: 50
+      threads_per_worker: 5
+    build_splot_maps:
+      npartitions: 60
+      dask:
+        n_workers: 40
+        memory_limit: 40GB
+    featurize_train:
+      n_chunks: 6
+      n_workers: 30
+      memory_limit: null
+    build_predict:
+      n_chunks: 5
+      n_workers: null
+      memory_limit: 100GB
+      impute_chunks: 3
+    calc_spatial_autocorr:
+      n_workers: 60
+      n_workers_variogram: 5
+    skcv_splits:
+      n_workers: 60
+    aoa:
+      device_ids: [0, 1]
+      predict_sample: 0.5
+      splot:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        chunked_dist: true
+        train_sample: 0.5
+        avg_dist_batch_size: 5000
+        predict_partitions: null
+    build_final_product:
+      n_workers: 3
+      threads_per_worker: 1
   "001":
     harmonize_eo_data:
       n_workers: 12
+    match_gbif_pfts:
+      n_workers: 80
+      n_partitions: 80
+    build_gbif_maps:
+      n_workers: 50
+      threads_per_worker: 5
     build_splot_maps:
       npartitions: 60
       dask:
@@ -54,6 +105,12 @@ pylos:
   "02":
     harmonize_eo_data:
       n_workers: 20
+    match_gbif_pfts:
+      n_workers: 80
+      n_partitions: 80
+    build_gbif_maps:
+      n_workers: 50
+      threads_per_worker: 5
     build_splot_maps:
       npartitions: 60
       dask:
@@ -92,6 +149,12 @@ pylos:
   "05":
     harmonize_eo_data:
       n_workers: 18
+    match_gbif_pfts:
+      n_workers: 80
+      n_partitions: 80
+    build_gbif_maps:
+      n_workers: 50
+      threads_per_worker: 5
     build_splot_maps:
       npartitions: 60
       dask:
@@ -130,6 +193,12 @@ pylos:
   "1":
     harmonize_eo_data:
       n_workers: 48
+    match_gbif_pfts:
+      n_workers: 80
+      n_partitions: 80
+    build_gbif_maps:
+      n_workers: 50
+      threads_per_worker: 5
     build_splot_maps:
       npartitions: 60
       dask:
@@ -168,6 +237,12 @@ pylos:
   "2":
     harmonize_eo_data:
       n_workers: 30
+    match_gbif_pfts:
+      n_workers: 80
+      n_partitions: 80
+    build_gbif_maps:
+      n_workers: 50
+      threads_per_worker: 5
     build_splot_maps:
       npartitions: 60
       dask:
@@ -204,9 +279,59 @@ pylos:
       n_workers: 5
       threads_per_worker: 1
 geos:
+  "1km":
+    harmonize_eo_data:
+      n_workers: 48
+    match_gbif_pfts:
+      n_workers: 60
+      n_partitions: 80
+    build_gbif_maps:
+      n_workers: 80
+      threads_per_worker: 5
+      memory_limit: 15GB
+    build_splot_maps:
+      npartitions: 60
+      dask:
+        n_workers: 80
+        memory_limit: 40GB
+    featurize_train:
+      n_chunks: 2
+      n_workers: 100
+      memory_limit: 150GB
+    build_predict:
+      n_chunks: 3
+      n_workers: 80
+      memory_limit: 400GB
+      impute_chunks: 2
+    calc_spatial_autocorr:
+      n_workers: 100
+      n_workers_variogram: 20
+    skcv_splits:
+      n_workers: 80
+    aoa:
+      device_ids: [0, 1, 2, 3]
+      predict_sample: 0.5
+      splot:
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        chunked_dist: true
+        train_sample: 0.5
+        avg_dist_batch_size: 5000
+        predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "001":
     harmonize_eo_data:
       n_workers: 48
+    match_gbif_pfts:
+      n_workers: 60
+      n_partitions: 80
+    build_gbif_maps:
+      n_workers: 50
+      threads_per_worker: 5
     build_splot_maps:
       npartitions: 60
       dask:
@@ -244,6 +369,12 @@ geos:
   "02":
     harmonize_eo_data:
       n_workers: 48
+    match_gbif_pfts:
+      n_workers: 60
+      n_partitions: 80
+    build_gbif_maps:
+      n_workers: 50
+      threads_per_worker: 5
     build_splot_maps:
       npartitions: 80
       dask:
@@ -281,6 +412,12 @@ geos:
   "05":
     harmonize_eo_data:
       n_workers: 48
+    match_gbif_pfts:
+      n_workers: 60
+      n_partitions: 80
+    build_gbif_maps:
+      n_workers: 50
+      threads_per_worker: 5
     build_splot_maps:
       npartitions: 80
       dask:
@@ -318,6 +455,12 @@ geos:
   "1":
     harmonize_eo_data:
       n_workers: 80
+    match_gbif_pfts:
+      n_workers: 60
+      n_partitions: 80
+    build_gbif_maps:
+      n_workers: 50
+      threads_per_worker: 5
     build_splot_maps:
       npartitions: 80
       dask:
@@ -355,6 +498,12 @@ geos:
   "2":
     harmonize_eo_data:
       n_workers: 80
+    match_gbif_pfts:
+      n_workers: 60
+      n_partitions: 80
+    build_gbif_maps:
+      n_workers: 50
+      threads_per_worker: 5
     build_splot_maps:
       npartitions: 80
       dask:
@@ -476,6 +625,8 @@ gbif:
     subsampled: gbif_subsampled.parquet
     subsample_binsize: 4
     subsample_n_max: 10000
+    min_count: 10
+    max_count: 500
     traits: trait_maps
 
 splot:
