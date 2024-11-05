@@ -110,8 +110,8 @@ stages:
     deps:
     - path: src/data/harmonize_eo_data.py
       hash: md5
-      md5: b3483593372cd82f6c3097f5d4f542af
-      size: 7561
+      md5: 43018640aaea1ac3ebeb5a3ece63268d
+      size: 7805
     params:
       params.yaml:
         base_resolution: 1000
@@ -146,6 +146,6 @@ stages:
     outs:
     - path: data/interim/eo_data/1km
       hash: md5
-      md5: bf7b4d5a30b61bfc1e41036eaa8690d7.dir
-      size: 29066745758
+      md5: 87a28aca17838fa1ebf8cf95d05d344b.dir
+      size: 30773572454
       nfiles: 150
