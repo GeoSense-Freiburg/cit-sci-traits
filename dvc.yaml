@@ -129,6 +129,7 @@ stages:
       - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
     params:
       - datasets.Y.trait_stat
+      - datasets.Y.traits
 
     outs:
       - ${train.dir}/${PFT}/${model_res}/${train.Y.fn}
