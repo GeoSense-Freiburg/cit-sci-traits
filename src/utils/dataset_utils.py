@@ -169,7 +169,8 @@ def load_x_or_y_raster(
     da = open_raster(
         fn,
         chunks={"x": width // nchunks, "y": height // nchunks},
-        mask_and_scale=True,
+        mask_and_scale=False,
+        masked=True,
     ).sel(band=band)
 
     long_name = da.attrs["long_name"]
