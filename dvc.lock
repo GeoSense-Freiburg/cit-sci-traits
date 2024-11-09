@@ -244,3 +244,30 @@ stages:
       md5: a2992451d4a0ee7dfe5b4cbd778bafe3.dir
       size: 1579745561
       nfiles: 33
+  build_y:
+    cmd: python src/features/build_y.py
+    deps:
+    - path: data/interim/gbif/trait_maps/Shrub_Tree_Grass/1km
+      hash: md5
+      md5: 914376449de97ddb139e94e5ac69f8d8.dir
+      size: 5440398749
+      nfiles: 33
+    - path: data/interim/splot/trait_maps/Shrub_Tree_Grass/1km
+      hash: md5
+      md5: a2992451d4a0ee7dfe5b4cbd778bafe3.dir
+      size: 1579745561
+      nfiles: 33
+    - path: src/features/build_y.py
+      hash: md5
+      md5: be8d0de566b38a1500468b27d9f7d291
+      size: 3043
+    params:
+      params.yaml:
+        datasets.Y.trait_stat: 1
+        datasets.Y.traits:
+        - 11
+    outs:
+    - path: data/features/Shrub_Tree_Grass/1km/Y.parquet
+      hash: md5
+      md5: 303853c488a92aa723fc95930d1ae1df
+      size: 26349130
