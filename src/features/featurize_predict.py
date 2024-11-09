@@ -10,11 +10,11 @@ import pandas as pd
 import xarray as xr
 from box import ConfigBox
 from dask import config
-from dask.distributed import Client
 from verstack import NaNImputer
 
 from src.conf.conf import get_config
 from src.conf.environment import detect_system, log
+from src.utils.dask_utils import close_dask, init_dask
 from src.utils.dataset_utils import (
     compute_partitions,
     get_eo_fns_list,
@@ -69,31 +69,36 @@ def eo_ds_to_ddf(ds: xr.Dataset, thresh: float, sample: float = 1.0) -> dd.DataF
 
 def main(cfg: ConfigBox = get_config(), args: argparse.Namespace = cli()) -> None:
     """Main function for featurizing EO data for prediction and AoA calculation."""
-    syscfg = cfg[detect_system()][cfg.model_res]
+    syscfg = cfg[detect_system()][cfg.model_res]["build_predict"]
 
     if args.debug:
         log.info("Running in debug mode...")
 
-    with Client(
+    log.info("Initializing Dask client...")
+    client, cluster = init_dask(
         dashboard_address=cfg.dask_dashboard,
-        memory_limit=syscfg.build_predict.memory_limit,
-        n_workers=syscfg.build_predict.n_workers,
-    ), config.set({"array.slicing.split_large_chunks": False}):
+        n_workers=syscfg.n_workers,
+        memory_limit=syscfg.memory_limit,
+    )
+    config.set({"array.slicing.split_large_chunks": False})
 
-        log.info("Getting filenames...")
-        eo_fns = get_eo_fns_list(stage="interim")
+    log.info("Getting filenames...")
+    eo_fns = get_eo_fns_list(stage="interim")
 
-        if args.debug:
-            eo_fns = eo_fns[:2]
+    if args.debug:
+        eo_fns = eo_fns[:2]
 
-        log.info("Loading rasters...")
-        ds = load_rasters_parallel(eo_fns, nchunks=syscfg.build_predict.n_chunks)
+    log.info("Loading rasters...")
+    ds = load_rasters_parallel(eo_fns, nchunks=syscfg.n_chunks)
 
-        log.info("Converting to Dask DataFrame...")
-        ddf = eo_ds_to_ddf(ds, thresh=cfg.train.missing_val_thresh)
+    log.info("Converting to Dask DataFrame...")
+    ddf = eo_ds_to_ddf(ds, thresh=cfg.train.missing_val_thresh)
 
-        log.info("Computing partitions...")
-        df = compute_partitions(ddf).reset_index(drop=True).set_index(["y", "x"])
+    log.info("Computing partitions...")
+    df = compute_partitions(ddf).reset_index(drop=True).set_index(["y", "x"])
+
+    log.info("Closing Dask client...")
+    close_dask(client, cluster)
 
     log.info("Creating mask for missing values...")
     mask = df.isna().reset_index(drop=False)
@@ -110,7 +115,7 @@ def main(cfg: ConfigBox = get_config(), args: argparse.Namespace = cli()) -> Non
     mask.to_parquet(mask_path, compression="zstd", compression_level=19)
 
     log.info("Imputing missing values...")
-    df_imputed = impute_missing(df, chunks=syscfg.build_predict.impute_chunks)
+    df_imputed = impute_missing(df, chunks=syscfg.impute_chunks)
 
     log.info("Casting dtypes of imputed data to conserve efficiency...")
     with open("reference/eo_data_dtypes.pkl", "rb") as f:
