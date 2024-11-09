@@ -125,8 +125,11 @@ def main(cfg: ConfigBox = get_config(), args: argparse.Namespace = cli()) -> Non
         col for col, dtype in dtypes.items() if np.issubdtype(dtype, np.integer)
     ]
 
+    int_cols = [col for col in int_cols if col in df_imputed.columns]
+    dtypes = {col: dtypes[col] for col in int_cols}
+
     # Round up the integer columns as imputing sometimes results in float values
-    df_imputed[int_cols] = np.ceil(df_imputed[int_cols])
+    df_imputed[int_cols] = np.round(df_imputed[int_cols])
     df_imputed = df_imputed.astype(dtypes)
 
     log.info("Writing imputed predict DataFrame to disk...")
