@@ -3,6 +3,8 @@
 import argparse
 import math
 import pickle
+import shutil
+from pathlib import Path
 
 import dask.dataframe as dd
 import numpy as np
@@ -117,6 +119,11 @@ def main(cfg: ConfigBox = get_config(), args: argparse.Namespace = cli()) -> Non
     log.info("Imputing missing values...")
     df_imputed = impute_missing(df, chunks=syscfg.impute_chunks)
 
+    tmp_fn = Path(cfg.tmp_dir) / "eo_data" / "imputed_predict.parquet"
+    tmp_fn.parent.mkdir(parents=True, exist_ok=True)
+    log.info("Writing temporary imputed DataFrame to disk...")
+    df_imputed.reset_index(drop=False).to_parquet(tmp_fn, compression="zstd")
+
     log.info("Casting dtypes of imputed data to conserve efficiency...")
     with open("reference/eo_data_dtypes.pkl", "rb") as f:
         dtypes = pickle.load(f)
@@ -141,6 +148,10 @@ def main(cfg: ConfigBox = get_config(), args: argparse.Namespace = cli()) -> Non
     df_imputed.reset_index(drop=False).to_parquet(
         pred_imputed_path, compression="zstd", compression_level=19
     )
+
+    log.info("Cleaning up...")
+    tmp_fn.unlink()
+    shutil.rmtree(tmp_fn.parent)
 
     log.info("Done!")
 
