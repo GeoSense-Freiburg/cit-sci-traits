@@ -297,7 +297,7 @@ geos:
         memory_limit: 40GB
     featurize_train:
       n_chunks: 2
-      n_workers: 100
+      n_workers: 80
       memory_limit: 150GB
     build_predict:
       n_chunks: 3
