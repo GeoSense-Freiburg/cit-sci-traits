@@ -4,20 +4,20 @@ from pathlib import Path
 
 import dask.dataframe as dd
 from box import ConfigBox
-from dask.distributed import Client, LocalCluster
 
 from src.conf.conf import get_config
-from src.conf.environment import log
+from src.conf.environment import detect_system, log
+from src.utils.dask_utils import close_dask, init_dask
 from src.utils.trait_utils import clean_species_name
 
 
 def main(cfg: ConfigBox = get_config()):
     """Match GBIF and PFT data and save to disk."""
+    syscfg = cfg[detect_system()][cfg.model_res]["match_gbif_pfts"]
     # 00. Initialize Dask client
-    cluster = LocalCluster(
-        dashboard_address=":39143", n_workers=40, memory_limit="48GB"
+    client, cluster = init_dask(
+        dashboard_address=cfg.dask_dashboard, n_workers=syscfg.n_workers
     )
-    client = Client(cluster)
 
     # 01. Load data
     gbif_raw_dir = Path(cfg.raw_dir, cfg.gbif.raw.dir)
@@ -28,18 +28,18 @@ def main(cfg: ConfigBox = get_config()):
         "taxonrank",
         "decimallatitude",
         "decimallongitude",
+        "occurrencestatus",
     ]
     ddf = dd.read_parquet(
-        gbif_raw_dir / "all_tracheophyta_non-cult_2024-04-10.parquet/*",
-        columns=columns,
-    ).repartition(npartitions=60)
+        gbif_raw_dir / "all_tracheophyta_non-cult_2024-04-10.parquet/*", columns=columns
+    )
 
     pfts = dd.read_csv(Path(cfg.raw_dir, cfg.trydb.raw.pfts), encoding="latin-1")
 
     # 02. Preprocess GBIF data
     ddf = (
-        ddf[ddf["taxonrank"] == "SPECIES"]
-        .drop(columns=["taxonrank"])
+        ddf.query("taxonrank == 'SPECIES' and occurrencestatus == 'PRESENT'")
+        .drop(columns=["taxonrank", "occurrencestatus"])
         .dropna(subset=["species"])
         .pipe(clean_species_name, "species", "speciesname")
         .drop(columns=["species"])
@@ -65,8 +65,7 @@ def main(cfg: ConfigBox = get_config()):
         )
     finally:
         log.info("Shutting down Dask client...")
-        client.close()
-        cluster.close()
+        close_dask(client, cluster)
 
 
 if __name__ == "__main__":

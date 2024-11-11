@@ -25,6 +25,7 @@ def get_mask(
     mask_path: str,
     keep_classes: list[int],
     resolution: int | float,
+    crs: str,
     binary: bool = True,
 ) -> xr.DataArray:
     """
@@ -42,7 +43,7 @@ def get_mask(
         xr.DataArray: The generated mask.
 
     """
-    ref_raster = create_sample_raster(resolution=resolution)
+    ref_raster = create_sample_raster(resolution=resolution, crs=crs)
 
     mask = (
         open_raster(mask_path)
