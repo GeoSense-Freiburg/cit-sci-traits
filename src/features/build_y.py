@@ -7,7 +7,6 @@ import pandas as pd
 import xarray as xr
 from box import ConfigBox
 from dask import config
-from dask.distributed import Client
 
 from src.conf.conf import get_config
 from src.conf.environment import detect_system, log
