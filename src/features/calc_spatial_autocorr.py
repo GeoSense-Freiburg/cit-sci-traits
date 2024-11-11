@@ -77,7 +77,9 @@ def add_utm(df: pd.DataFrame, chunksize: int = 10000) -> pd.DataFrame:
 
 
 @delayed
-def calculate_variogram(group: pd.DataFrame, data_col: str, **kwargs) -> float | None:
+def calculate_variogram_pykrige(
+    group: pd.DataFrame, data_col: str, **kwargs
+) -> tuple[float | None, int]:
     """
     Calculate the variogram for a given group of data points.
 
@@ -89,23 +91,28 @@ def calculate_variogram(group: pd.DataFrame, data_col: str, **kwargs) -> float |
     Returns:
         float | None: The variogram value, or None if the group is not a DataFrame or
             has less than 200 rows.
+        int: The number of samples used to calculate the variogram.
     """
     if not isinstance(group, pd.DataFrame) or len(group) < 200:
-        return 0
+        return 0, 0
 
     n_max = 20_000
 
     if "n_max" in kwargs:
         n_max = kwargs.pop("n_max")
 
+    group = group.copy()
+
     if len(group) > n_max:
         group = group.sample(n_max)
+
+    n_samples = len(group)
 
     ok_vgram = OrdinaryKriging(
         group["easting"], group["northing"], group[data_col], **kwargs
     )
 
-    return ok_vgram.variogram_model_parameters[1]
+    return ok_vgram.variogram_model_parameters[1], n_samples
 
 
 def copy_ref_to_dvc(cfg: ConfigBox) -> None:
@@ -127,7 +134,7 @@ def copy_ref_to_dvc(cfg: ConfigBox) -> None:
 
 def main(cfg: ConfigBox = get_config()) -> None:
     """Main function for calculating spatial autocorrelation."""
-    syscfg = cfg[detect_system()][cfg.model_res]
+    syscfg = cfg[detect_system()][cfg.model_res]["calc_spatial_autocorr"]
 
     if cfg.calc_spatial_autocorr.use_existing:
         copy_ref_to_dvc(cfg)
@@ -135,12 +142,9 @@ def main(cfg: ConfigBox = get_config()) -> None:
 
     y_fn = get_y_fn(cfg)
 
+    # Use only sPlot data to calculate spatial autocorrelation
     log.info("Reading sPlot features from %s...", y_fn)
-    y_ddf = (
-        dd.read_parquet(y_fn)
-        .pipe(lambda _ddf: _ddf[_ddf["source"] == "s"])
-        .drop(columns=["source"])
-    )
+    y_ddf = dd.read_parquet(y_fn).query("source == 's'").drop(columns=["source"])
     y_cols = y_ddf.columns.difference(["x", "y"]).to_list()
 
     vgram_kwargs = {
@@ -160,7 +164,7 @@ def main(cfg: ConfigBox = get_config()) -> None:
             .reset_index(drop=True)
         )
 
-        if cfg.target_resolution > 0.2:
+        if cfg.target_resolution > 0.2 and cfg.crs == "EPSG:4326":
             log.info(
                 "Target resolution of > 0.2 deg detected. Using web mercator "
                 "coordinates instead of UTM zones..."
@@ -183,15 +187,17 @@ def main(cfg: ConfigBox = get_config()) -> None:
             log.info("Calculating variogram ranges...")
             client, cluster = init_dask(
                 dashboard_address=cfg.dask_dashboard,
-                n_workers=syscfg.calc_spatial_autocorr.n_workers_variogram,
+                n_workers=syscfg.n_workers_variogram,
             )
-            results = [calculate_variogram(trait_df_wmerc, trait_col, **vgram_kwargs)]
+            results = [
+                calculate_variogram_pykrige(trait_df_wmerc, trait_col, **vgram_kwargs)
+            ]
 
-        else:
+        elif cfg.crs == "EPSG:4326":
             log.info("Adding UTM coordinates...")
             client, cluster = init_dask(
                 dashboard_address=cfg.dask_dashboard,
-                n_workers=syscfg.calc_spatial_autocorr.n_workers,
+                n_workers=syscfg.n_workers,
             )
 
             trait_df = add_utm(trait_df).drop(columns=["x", "y"])
@@ -201,19 +207,85 @@ def main(cfg: ConfigBox = get_config()) -> None:
             log.info("Calculating variogram ranges...")
             client, cluster = init_dask(
                 dashboard_address=cfg.dask_dashboard,
-                n_workers=syscfg.calc_spatial_autocorr.n_workers_variogram,
+                n_workers=syscfg.n_workers_variogram,
             )
 
             results = [
-                calculate_variogram(group, trait_col, **vgram_kwargs)
+                calculate_variogram_pykrige(group, trait_col, **vgram_kwargs)
                 for _, group in trait_df.groupby("zone")
             ]
+
+        elif cfg.crs == "EPSG:6933":
+
+            def _assign_zones(df: pd.DataFrame, n_zones: int) -> pd.DataFrame:
+                """
+                Assigns zones to the DataFrame based on x and y coordinates.
+
+                Args:
+                    df (pd.DataFrame): The DataFrame with x and y coordinates.
+                    n_sectors (int): The number of sectors to divide the data into.
+
+                Returns:
+                    pd.DataFrame: The DataFrame with an additional 'zone' column.
+                """
+
+                x_bins = np.linspace(df.easting.min(), df.easting.max(), n_zones + 1)
+                y_bins = np.linspace(
+                    df.northing.min(), df.northing.max(), n_zones // 2 + 1
+                )
+
+                x_zones = np.digitize(df.easting, x_bins) - 1
+                y_zones = np.digitize(df.northing, y_bins) - 1
+
+                df["zone"] = [f"{x}_{y}" for x, y in zip(x_zones, y_zones)]
+                return df
+
+            # Convert x and y to easting and northing (simple shift) as EPSG:6933 contains
+            # negative x and y coordinates
+            trait_df = trait_df.assign(
+                easting=trait_df.x + abs(trait_df.x.min()),
+                northing=trait_df.y + abs(trait_df.y.min()),
+            ).drop(columns=["x", "y"])
+
+            if syscfg.n_chunks > 1:
+                trait_df_grouped = trait_df.pipe(
+                    _assign_zones, n_zones=syscfg.n_chunks
+                ).groupby("zone")
+
+                log.info("Calculating variogram ranges...")
+                client, cluster = init_dask(
+                    dashboard_address=cfg.dask_dashboard,
+                    # n_workers=syscfg.n_chunks // 2,
+                    n_workers=1,
+                    # threads_per_worker=1,
+                )
+
+                vgram_kwargs["n_max"] = len(trait_df)
+                results = [
+                    calculate_variogram_pykrige(group, trait_col)
+                    for _, group in trait_df_grouped
+                ]
+            else:
+                log.info("Calculating variogram ranges...")
+                client, cluster = init_dask(
+                    dashboard_address=cfg.dask_dashboard,
+                    n_workers=1,
+                )
+
+                vgram_kwargs["n_max"] = len(trait_df)
+
+                results = [
+                    calculate_variogram_pykrige(trait_df, trait_col, **vgram_kwargs)
+                ]
+
+        else:
+            raise ValueError(f"Unknown CRS: {cfg.crs}")
 
         autocorr_ranges = list(compute(*results))
 
         close_dask(client, cluster)
 
-        filt_ranges = [r for r in autocorr_ranges if r != 0]
+        filt_ranges = [(n, r) for n, r in autocorr_ranges if n > 0]
         log.info("Saving range statistics to DataFrame...")
 
         # Path to be checked into DVC
@@ -232,6 +304,14 @@ def main(cfg: ConfigBox = get_config()) -> None:
             else pd.DataFrame(columns=["trait", "mean", "std", "median", "q05", "q95"])
         )
 
+        # Weight the ranges by the number of samples used to calculate them
+        # The weights and ranges are in a list of tuples, where the first element is the
+        # number of samples and the second element is the range. We want to normalize the
+        # sample_sizes so that they sum to 1, effectively converting them to weights
+        sample_sizes = np.array([n for n, _ in filt_ranges])
+        weights = sample_sizes / sample_sizes.sum()
+        ranges = np.array([r for _, r in filt_ranges])
+
         # Create a new row and append it to the DataFrame
         ranges_df = pd.concat(
             [
@@ -240,11 +320,17 @@ def main(cfg: ConfigBox = get_config()) -> None:
                     [
                         {
                             "trait": trait_col,
-                            "mean": np.mean(filt_ranges),
-                            "std": np.std(filt_ranges),
-                            "median": np.median(filt_ranges),
-                            "q05": np.quantile(filt_ranges, 0.05),
-                            "q95": np.quantile(filt_ranges, 0.95),
+                            "mean": np.average(ranges, weights=weights),
+                            "std": np.sqrt(
+                                np.average(
+                                    (ranges - ranges.mean()) ** 2, weights=weights
+                                )
+                            ),
+                            "median": np.median(ranges),
+                            "q05": np.quantile(ranges, 0.05),
+                            "q95": np.quantile(ranges, 0.95),
+                            "n": sample_sizes.sum(),
+                            "n_chunks": len(ranges),
                         }
                     ]
                 ),
