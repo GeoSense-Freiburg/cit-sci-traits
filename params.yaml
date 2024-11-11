@@ -919,7 +919,7 @@ biomes: # Used for model analysis by biome
   
 calc_spatial_autocorr:
   # Use existing spatial autocorrelation data from this model_res. To recompute, set to false.
-  use_existing: false
+  use_existing: "1km"
 
 train:
   dir: data/features
