@@ -321,6 +321,13 @@ def agg_df(
             "count": "count",
         }
 
+        if "species" in df.index.name:
+            funcs["species_count"] = lambda x: x.index.nunique()
+
+        elif any("species" in col for col in df.columns):
+            species_col = [col for col in df.columns if "species" in col][0]
+            funcs["species_count"] = lambda x: x[species_col].nunique()
+
     if n_max is not None:
         # Randomly subsample a maximum of n_max points from each group
         seed = get_config().random_seed
