@@ -19,7 +19,7 @@ from src.utils.dataset_utils import get_eo_fns_dict
 from src.utils.raster_utils import (
     create_sample_raster,
     open_raster,
-    scale_data,
+    pack_xr,
     xr_to_raster,
 )
 
@@ -53,10 +53,17 @@ def process_file(
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     if out_path.exists() and not overwrite:
-        log.info(f"Skipping {filename}...")
+        log.info("Skipping %s...", filename)
         return
 
-    rast = open_raster(filename).sel(band=1).rio.reproject_match(mask)
+    rast = open_raster(filename).sel(band=1)
+
+    if rast.rio.nodata is None:
+        # Make sure that the raster has a nodata value or else the reproject_match
+        # method will treat nan values as actual data
+        rast = rast.rio.write_nodata(np.nan)
+
+    rast = rast.rio.reproject_match(mask)
     rast_masked = mask_raster(rast, mask)
 
     rast.close()
@@ -86,9 +93,9 @@ def process_file(
     if dataset == "canopy_height":
         dtype = "uint8"
 
-    if dataset == "vodca":
+    if dataset in ("worldclim", "vodca"):
         dtype = "int16"
-        rast_masked = scale_data(rast_masked, dtype, True)
+        rast_masked = pack_xr(rast_masked)
 
     if "long_name" not in rast_masked.attrs:
         rast_masked.attrs["long_name"] = Path(filename).stem
@@ -207,10 +214,12 @@ def main(args: argparse.Namespace) -> None:
         return
 
     log.info("Building reference rasters...")
-    target_sample_raster = create_sample_raster(resolution=cfg.target_resolution)
+    target_sample_raster = create_sample_raster(
+        resolution=cfg.target_resolution, crs=cfg.crs
+    )
 
     log.info("Building landcover mask...")
-    mask = get_mask(cfg.mask.path, cfg.mask.keep_classes, cfg.base_resolution)
+    mask = get_mask(cfg.mask.path, cfg.mask.keep_classes, cfg.base_resolution, cfg.crs)
 
     if not args.dry_run:
         out_dir.mkdir(parents=True, exist_ok=True)

@@ -97,3 +97,4 @@ target/
 .history/
 .local_gitignore
 /share
+scratch

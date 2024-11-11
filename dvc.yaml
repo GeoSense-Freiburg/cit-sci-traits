@@ -32,22 +32,6 @@ stages:
       - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.matched}:
           persist: true
 
-  subsample_gbif:
-    cmd: python src/data/subsample_gbif.py
-    deps:
-      - src/data/subsample_gbif.py
-      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.matched}
-    params:
-      - gbif.interim.dir
-      - gbif.interim.matched
-      - gbif.interim.subsampled
-      - gbif.interim.subsample_binsize
-      - gbif.interim.subsample_n_max
-      - random_seed
-    outs:
-      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.subsampled}:
-          persist: true
-
   extract_splot:
     cmd: python src/data/extract_splot.py
     deps:
@@ -107,11 +91,10 @@ stages:
     cmd: python src/data/build_gbif_maps.py
     deps:
       - src/data/build_gbif_maps.py
-      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.subsampled}
+      - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.matched}
       - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}
     params:
       - gbif.interim.dir
-      - gbif.interim.subsampled
       - trydb.interim.dir
       - trydb.interim.filtered
       - datasets.Y.gbif
@@ -146,6 +129,7 @@ stages:
       - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}
     params:
       - datasets.Y.trait_stat
+      - datasets.Y.traits
 
     outs:
       - ${train.dir}/${PFT}/${model_res}/${train.Y.fn}
