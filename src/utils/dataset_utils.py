@@ -128,12 +128,17 @@ def map_da_dtypes(
     return dtype_map
 
 
-def get_res(fn: Path) -> int | float:
+def get_res(
+    fn: Path, xy: bool = False
+) -> int | float | tuple[int | float, int | float]:
     """
     Get the resolution of a raster.
     """
     data = open_raster(fn).sel(band=1)
-    res = abs(data.rio.resolution()[0])
+    if not xy:
+        res = abs(data.rio.resolution()[0])
+    else:
+        res = tuple(abs(r) for r in data.rio.resolution())
     data.close()
     del data
     return res
@@ -157,11 +162,15 @@ def load_x_or_y_raster(
     Raises:
         ValueError: If multiple files are found while opening the raster dataset.
     """
-    res = get_res(fn)
+    # res = get_res(fn)
+    da = open_raster(fn)
+    width, height = da.rio.width, da.rio.height
+    da.close()
     da = open_raster(
         fn,
-        chunks={"x": (360 / res) // nchunks, "y": (180 / res) // nchunks},
-        mask_and_scale=True,
+        chunks={"x": width // nchunks, "y": height // nchunks},
+        mask_and_scale=False,
+        masked=True,
     ).sel(band=band)
 
     long_name = da.attrs["long_name"]
