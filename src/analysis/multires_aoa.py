@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -66,7 +67,7 @@ def main() -> None:
 
     # Back up the results
     log.info("Backing up results...")
-    Path("results/all_results.parquet").rename("results/all_results.parquet.bak")
+    shutil.copy("results/all_results.parquet", "results/all_results.parquet.bak")
 
     log.info("Saving updated results...")
     all_results.to_parquet("results/all_results.parquet")
