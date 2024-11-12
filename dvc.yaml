@@ -44,6 +44,15 @@ stages:
       - ${interim_dir}/${splot.interim.dir}/${splot.interim.extracted}:
           persist: true
 
+  standardize_other_products:
+    cmd: python src/data/standardize_other_products.py
+    deps:
+      - src/data/standardize_other_products.py
+      - ${raw_dir}/other-trait-maps
+    outs:
+      - ${interim_dir}/other_trait_maps:
+          persist: true
+
   ######################################################################################
   # RES-DEP., PFT-IND. -----------------------------------------------------------------
   ######################################################################################
@@ -236,3 +245,9 @@ stages:
     params:
       - analysis
       
+  other_product_splot_correlation:
+    cmd: python src/analysis/other_product_splot_correlation.py
+    deps:
+      - src/analysis/other_product_splot_correlation.py
+      - ${interim_dir}/other_trait_maps
+      - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}

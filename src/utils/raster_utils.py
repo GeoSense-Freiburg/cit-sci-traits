@@ -417,8 +417,8 @@ def pack_xr(
     if isinstance(data, xr.DataArray):
         scale, offset, nodata_value, data_int16 = pack_data(data.values, nbits, signed)
         data.values = data_int16
-        data.attrs["Scale"] = scale
-        data.attrs["Offset"] = offset
+        data.attrs["scale_factor"] = scale
+        data.attrs["add_offset"] = offset
         data = data.rio.write_nodata(nodata_value, encoded=False)
         return data
 
@@ -427,8 +427,8 @@ def pack_xr(
             data[var].values, nbits, signed
         )
         data[var].values = data_int16
-        data[var].attrs["Scale"] = scale
-        data[var].attrs["Offset"] = offset
+        data[var].attrs["scale_factor"] = scale
+        data[var].attrs["add_offset"] = offset
         data[var] = data[var].rio.write_nodata(nodata_value, encoded=False)
 
     return data

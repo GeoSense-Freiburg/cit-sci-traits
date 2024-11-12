@@ -200,7 +200,7 @@ def filter_outliers(
 
 
 def reproject_geo_to_xy(
-    df: pd.DataFrame, crs: str = "EPSG:6933", x: str = "x", y: str = "y"
+    df: pd.DataFrame, to_crs: str = "EPSG:6933", x: str = "x", y: str = "y"
 ):
     """
     Reprojects geographical coordinates to a specified coordinate reference system (CRS).
@@ -214,10 +214,32 @@ def reproject_geo_to_xy(
     Returns:
     pd.DataFrame: DataFrame with reprojected x and y coordinates.
     """
-    proj = pyproj.Proj(pyproj.CRS(crs))
-    xy = proj(df[x], df[y])
+    transformer = pyproj.Transformer.from_crs("EPSG:4326", to_crs, always_xy=True)
+    xy = transformer.transform(df[y].values, df[x].values)
     df["x"] = xy[0]
     df["y"] = xy[1]
+    return df
+
+
+def reproject_xy_to_geo(
+    df: pd.DataFrame, from_crs: str = "EPSG:6933", x: str = "x", y: str = "y"
+):
+    """
+    Reprojects coordinates in meters to a geographic coordinate system.
+
+    Parameters:
+    df (pd.DataFrame): DataFrame containing the coordinates (in meters).
+    crs (str): Coordinate reference system to reproject to. Default is "EPSG:6933".
+    x (str): Name of the column containing the x coordinates. Default is "x".
+    y (str): Name of the column containing the y coordinates. Default is "y".
+
+    Returns:
+    pd.DataFrame: DataFrame with x and y coordinates projected into the new CRS.
+    """
+    transformer = pyproj.Transformer.from_crs(from_crs, "EPSG:4326", always_xy=True)
+    lon, lat = transformer.transform(df[x].values, df[y].values)
+    df["lon"] = lon
+    df["lat"] = lat
     return df
 
 
@@ -320,6 +342,13 @@ def agg_df(
             "q95": lambda x: x.quantile(0.95, interpolation="nearest"),
             "count": "count",
         }
+
+        if "species" in df.index.name:
+            funcs["species_count"] = lambda x: x.index.nunique()
+
+        elif any("species" in col for col in df.columns):
+            species_col = [col for col in df.columns if "species" in col][0]
+            funcs["species_count"] = lambda x: x[species_col].nunique()
 
     if n_max is not None:
         # Randomly subsample a maximum of n_max points from each group

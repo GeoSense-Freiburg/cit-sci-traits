@@ -7,10 +7,10 @@ import pandas as pd
 import xarray as xr
 from box import ConfigBox
 from dask import config
-from dask.distributed import Client
 
 from src.conf.conf import get_config
 from src.conf.environment import detect_system, log
+from src.utils.dask_utils import close_dask, init_dask
 from src.utils.dataset_utils import (
     check_y_set,
     compute_partitions,
@@ -40,9 +40,7 @@ def build_y_df(
     """Build dataframe of Y data for a given trait set."""
     check_y_set(trait_set)
     log.info("Loading Y data (%s)...", trait_set)
-    y_ds = load_rasters_parallel(
-        fns, cfg.datasets.Y.trait_stat, syscfg.featurize_train.n_chunks
-    )
+    y_ds = load_rasters_parallel(fns, cfg.datasets.Y.trait_stat, syscfg.n_chunks)
 
     log.info("Computing Y data (%s)...", trait_set)
     y_ddf = ds_to_ddf(y_ds)
@@ -63,40 +61,46 @@ def main(cfg: ConfigBox = get_config()) -> None:
     Returns:
         None
     """
-    syscfg = cfg[detect_system()][cfg.model_res]
+    syscfg = cfg[detect_system()][cfg.model_res]["featurize_train"]
 
-    with Client(
+    log.info("Initializing Dask client...")
+    client, cluster = init_dask(
         dashboard_address=cfg.dask_dashboard,
-        n_workers=syscfg.featurize_train.n_workers,
-        memory_limit=syscfg.featurize_train.memory_limit,
-    ), config.set({"array.slicing.split_large_chunks": False}):
+        n_workers=syscfg.n_workers,
+        memory_limit=syscfg.memory_limit,
+    )
+    config.set({"array.slicing.split_large_chunks": False})
 
-        valid_traits = cfg.datasets.Y.traits
-        gbif_trait_map_fns = [
-            fn
-            for fn in get_trait_map_fns("gbif", cfg)
-            if get_trait_number_from_id(fn.stem) in valid_traits
-        ]
-        splot_trait_map_fns = [
-            fn
-            for fn in get_trait_map_fns("splot", cfg)
-            if get_trait_number_from_id(fn.stem) in valid_traits
-        ]
+    log.info("Gathering trait map filenames...")
+    valid_traits = [str(trait_num) for trait_num in cfg.datasets.Y.traits]
+    gbif_trait_map_fns = [
+        fn
+        for fn in get_trait_map_fns("gbif", cfg)
+        if get_trait_number_from_id(fn.stem) in valid_traits
+    ]
+    splot_trait_map_fns = [
+        fn
+        for fn in get_trait_map_fns("splot", cfg)
+        if get_trait_number_from_id(fn.stem) in valid_traits
+    ]
 
-        log.info("Combining sPlot and GBIF...")
-        y_df = pd.concat(
-            [
-                build_y_df(gbif_trait_map_fns, cfg, syscfg, "gbif"),
-                build_y_df(splot_trait_map_fns, cfg, syscfg, "splot"),
-            ],
-            axis=0,
-            ignore_index=True,
-        )
+    log.info("Combining sPlot and GBIF...")
+    y_df = pd.concat(
+        [
+            build_y_df(gbif_trait_map_fns, cfg, syscfg, "gbif"),
+            build_y_df(splot_trait_map_fns, cfg, syscfg, "splot"),
+        ],
+        axis=0,
+        ignore_index=True,
+    )
 
-        out_path = get_y_fn(cfg)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        log.info("Writing Y data to %s...", str(out_path))
-        y_df.to_parquet(out_path, compression="zstd")
+    log.info("Closing Dask client...")
+    close_dask(client, cluster)
+
+    out_path = get_y_fn(cfg)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    log.info("Writing Y data to %s...", str(out_path))
+    y_df.to_parquet(out_path, compression="zstd")
 
 
 if __name__ == "__main__":

@@ -98,3 +98,4 @@ target/
 .local_gitignore
 /share
 scratch
+/results/all_results.parquet.bak
