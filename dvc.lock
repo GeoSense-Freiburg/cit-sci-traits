@@ -106,3 +106,21 @@ stages:
       size: 508142149
       nfiles: 3
   
+  standardize_other_products:
+    cmd: python src/data/standardize_other_products.py
+    deps:
+    - path: data/raw/other-trait-maps
+      hash: md5
+      md5: 224244cf76242106abf656a1946fb350.dir
+      size: 28945584053
+      nfiles: 1506
+    - path: src/data/standardize_other_products.py
+      hash: md5
+      md5: f0e35e20db15f9c3e94e2e5ee91fec17
+      size: 2539
+    outs:
+    - path: data/interim/other_trait_maps
+      hash: md5
+      md5: fe0cdb6c19dc0bac2da8766b15c630b7.dir
+      size: 499888340
+      nfiles: 44
