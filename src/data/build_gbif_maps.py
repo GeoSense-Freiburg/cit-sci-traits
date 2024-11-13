@@ -14,7 +14,7 @@ from src.conf.environment import detect_system, log
 from src.utils.dask_utils import close_dask, init_dask
 from src.utils.df_utils import rasterize_points, reproject_geo_to_xy
 from src.utils.raster_utils import xr_to_raster
-from src.utils.trait_utils import filter_pft
+from src.utils.trait_utils import filter_pft, get_trait_number_from_id
 
 
 def cli() -> argparse.Namespace:
@@ -78,6 +78,8 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
 
     # Grid trait stats (mean, STD, median, 5th and 95th quantiles) for each grid cell
     cols = [col for col in merged.columns if col.startswith("X")]
+    valid_traits = [str(trait_num) for trait_num in cfg.datasets.Y.traits]
+    cols = [col for col in cols if get_trait_number_from_id(col) in valid_traits]
 
     try:
         for col in cols:
