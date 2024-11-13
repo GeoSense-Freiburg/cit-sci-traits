@@ -201,7 +201,7 @@ def filter_outliers(
 
 def reproject_geo_to_xy(
     df: pd.DataFrame, to_crs: str = "EPSG:6933", x: str = "x", y: str = "y"
-):
+) -> pd.DataFrame:
     """
     Reprojects geographical coordinates to a specified coordinate reference system (CRS).
 
@@ -215,7 +215,7 @@ def reproject_geo_to_xy(
     pd.DataFrame: DataFrame with reprojected x and y coordinates.
     """
     transformer = pyproj.Transformer.from_crs("EPSG:4326", to_crs, always_xy=True)
-    xy = transformer.transform(df[y].values, df[x].values)
+    xy = transformer.transform(df[x].values, df[y].values)
     df["x"] = xy[0]
     df["y"] = xy[1]
     return df
@@ -223,7 +223,7 @@ def reproject_geo_to_xy(
 
 def reproject_xy_to_geo(
     df: pd.DataFrame, from_crs: str = "EPSG:6933", x: str = "x", y: str = "y"
-):
+) -> pd.DataFrame:
     """
     Reprojects coordinates in meters to a geographic coordinate system.
 
@@ -342,6 +342,13 @@ def agg_df(
             "q95": lambda x: x.quantile(0.95, interpolation="nearest"),
             "count": "count",
         }
+
+        if "species" in df.index.name:
+            funcs["species_count"] = lambda x: x.index.nunique()
+
+        elif any("species" in col for col in df.columns):
+            species_col = [col for col in df.columns if "species" in col][0]
+            funcs["species_count"] = lambda x: x[species_col].nunique()
 
     if n_max is not None:
         # Randomly subsample a maximum of n_max points from each group

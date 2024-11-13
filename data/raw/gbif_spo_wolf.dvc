@@ -1,6 +1,0 @@
-outs:
-- md5: 95d98668bdc5a78835aca0b0a07b7375.dir
-  size: 9182750067
-  nfiles: 1486
-  hash: md5
-  path: gbif_spo_wolf
