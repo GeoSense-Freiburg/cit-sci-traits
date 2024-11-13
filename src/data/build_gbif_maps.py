@@ -68,9 +68,13 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
     )
 
     # Reproject coordinates to target CRS
-    merged = merged.map_partitions(
-        reproject_geo_to_xy, crs=cfg.crs, x="decimallongitude", y="decimallatitude"
-    ).drop(columns=["decimallatitude", "decimallongitude"])
+    if cfg.crs == "EPSG:6933":
+        merged = merged.map_partitions(
+            reproject_geo_to_xy,
+            to_crs=cfg.crs,
+            x="decimallongitude",
+            y="decimallatitude",
+        ).drop(columns=["decimallatitude", "decimallongitude"])
 
     # Grid trait stats (mean, STD, median, 5th and 95th quantiles) for each grid cell
     cols = [col for col in merged.columns if col.startswith("X")]
