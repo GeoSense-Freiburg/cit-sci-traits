@@ -11,12 +11,13 @@ import numpy.typing as npt
 import pandas as pd
 from box import ConfigBox
 from dask import compute, delayed
-from dask.distributed import Client
 from scipy.stats import ks_2samp
 
 from src.conf.conf import get_config
 from src.conf.environment import detect_system, log
+from src.utils.dask_utils import close_dask, init_dask
 from src.utils.dataset_utils import get_autocorr_ranges_fn, get_cv_splits_dir, get_y_fn
+from src.utils.df_utils import reproject_xy_to_geo
 from src.utils.log_utils import get_loggers_starting_with
 from src.utils.spatial_utils import acr_to_h3_res, assign_hexagons
 
@@ -172,6 +173,9 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
     # Ignore warnings
     warnings.simplefilter(action="ignore", category=UserWarning)
 
+    client, cluster = init_dask(
+        dashboard_address=cfg.dask_dashboard, n_workers=syscfg.skcv_splits.n_workers
+    )
     ranges = pd.read_parquet(
         get_autocorr_ranges_fn(),
         columns=["trait", cfg.train.cv_splits.range_stat],
@@ -194,18 +198,19 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
             continue
 
         log.info("Processing trait: %s", trait_col)
-        with Client(
-            dashboard_address=cfg.dask_dashboard, n_workers=syscfg.skcv_splits.n_workers
-        ):
-            # Ensure dask loggers don't interfere with the main logger
-            dask_loggers = get_loggers_starting_with("distributed")
-            for logger in dask_loggers:
-                logging.getLogger(logger).setLevel(logging.WARNING)
+        # Ensure dask loggers don't interfere with the main logger
+        dask_loggers = get_loggers_starting_with("distributed")
+        for logger in dask_loggers:
+            logging.getLogger(logger).setLevel(logging.WARNING)
 
-            trait_range = ranges[ranges["trait"] == trait_col][
-                cfg.train.cv_splits.range_stat
-            ]
-            trait_range_deg = trait_range.values[0] / 111320
+        trait_df = traits[[trait_col, "x", "y"]].dropna()
+
+        trait_range = ranges[ranges["trait"] == trait_col][
+            cfg.train.cv_splits.range_stat
+        ].values[0]
+
+        if cfg.crs == "EPSG:4326":
+            trait_range_deg = trait_range / 111320
             if trait_range_deg <= cfg.target_resolution:
                 log.warning(
                     "Trait range of %.2f m is less than or equal to the existing map"
@@ -216,26 +221,50 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
                 )
                 trait_range = cfg.target_resolution * 111320
 
-            h3_res = acr_to_h3_res(trait_range)
+        if cfg.crs == "EPSG:6933":
+            if trait_range <= cfg.target_resolution:
+                log.warning(
+                    "Trait range of %.2f m is less than or equal to the existing map"
+                    "resolution of %.2f m. "
+                    "Using the map resolution for hexagon assignment...",
+                    trait_range,
+                    cfg.target_resolution,
+                )
+                trait_range = cfg.target_resolution
 
-            df = (
-                assign_hexagons(
-                    traits[["x", "y", trait_col]], h3_res, dask=True
-                )  # pyright: ignore[reportCallIssue]
-                .compute()
-                .reset_index(drop=True)
+            log.info("Reprojecting coordinates to WGS84 for hexagon assignment...")
+            # Convert coordinates to EPSG:4326 to get hexagon assignments
+            trait_df = trait_df.map_partitions(reproject_xy_to_geo, from_crs=cfg.crs)
+            trait_df = trait_df.rename(
+                columns={"x": "x_old", "y": "y_old", "lat": "y", "lon": "x"}
             )
 
+        h3_res = acr_to_h3_res(trait_range)
+
+        trait_df = assign_hexagons(trait_df, h3_res, dask=True).reset_index(drop=True)
+
+        if cfg.crs == "EPSG:6933":
+            # Revert back to the original coordinates
+            trait_df = trait_df.drop(columns=["x", "y"]).rename(
+                columns={"x_old": "x", "y_old": "y"}
+            )
+
+        trait_df = trait_df.compute()  # pyright: ignore[reportCallIssue]
+
         log.info("Assigning the best folds...")
-        df = assign_folds(
-            df, cfg.train.cv_splits.n_splits, cfg.train.cv_splits.n_sims, trait_col
+        trait_df = assign_folds(
+            trait_df,
+            cfg.train.cv_splits.n_splits,
+            cfg.train.cv_splits.n_sims,
+            trait_col,
         )
 
-        splits = df[["x", "y", "fold"]].drop_duplicates().reset_index(drop=True)
+        splits = trait_df[["x", "y", "fold"]].drop_duplicates().reset_index(drop=True)
 
         log.info("Saving splits to %s", splits_fn.absolute())
         splits.to_parquet(splits_fn, compression="zstd")
 
+    close_dask(client, cluster)
     log.info("Done!")
 
 

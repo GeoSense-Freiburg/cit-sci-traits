@@ -23,7 +23,6 @@ from src.utils.dataset_utils import (
     get_y_fn,
 )
 from src.utils.spatial_utils import lat_weights, weighted_pearson_r
-from src.utils.training_utils import filter_trait_set
 
 TMP_DIR = Path("tmp")
 
@@ -37,7 +36,10 @@ def process_fold(fold_dir: Path, xy: pd.DataFrame) -> pd.DataFrame:
 
 
 def get_stats(
-    cv_obs_vs_pred: pd.DataFrame, resolution: int | float, log_transform: bool = False
+    cv_obs_vs_pred: pd.DataFrame,
+    resolution: int | float,
+    log_transform: bool = False,
+    wt_pearson: bool = False,
 ) -> dict[str, Any]:
     """Calculate statistics for a given DataFrame of observed and predicted values."""
     obs = cv_obs_vs_pred.obs.to_numpy()
@@ -52,10 +54,13 @@ def get_stats(
 
     r2 = metrics.r2_score(obs, pred)
     pearsonr = cv_obs_vs_pred[["obs", "pred"]].corr().iloc[0, 1]
-    pearsonr_wt = weighted_pearson_r(
-        cv_obs_vs_pred.set_index(["y", "x"]),
-        lat_weights(cv_obs_vs_pred.y.unique(), resolution),
-    )
+
+    pearsonr_wt = None
+    if wt_pearson:
+        pearsonr_wt = weighted_pearson_r(
+            cv_obs_vs_pred.set_index(["y", "x"]),
+            lat_weights(cv_obs_vs_pred.y.unique(), resolution),
+        )
     root_mean_squared_error = metrics.root_mean_squared_error(obs, pred)
     norm_root_mean_squared_error = root_mean_squared_error / (
         cv_obs_vs_pred.obs.quantile(0.99) - cv_obs_vs_pred.obs.quantile(0.01)
@@ -213,9 +218,15 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
 
             log.info("Calculating stats...")
             all_stats = pd.DataFrame()
-            stats = get_stats(cv_obs_vs_pred, cfg.target_resolution)
+            pearsonr_wt = cfg.crs == "EPSG:4326"
+            stats = get_stats(
+                cv_obs_vs_pred, cfg.target_resolution, wt_pearson=pearsonr_wt
+            )
             stats_ln = get_stats(
-                cv_obs_vs_pred, cfg.target_resolution, log_transform=True
+                cv_obs_vs_pred,
+                cfg.target_resolution,
+                log_transform=True,
+                wt_pearson=pearsonr_wt,
             )
 
             all_stats = pd.concat(
