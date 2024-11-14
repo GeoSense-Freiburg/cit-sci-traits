@@ -557,47 +557,10 @@ def grid_df_to_raster(
     Returns:
         None
     """
-    ref = create_sample_raster(resolution=res)
-    decimals = coord_decimal_places(res)
-
-    ds = (
-        df.to_xarray()
-        .assign_coords(
-            x=lambda ds: np.round(ds["x"], decimals),
-            y=lambda ds: np.round(ds["y"], decimals),
-        )
-        .merge(ref, join="right")
-        .rio.write_crs(ref.rio.crs)
+    raise DeprecationWarning(
+        "'grid_df_to_raster' is deprecated and will be removed in a future version. "
+        "Use 'rasterize_points' instead."
     )
-
-    for var in ds.data_vars:
-        if "_FillValue" in ds[var].attrs:
-            nodata = ds[var].attrs["_FillValue"]
-            ds[var] = ds[var].where(ds[var] != nodata, np.nan)
-        else:
-            ds[var] = ds[var].where(~ds[var].isnull(), np.nan)
-
-        ds[var] = ds[var].rio.write_nodata(-32767.0, encoded=True)
-
-    ds.attrs["long_name"] = list(ds.data_vars)
-    if out is None:
-        ds.attrs["trait"] = name
-    else:
-        ds.attrs["trait"] = out.stem
-
-    if out is not None:
-        xr_to_raster(ds, out, *args, **kwargs)
-
-    ref.close()
-
-    if out is None:
-        return ds
-
-    ds.close()
-
-    del ref, ds
-    gc.collect()
-    return None
 
 
 def pipe_log(df: pd.DataFrame, message: str) -> pd.DataFrame:

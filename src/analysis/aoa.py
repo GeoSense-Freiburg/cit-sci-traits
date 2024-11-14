@@ -24,7 +24,8 @@ from src.utils.dataset_utils import (
     get_trait_models_dir,
     get_y_fn,
 )
-from src.utils.df_utils import grid_df_to_raster
+from src.utils.df_utils import rasterize_points
+from src.utils.raster_utils import xr_to_raster
 from src.utils.training_utils import assign_splits, filter_trait_set, set_yx_index
 from src.utils.trait_utils import get_active_traits
 
@@ -424,11 +425,8 @@ def calc_aoa(
     log.info(predict_di["di"].describe())
 
     log.info("Writing %s...", out_path)
-    grid_df_to_raster(
-        predict_di[["x", "y", "di", "aoa"]].set_index(["y", "x"]),
-        cfg.target_resolution,
-        out_path,
-    )
+    aoa_r = rasterize_points(predict_di, res=cfg.target_resolution, crs=cfg.crs)
+    xr_to_raster(aoa_r, out_path)
 
     log.info("Cleaning up...")
     train_fn.unlink()
