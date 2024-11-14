@@ -104,7 +104,9 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
         .pipe(_repartition_if_set, sys_cfg.npartitions)
         .astype({"Longitude": np.float64, "Latitude": np.float64})
         .set_index("PlotObservationID")
-        .map_partitions(reproject_geo_to_xy, crs=cfg.crs, x="Longitude", y="Latitude")
+        .map_partitions(
+            reproject_geo_to_xy, to_crs=cfg.crs, x="Longitude", y="Latitude"
+        )
         .drop(columns=["Longitude", "Latitude"])
     )
 
