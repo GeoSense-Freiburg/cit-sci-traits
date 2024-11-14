@@ -91,3 +91,37 @@ stages:
       md5: fe0cdb6c19dc0bac2da8766b15c630b7.dir
       size: 499888340
       nfiles: 44
+  get_TRY_mean_traits:
+    cmd: python src/data/build_try_traits.py
+    deps:
+    - path: data/raw/TRY_6_gapfilled_for_distribution/TRY6_gapfilled_for_distribution.zip
+      hash: md5
+      md5: f2cc4a7dd419bed117f42e62780b16e8
+      size: 307941318
+    - path: src/data/build_try_traits.py
+      hash: md5
+      md5: 2e3f44bf4e467e6da01e73daf0d1afd1
+      size: 3432
+    params:
+      params.yaml:
+        trydb:
+          raw:
+            dir: TRY_6_gapfilled_for_distribution
+            zip: TRY6_gapfilled_for_distribution.zip
+            zipfile_csv: TRY6_gapfilled_for_distribution/TRY6_gapfilled_filtered_2.csv.zip
+            already_norm:
+            - 13
+            - 47
+            - 95
+            - 78
+            - 4
+            pfts: try_pft_v2.parquet
+          interim:
+            dir: try
+            quantile_range:
+            filtered: traits.parquet
+    outs:
+    - path: data/interim/try/traits.parquet
+      hash: md5
+      md5: 546b4d12b8c75663f4e07d2a47ad828e
+      size: 18025426
