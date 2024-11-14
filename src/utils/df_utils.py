@@ -293,6 +293,13 @@ def xy_to_rowcol_df(
     if isinstance(transform, tuple):
         transform = Affine.from_gdal(*transform)
 
+    # Check if x and y are indices instead of columns, and if so, convert them to columns
+    if x not in df.columns and y not in df.columns:
+        if x not in df.index.names and y not in df.index.names:
+            raise ValueError("x and y must be column names or index names.")
+
+        df = df.reset_index()
+
     idx = point_to_cell_index(df[x], df[y], transform)
     df["col"] = idx[0]
     df["row"] = idx[1]
