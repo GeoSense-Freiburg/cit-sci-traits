@@ -196,7 +196,7 @@ stages:
           persist: true
 
   predict:
-    cmd: python src/models/predict_traits.py -r
+    cmd: python src/models/predict_traits.py -r -v
     deps:
       - src/models/predict_traits.py
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}
@@ -209,7 +209,7 @@ stages:
           persist: true
 
   cov:
-    cmd: python src/models/predict_traits.py -r --cov
+    cmd: python src/models/predict_traits.py -r -v --cov
     deps:
       - src/models/predict_traits.py
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}
