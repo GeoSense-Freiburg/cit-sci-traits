@@ -34,7 +34,13 @@ def main(cfg: ConfigBox = get_config()):
         gbif_raw_dir / "all_tracheophyta_non-cult_2024-04-10.parquet/*", columns=columns
     )
 
-    pfts = dd.read_csv(Path(cfg.raw_dir, cfg.trydb.raw.pfts), encoding="latin-1")
+    pft_path = Path(cfg.raw_dir, cfg.trydb.raw.pfts)
+    if pft_path.suffix == ".csv":
+        pfts = dd.read_csv(Path(cfg.raw_dir, cfg.trydb.raw.pfts), encoding="latin-1")
+    elif pft_path.suffix == ".parquet":
+        pfts = dd.read_parquet(Path(cfg.raw_dir, cfg.trydb.raw.pfts))
+    else:
+        raise ValueError(f"Unsupported PFT file format: {pft_path.suffix}")
 
     # 02. Preprocess GBIF data
     ddf = (

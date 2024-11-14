@@ -121,9 +121,16 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
 
     # Load PFT data, filter by desired PFT, clean species names, and set them as index
     # for joining
+    pft_path = Path(cfg.raw_dir, cfg.trydb.raw.pfts)
+    if pft_path.suffix == ".csv":
+        pfts = dd.read_csv(Path(cfg.raw_dir, cfg.trydb.raw.pfts), encoding="latin-1")
+    elif pft_path.suffix == ".parquet":
+        pfts = dd.read_parquet(Path(cfg.raw_dir, cfg.trydb.raw.pfts))
+    else:
+        raise ValueError(f"Unsupported PFT file format: {pft_path.suffix}")
+
     pfts = (
-        dd.read_csv(Path(cfg.raw_dir) / cfg.trydb.raw.pfts, encoding="latin-1")
-        .pipe(_repartition_if_set, sys_cfg.npartitions)
+        pfts.pipe(_repartition_if_set, sys_cfg.npartitions)
         .pipe(filter_pft, cfg.PFT)
         .drop(columns=["AccSpeciesID"])
         .dropna(subset=["AccSpeciesName"])
@@ -234,10 +241,6 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
     finally:
         close_dask(client, cluster)
         log.info("Done!")
-
-
-if __name__ == "__main__":
-    main()
 
 
 if __name__ == "__main__":
