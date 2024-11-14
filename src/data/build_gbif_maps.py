@@ -94,6 +94,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
                 data=str(col),
                 res=cfg.target_resolution,
                 crs=cfg.crs,
+                agg=True,
                 n_min=cfg.gbif.interim.min_count,
                 n_max=cfg.gbif.interim.max_count,
             )
