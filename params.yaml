@@ -578,79 +578,43 @@ datasets:
     trait_stats: ["mean", "std", "median", "q05", "q95", "count"]
     trait_stat: 1 # ('mean', 'std', 'median', 'q05', 'q95', 'count') (bands start at 1)
     traits:
-      TRY5:
-        - 4 # Stem specific density (SSD) or wood density (stem dry mass per stem fresh volume)
-        - 6 # Root rooting depth
-        - 11 # Leaf area per leaf dry mass (specific leaf area, SLA or 1/LMA): undefined if petiole is included or excluded)
-        - 13 # Leaf carbon (C) content per leaf dry mass
-        - 14 # Leaf nitrogen (N) content per leaf dry mass
-        - 15 # Leaf phosphorus (P) content per leaf dry mass
-        - 18 # Plant height
-        - 21 # Stem diameter
-        - 26 # Seed dry mass
-        - 27 # Seed length
-        - 46 # Leaf thickness
-        - 47 # Leaf dry mass per leaf fresh mass (leaf dry matter content, LDMC)
-        - 50 # Leaf nitrogen (N) content per leaf area
-        - 55 # Leaf dry mass (single leaf)
-        - 78 # Leaf nitrogen (N) isotope signature (delta 15N)
-        - 95 # Seed germination rate (germination efficiency)
-        - 138 # Seed number per reproduction unit
-        - 144 # Leaf length
-        - 145 # Leaf width
-        - 146 # Leaf carbon/nitrogen (C/N) ratio
-        - 163 # Leaf fresh mass
-        - 169 # Stem conduit density (vessels and tracheids)
-        - 223 # Species genotype: chromosome number
-        - 224 # Species genotype: chromosome cDNA content
-        - 237 # Dispersal unit length
-        - 281 # Stem conduit diameter (vessels, tracheids)
-        - 282 # Wood vessel element length; stem conduit (vessel and tracheids) element length
-        - 289 # Wood fiber lengths
-        - 1080 # Root length per root dry mass (specific root length, SRL)
-        - 3112 # Leaf area (in case of compound leaves: leaf, undefined if petiole in- or excluded)
-        - 3113 # Leaf area (in case of compound leaves: leaflet, undefined if petiole is in- or excluded)
-        - 3114 # Leaf area (in case of compound leaves: undefined if leaf or leaflet, undefined if petiole is in- or excluded)
-        - 3120 # Leaf water content per leaf dry mass (not saturated)
-      TRY6:
-        - 3117 # Leaf area per leaf dry mass (specific leaf area, SLA or 1/LMA): undefined if petiole is in- or exclu
-        - 14 # Leaf nitrogen (N) content per leaf dry mass
-        - 50 # Leaf nitrogen (N) content per leaf area
-        - 146 # Leaf carbon/nitrogen (C/N) ratio
-        - 3120 # Leaf water content per leaf dry mass (not saturated)
-        - 224 # Species genotype: chromosome cDNA content
-        - 297 # Wood rays per millimetre (wood ray density)
-        - 21 # Stem diameter
-        - 13 # Leaf carbon (C) content per leaf dry mass
-        - 15 # Leaf phosphorus (P) content per leaf dry mass
-        - 3114 # Leaf area (in case of compound leaves undefined if leaf or leaflet, undefined if petiole is in- or e
-        - 3113 # Leaf area (in case of compound leaves: leaflet, undefined if petiole is in- or excluded)
-        - 3112 # Leaf area (in case of compound leaves: leaf, undefined if petiole in- or excluded)
-        - 47 # Leaf dry mass per leaf fresh mass (leaf dry matter content, LDMC)
-        - 169 # Stem conduit density (vessels and tracheids)
-        - 3106 # Plant height vegetative
-        - 144 # Leaf length
-        - 27 # Seed length
-        - 26 # Seed dry mass
-        - 55 # Leaf dry mass (single leaf)
-        - 46 # Leaf thickness
-        - 281 # Stem conduit diameter (vessels, tracheids)
-        - 282 # Wood vessel element length; stem conduit (vessel and tracheids) element length
-        - 289 # Wood fiber lengths
-        - 163 # Leaf fresh mass
-        - 145 # Leaf width
-        - 3107 # Plant height generative
-        - 223 # Species genotype: chromosome number
-        - 237 # Dispersal unit length
-        - 614 # Fine root length per fine root dry mass (specific fine root length, SRL)
-        - 351 # Seed number per dispersal unit
-        - 6 # Root rooting depth
-        - 95 # Seed germination rate (germination efficiency)
-        - 138 # Seed number per reproducton unit
-        - 1080 # Root length per root dry mass (specific root length, SRL)
-        - 78 # Leaf nitrogen (N) isotope signature (delta 15N)
-        - 4 # Stem specific density (SSD, stem dry mass per stem fresh volume) or wood density
-
+      # - 4 # Stem specific density (SSD, stem dry mass per stem fresh volume) or wood density
+      # - 6 # Root rooting depth
+      # - 13 # Leaf carbon (C) content per leaf dry mass
+      # - 14 # Leaf nitrogen (N) content per leaf dry mass
+      # - 15 # Leaf phosphorus (P) content per leaf dry mass
+      # - 21 # Stem diameter
+      # - 26 # Seed dry mass
+      # - 27 # Seed length
+      # - 46 # Leaf thickness
+      # - 47 # Leaf dry mass per leaf fresh mass (leaf dry matter content, LDMC)
+      # - 50 # Leaf nitrogen (N) content per leaf area
+      # - 55 # Leaf dry mass (single leaf)
+      # - 78 # Leaf nitrogen (N) isotope signature (delta 15N)
+      # - 95 # Seed germination rate (germination efficiency)
+      # - 138 # Seed number per reproducton unit
+      # - 144 # Leaf length
+      # - 145 # Leaf width
+      # - 146 # Leaf carbon/nitrogen (C/N) ratio
+      # - 163 # Leaf fresh mass
+      # - 169 # Stem conduit density (vessels and tracheids)
+      # - 223 # Species genotype: chromosome number
+      # - 224 # Species genotype: chromosome cDNA content
+      # - 237 # Dispersal unit length
+      # - 281 # Stem conduit diameter (vessels, tracheids)
+      # - 282 # Wood vessel element length; stem conduit (vessel and tracheids) element length
+      # - 289 # Wood fiber lengths
+      # - 297 # Wood rays per millimetre (wood ray density)
+      # - 351 # Seed number per dispersal unit
+      # - 614 # Fine root length per fine root dry mass (specific fine root length, SRL)
+      # - 1080 # Root length per root dry mass (specific root length, SRL)
+      # - 3106 # Plant height vegetative
+      # - 3107 # Plant height generative
+      # - 3112 # Leaf area (in case of compound leaves: leaf, undefined if petiole in- or excluded)
+      # - 3113 # Leaf area (in case of compound leaves: leaflet, undefined if petiole is in- or excluded)
+      # - 3114 # Leaf area (in case of compound leaves undefined if leaf or leaflet, undefined if petiole is in- or e
+      - 3117 # Leaf area per leaf dry mass (specific leaf area, SLA or 1/LMA): undefined if petiole is in- or exclu
+      # - 3120 # Leaf water content per leaf dry mass (not saturated)
 
 eo_data:
   interim:
