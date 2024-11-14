@@ -717,7 +717,7 @@ predict:
   dir: predict
   geos:
     n_workers: 14
-    batches: 24
+    batches: 28
   pylos:
     n_workers: 4
     batches: 24
