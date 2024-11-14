@@ -212,6 +212,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
                     data=stat_col,
                     res=cfg.target_resolution,
                     crs=cfg.crs,
+                    agg=True,
                     funcs=funcs,
                 )
 

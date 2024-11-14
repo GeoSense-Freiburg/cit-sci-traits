@@ -373,13 +373,14 @@ def agg_df(
 
 def rasterize_points(
     df: pd.DataFrame,
-    data: str,
+    data: str | None = None,
     x: str = "x",
     y: str = "y",
     raster: xr.DataArray | xr.Dataset | None = None,
     res: int | float | None = None,
     crs: str | None = None,
     nodata: int | float = np.nan,
+    agg: bool = False,
     funcs: dict[str, Any] | None = None,
     n_min: int = 1,
     n_max: int | None = None,
@@ -444,13 +445,14 @@ def rasterize_points(
 
     transform = ref.rio.transform().to_gdal()
 
-    grid_df = (
-        xy_to_rowcol_df(df, transform, x=x, y=y)
-        .drop(columns=["x", "y"])
-        .pipe(
-            agg_df, by=["row", "col"], data=data, funcs=funcs, n_min=n_min, n_max=n_max
+    grid_df = xy_to_rowcol_df(df, transform, x=x, y=y).drop(columns=["x", "y"])
+
+    if agg:
+        if data is None:
+            raise ValueError("Data column must be provided for aggregation.")
+        grid_df = agg_df(
+            grid_df, by=["row", "col"], data=data, funcs=funcs, n_min=n_min, n_max=n_max
         )
-    )
 
     if dask.is_dask_collection(grid_df):
         grid_df = grid_df.compute()  # pyright: ignore[reportCallIssue]
