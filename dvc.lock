@@ -1,34 +1,58 @@
 schema: '2.0'
 stages:
+  
+  standardize_other_products:
+    cmd: python src/data/standardize_other_products.py
+    deps:
+    - path: data/raw/other-trait-maps
+      hash: md5
+      md5: 224244cf76242106abf656a1946fb350.dir
+      size: 28945584053
+      nfiles: 1506
+    - path: src/data/standardize_other_products.py
+      hash: md5
+      md5: f0e35e20db15f9c3e94e2e5ee91fec17
+      size: 2539
+    outs:
+    - path: data/interim/other_trait_maps
+      hash: md5
+      md5: fe0cdb6c19dc0bac2da8766b15c630b7.dir
+      size: 499888340
+      nfiles: 44
   get_TRY_mean_traits:
     cmd: python src/data/build_try_traits.py
     deps:
-    - path: data/raw/TRY_5_GapFilledData_2020/TRY_5_GapFilledData_2020.zip
+    - path: data/raw/TRY_6_gapfilled_for_distribution/TRY6_gapfilled_for_distribution.zip
       hash: md5
-      md5: b0b6e84693d252fb89037d45563d7e0e
-      size: 452814652
+      md5: f2cc4a7dd419bed117f42e62780b16e8
+      size: 307941318
     - path: src/data/build_try_traits.py
       hash: md5
-      md5: 0f264e7b766291e81726a062c0858994
-      size: 2089
+      md5: 2e3f44bf4e467e6da01e73daf0d1afd1
+      size: 3432
     params:
       params.yaml:
-        trydb.interim:
-          dir: try
-          extracted_csv: mean_gf_bt_sp.csv
-          quantile_range:
-          - 0.005
-          - 0.995
-          filtered: mean_gf_bt_sp_filt.parquet
-        trydb.raw.dir: TRY_5_GapFilledData_2020
-        trydb.raw.zip: TRY_5_GapFilledData_2020.zip
-        trydb.raw.zipfile_csv: 
-          TRY_50_2020_01/gapfilled_data/mean_gap_filled_back_transformed_incl_species_names.csv
+        trydb:
+          raw:
+            dir: TRY_6_gapfilled_for_distribution
+            zip: TRY6_gapfilled_for_distribution.zip
+            zipfile_csv: TRY6_gapfilled_for_distribution/TRY6_gapfilled_filtered_2.csv.zip
+            already_norm:
+            - 13
+            - 47
+            - 95
+            - 78
+            - 4
+            pfts: try_pft_v2.parquet
+          interim:
+            dir: try
+            quantile_range:
+            filtered: traits.parquet
     outs:
-    - path: data/interim/try/mean_gf_bt_sp_filt.parquet
+    - path: data/interim/try/traits.parquet
       hash: md5
-      md5: 510f410e0fed41ca18b417b0a716dda6
-      size: 13698859
+      md5: 546b4d12b8c75663f4e07d2a47ad828e
+      size: 18025426
   match_gbif_pfts:
     cmd: python src/data/match_gbif_pfts.py
     deps:
@@ -37,14 +61,14 @@ stages:
       md5: ada860692d425bd047bd09fd4531fdbf.dir
       size: 30005038638
       nfiles: 1584
-    - path: data/raw/try_pft_v1.csv
+    - path: data/raw/try_pft_v2.parquet
       hash: md5
-      md5: c8c8c94250a247ce30b76ce150bedf90
-      size: 3964944
+      md5: d49a4b1611eebbd529c9e9aba6aa5f69
+      size: 2232209
     - path: src/data/match_gbif_pfts.py
       hash: md5
-      md5: d46c0f918ff0aa9bf84e0f7829d95ca0
-      size: 2220
+      md5: 7d1a4ba3531b7f4adfaebae71825792b
+      size: 2507
     params:
       params.yaml:
         datasets.Y.gbif: all_tracheophyta_non-cult_2024-04-10
@@ -54,35 +78,9 @@ stages:
     outs:
     - path: data/interim/gbif/gbif_pfts.parquet
       hash: md5
-      md5: 808425a21170d42c6f1c9078555864eb.dir
-      size: 4474658309
+      md5: c2cf56ca2bedf888ff4c99014a82320c.dir
+      size: 4473036358
       nfiles: 159
-  subsample_gbif:
-    cmd: python src/data/subsample_gbif.py
-    deps:
-    - path: data/interim/gbif/gbif_pfts.parquet
-      hash: md5
-      md5: 0fa511f0bb36456892bfe3dc7bb35637.dir
-      size: 6792826593
-      nfiles: 122
-    - path: src/data/subsample_gbif.py
-      hash: md5
-      md5: 73f61cc054c4830e6404dab9a5f08f0e
-      size: 2982
-    params:
-      params.yaml:
-        gbif.interim.dir: gbif
-        gbif.interim.matched: gbif_pfts.parquet
-        gbif.interim.subsample_binsize: 4
-        gbif.interim.subsample_n_max: 10000
-        gbif.interim.subsampled: gbif_subsampled.parquet
-        random_seed: 42
-    outs:
-    - path: data/interim/gbif/gbif_subsampled.parquet
-      hash: md5
-      md5: b532b313f20180543b078aa0aa8a90ec.dir
-      size: 904490983
-      nfiles: 64
   extract_splot:
     cmd: python src/data/extract_splot.py
     deps:

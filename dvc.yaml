@@ -9,10 +9,7 @@ stages:
       - src/data/build_try_traits.py
       - ${raw_dir}/${trydb.raw.dir}/${trydb.raw.zip}
     params:
-      - trydb.raw.dir
-      - trydb.raw.zip
-      - trydb.raw.zipfile_csv
-      - trydb.interim
+      - trydb
     outs:
       - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}:
           persist: true
