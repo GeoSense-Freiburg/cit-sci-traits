@@ -1,6 +1,5 @@
 """Utility functions for working with DataFrames and GeoDataFrames."""
 
-import gc
 import warnings
 from pathlib import Path
 from typing import Any
@@ -17,10 +16,7 @@ from affine import Affine
 
 from src.conf.conf import get_config
 from src.conf.environment import log
-from src.utils.log_utils import setup_logger
-from src.utils.raster_utils import create_sample_raster, xr_to_raster
-
-log = setup_logger(__name__, "INFO")
+from src.utils.raster_utils import create_sample_raster
 
 
 def write_dgdf_parquet(dgdf: dgpd.GeoDataFrame, out_path: str | Path, **kwargs) -> None:
