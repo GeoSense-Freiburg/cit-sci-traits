@@ -238,7 +238,3 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
 
 if __name__ == "__main__":
     main()
-
-
-if __name__ == "__main__":
-    main()
