@@ -246,14 +246,14 @@ stages:
     deps:
     - path: data/interim/gbif/trait_maps/Shrub_Tree_Grass/1km
       hash: md5
-      md5: 9acfb59cc3a9954d6e908af5f0e89a04.dir
-      size: 5608740108
-      nfiles: 34
+      md5: 58f3c663a5fc611ada505a202c448aa2.dir
+      size: 168341359
+      nfiles: 1
     - path: data/interim/splot/trait_maps/Shrub_Tree_Grass/1km
       hash: md5
-      md5: 306c0b8af4e5e43713eb13fd888ca479.dir
-      size: 1623776570
-      nfiles: 34
+      md5: 85edd33247000d5637efe2047d5f26d9.dir
+      size: 44030841
+      nfiles: 1
     - path: src/features/build_y.py
       hash: md5
       md5: 969480c18cd6001ce1e389a6477e6312
@@ -277,27 +277,29 @@ stages:
       size: 25769252
     - path: src/features/calc_spatial_autocorr.py
       hash: md5
-      md5: 976e85cc5b989395b6dde532c2786531
-      size: 12057
+      md5: e8d334d1bd363f837199343b5e705ea0
+      size: 12038
     params:
       params.yaml:
+        calc_spatial_autocorr:
+          use_existing: false
         train.spatial_autocorr: spatial_autocorr.parquet
     outs:
     - path: data/features/Shrub_Tree_Grass/1km/spatial_autocorr.parquet
       hash: md5
-      md5: 6c449e964aa74b5e22857f571ab0b7ec
-      size: 5950
+      md5: eb1f23b7937edaf02e9c073bb0d26af0
+      size: 5985
   build_cv_splits:
     cmd: python src/features/skcv_splits.py -o
     deps:
     - path: data/features/Shrub_Tree_Grass/1km/Y.parquet
       hash: md5
-      md5: 303853c488a92aa723fc95930d1ae1df
-      size: 26349130
+      md5: 957fe9ca320a21d63fd5ac543c65f75d
+      size: 25769252
     - path: data/features/Shrub_Tree_Grass/1km/spatial_autocorr.parquet
       hash: md5
-      md5: 6c449e964aa74b5e22857f571ab0b7ec
-      size: 5950
+      md5: eb1f23b7937edaf02e9c073bb0d26af0
+      size: 5985
     - path: src/features/skcv_splits.py
       hash: md5
       md5: 85c2af4062f128a52dc82f42e84ca494
@@ -305,16 +307,16 @@ stages:
     params:
       params.yaml:
         train.cv_splits:
-          range_stat: mean
+          range_stat: median
           n_splits: 5
           n_sims: 100
           dir: skcv_splits
     outs:
     - path: data/features/Shrub_Tree_Grass/1km/skcv_splits
       hash: md5
-      md5: 74a1f0729207dd5398829b8352bd2268.dir
-      size: 5201084
-      nfiles: 1
+      md5: 70ae58d04b81b95cf8fec464ee87cd19.dir
+      size: 9796159
+      nfiles: 2
   train_models:
     cmd: python src/models/train_models.py -r && python src/models/cv_stats.py
     deps:
