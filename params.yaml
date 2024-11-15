@@ -295,7 +295,7 @@ geos:
     build_gbif_maps:
       n_workers: 80
       threads_per_worker: 5
-      memory_limit: 15GB
+      memory_limit: 30GB
     build_splot_maps:
       npartitions: 60
       dask:
