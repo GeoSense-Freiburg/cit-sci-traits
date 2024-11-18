@@ -322,7 +322,8 @@ geos:
       n_workers_variogram: 20  # For WGS84 coords only
       n_chunks: 16 # x direction only
     skcv_splits:
-      n_workers: 80
+      n_workers: 90
+      threads_per_worker: 1
     aoa:
       device_ids: [0, 1, 2, 3]
       predict_sample: 0.5
