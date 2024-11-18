@@ -33,6 +33,7 @@ pylos:
       n_chunks: 6
       n_workers: 30
       memory_limit: null
+      threads_per_worker: 2
     build_predict:
       n_chunks: 5
       n_workers: null
@@ -78,6 +79,7 @@ pylos:
       n_chunks: 6
       n_workers: 30
       memory_limit: null
+      threads_per_worker: 5
     build_predict:
       n_chunks: 5
       n_workers: null
@@ -123,6 +125,7 @@ pylos:
       n_chunks: 1
       n_workers: 60
       memory_limit: null
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: null
@@ -168,6 +171,7 @@ pylos:
       n_chunks: 1
       n_workers: 60
       memory_limit: null
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: null
@@ -213,6 +217,7 @@ pylos:
       n_chunks: 1
       n_workers: 30
       memory_limit: null
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: null
@@ -258,6 +263,7 @@ pylos:
       n_chunks: 1
       n_workers: 30
       memory_limit: null
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: null
@@ -302,9 +308,10 @@ geos:
         n_workers: 80
         memory_limit: 40GB
     featurize_train:
-      n_chunks: 2
-      n_workers: 100
+      n_chunks: 10
+      n_workers: 8
       memory_limit: 150GB
+      threads_per_worker: 1
     build_predict:
       n_chunks: 3
       n_workers: 80
@@ -349,6 +356,7 @@ geos:
       n_chunks: 2
       n_workers: 100
       memory_limit: 150GB
+      threads_per_worker: 5
     build_predict:
       n_chunks: 3
       n_workers: 100
@@ -393,6 +401,7 @@ geos:
       n_chunks: 1
       n_workers: 100
       memory_limit: 150GB
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: 100
@@ -437,6 +446,7 @@ geos:
       n_chunks: 1
       n_workers: 100
       memory_limit: 150GB
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: 100
@@ -481,6 +491,7 @@ geos:
       n_chunks: 1
       n_workers: 100
       memory_limit: 150GB
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: 100
@@ -525,6 +536,7 @@ geos:
       n_chunks: 1
       n_workers: 100
       memory_limit: 150GB
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: 100
