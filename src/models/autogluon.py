@@ -263,7 +263,7 @@ class TraitTrainer:
             self.xy[self.xy["fold"] != fold_id]
             .pipe(filter_trait_set, trait_set)
             .pipe(assign_weights, w_gbif=self.opts.cfg.train.weights.gbif)
-            .drop(columns=["x", "y", "source", "fold"])
+            .drop(columns=["x", "y", "source"])
             .reset_index(drop=True)
         )
         val = TabularDataset(
@@ -277,6 +277,7 @@ class TraitTrainer:
         try:
             predictor = TabularPredictor(
                 label=self.trait_name,
+                groups="fold",
                 sample_weight="weights",  # pyright: ignore[reportArgumentType]
                 path=str(fold_model_path),
             ).fit(
