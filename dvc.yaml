@@ -13,6 +13,8 @@ stages:
     outs:
       - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}:
           persist: true
+      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.transformer_fn}:
+          persist: true
 
   match_gbif_pfts:
     cmd: python src/data/match_gbif_pfts.py
@@ -109,7 +111,7 @@ stages:
       - target_resolution
     outs:
       - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.traits}/${PFT}/${model_res}:
-          persist: true
+          persist: false
 
   build_splot_maps:
     cmd: python src/data/build_splot_maps.py
@@ -125,7 +127,7 @@ stages:
       - target_resolution
     outs:
       - ${interim_dir}/${splot.interim.dir}/${splot.interim.traits}/${PFT}/${model_res}:
-          persist: true
+          persist: false
 
   build_y:
     cmd: python src/features/build_y.py
@@ -147,6 +149,7 @@ stages:
       - ${train.dir}/${PFT}/${model_res}/${train.Y.fn}
     params:
       - train.spatial_autocorr
+      - calc_spatial_autocorr
     outs:
       - ${train.dir}/${PFT}/${model_res}/${train.spatial_autocorr}
 
@@ -160,7 +163,7 @@ stages:
       - train.cv_splits
     outs:
       - ${train.dir}/${PFT}/${model_res}/${train.cv_splits.dir}:
-          persist: true
+          persist: false
 
   train_models:
     cmd: python src/models/train_models.py -r && python src/models/cv_stats.py
@@ -170,6 +173,7 @@ stages:
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}
       - ${train.dir}/${PFT}/${model_res}/${train.Y.fn}
       - ${train.dir}/${PFT}/${model_res}/${train.cv_splits.dir}
+      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.transformer_fn}
     params:
       - train.arch
       - autogluon
@@ -199,6 +203,7 @@ stages:
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.mask_fn}
       - ${models.dir}/${PFT}/${model_res}
+      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.transformer_fn}
     params:
       - predict
     outs:
@@ -212,6 +217,7 @@ stages:
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.mask_fn}
       - ${models.dir}/${PFT}/${model_res}
+      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.transformer_fn}
     params:
       - predict
       - cov

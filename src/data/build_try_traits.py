@@ -1,11 +1,13 @@
 """Extracts, cleans, and gets species mean trait values from TRY data."""
 
+import pickle
 import zipfile
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from box import ConfigBox
+from sklearn.preprocessing import PowerTransformer
 
 from src.conf.conf import get_config
 from src.conf.environment import log
@@ -44,6 +46,31 @@ def _log_transform_long_tails(df: pd.DataFrame, keep: list[str] | None) -> pd.Da
     ).drop(columns=long_tailed_cols)
 
 
+def _power_transform(df: pd.DataFrame, transformer_fn: Path) -> pd.DataFrame:
+    """Power transform (Yeo-Johnson) the data and save the lambdas for later."""
+    pt = PowerTransformer(method="yeo-johnson")
+    df_t = pt.fit_transform(df)
+
+    with open(transformer_fn, "wb") as f:
+        pickle.dump(pt, f)
+
+    return pd.DataFrame(df_t, columns=df.columns, index=df.index)
+
+
+def _transform(df: pd.DataFrame, transform: str | None, **kwargs) -> pd.DataFrame:
+    """Apply a transformation to the data."""
+    if transform is None:
+        return df
+
+    if transform == "log":
+        log.info("Log-transforming data with long-tailed distributions...")
+        return _log_transform_long_tails(df, **kwargs)
+    if transform == "power":
+        log.info("Power-transforming data...")
+        return _power_transform(df, **kwargs)
+    raise ValueError(f"Unknown transformation: {transform}")
+
+
 def standardize_trait_ids(df: pd.DataFrame) -> pd.DataFrame:
     """Standardize trait IDs between TRY5 and TRY6."""
     old_trait_cols = df.columns[df.columns.str.startswith("X")]
@@ -66,18 +93,22 @@ def main(cfg: ConfigBox = get_config()) -> None:
             else:
                 traits = pd.read_csv(zf, encoding="latin-1", index_col=0)
 
-    log.info("Filtering outliers and getting species mean trait values...")
+    log.info("Getting species mean trait values...")
     trait_cols = [col for col in traits.columns if col.startswith("X")]
     keep_cols = ["Species"] + trait_cols
     mean_filt_traits = (
         traits[keep_cols]
         .pipe(_filter_if_specified, trait_cols, cfg.trydb.interim.quantile_range)
         .pipe(standardize_trait_ids)
-        .pipe(_log_transform_long_tails, cfg.trydb.raw.already_norm)
         .pipe(clean_species_name, "Species", "speciesname")
         .drop(columns=["Species"])
         .groupby("speciesname")
         .mean()
+        .pipe(
+            _transform,
+            cfg.trydb.interim.transform,
+            transformer_fn=try_prep_dir / cfg.trydb.interim.transformer_fn,
+        )
         .reset_index()
     )
 

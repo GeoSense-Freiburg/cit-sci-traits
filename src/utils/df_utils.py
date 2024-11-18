@@ -232,6 +232,7 @@ def reproject_xy_to_geo(
     Returns:
     pd.DataFrame: DataFrame with x and y coordinates projected into the new CRS.
     """
+    df = df.copy()
     transformer = pyproj.Transformer.from_crs(from_crs, "EPSG:4326", always_xy=True)
     lon, lat = transformer.transform(df[x].values, df[y].values)
     df["lon"] = lon
@@ -346,7 +347,7 @@ def agg_df(
             "count": "count",
         }
 
-        if "species" in df.index.name:
+        if df.index.name is not None and "species" in df.index.name:
             funcs["species_count"] = lambda x: x.index.nunique()
 
         elif any("species" in col for col in df.columns):
