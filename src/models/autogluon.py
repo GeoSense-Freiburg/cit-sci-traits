@@ -227,6 +227,7 @@ class TraitTrainer:
     GBM_HYPERPARAMS: dict = {
         "GBM": {
             "min_child_weight": 1,
+            "device": "gpu",
         }
     }
 
@@ -262,7 +263,7 @@ class TraitTrainer:
             self.xy[self.xy["fold"] != fold_id]
             .pipe(filter_trait_set, trait_set)
             .pipe(assign_weights, w_gbif=self.opts.cfg.train.weights.gbif)
-            .drop(columns=["x", "y", "source", "fold"])
+            .drop(columns=["x", "y", "source"])
             .reset_index(drop=True)
         )
         val = TabularDataset(
@@ -276,6 +277,7 @@ class TraitTrainer:
         try:
             predictor = TabularPredictor(
                 label=self.trait_name,
+                groups="fold",
                 sample_weight="weights",  # pyright: ignore[reportArgumentType]
                 path=str(fold_model_path),
             ).fit(
@@ -290,8 +292,38 @@ class TraitTrainer:
 
             if self.opts.cfg.autogluon.feature_importance:
                 log.info("Calculating feature importance...")
+                features = predictor.feature_metadata_in.get_features()
+                feat_ds_map = {
+                    "canopy_height": {"startswith": True, "match": "ETH"},
+                    "soilgrids": {
+                        "startswith": False,
+                        "match": "cm_mean",
+                    },
+                    "modis": {"startswith": True, "match": "sur_refl"},
+                    "vodca": {"startswith": True, "match": "vodca"},
+                    "worldclim": {"startswith": True, "match": "wc2.1"},
+                }
+                # Generate a list of tuples of (dataset, [features]) for each dataset
+                datasets = []
+                for ds, ds_info in feat_ds_map.items():
+                    if ds_info["startswith"]:
+                        ds_feats = [
+                            feat
+                            for feat in features
+                            if feat.startswith(ds_info["match"])
+                        ]
+                    else:
+                        ds_feats = [
+                            feat for feat in features if feat.endswith(ds_info["match"])
+                        ]
+                    datasets.append((ds, ds_feats))
+
+                # Now add all features as well
+                datasets += features
+
                 feature_importance = predictor.feature_importance(
                     val,
+                    features=datasets,
                     time_limit=self.opts.cfg.autogluon.FI_time_limit,
                     num_shuffle_sets=self.opts.cfg.autogluon.FI_num_shuffle_sets,
                 ).assign(fold=fold_id)
@@ -309,7 +341,7 @@ class TraitTrainer:
                 val, auxiliary_metrics=True, detailed_report=True
             )
 
-            # Normalize RMSE by the standard deviation of the validation set
+            # Normalize RMSE by the 99th percentile - 1st percentile range of the target
             norm_factor = val[self.trait_name].quantile(0.99) - val[
                 self.trait_name
             ].quantile(0.01)
@@ -447,18 +479,9 @@ def prep_full_xy(
 
 def load_data() -> tuple[dd.DataFrame, pd.DataFrame, dd.DataFrame]:
     """Load the input data for modeling."""
-    y_cfg = get_config().datasets.Y
     feats = dd.read_parquet(get_predict_imputed_fn())
     feats_mask = pd.read_parquet(get_predict_mask_fn()).set_index(["y", "x"])
-    labels = dd.read_parquet(
-        get_y_fn(),
-        columns=[
-            "x",
-            "y",
-            "source",
-            *[f"X{i}_{y_cfg.trait_stats[y_cfg.trait_stat - 1]}" for i in y_cfg.traits],
-        ],
-    )
+    labels = dd.read_parquet(get_y_fn())
     return feats, feats_mask, labels
 
 

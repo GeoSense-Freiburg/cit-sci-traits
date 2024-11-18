@@ -20,7 +20,7 @@ from src.utils.trait_utils import filter_pft, get_trait_number_from_id
 def cli() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Match subsampled GBIF data with filtered trait data, grid it, generate grid cell statistics, and write each trait's corresponding raster stack to GeoTIFF files."
+        description="Match GBIF data with TRY mean trait data, grid it, generate grid cell statistics, and write each trait's corresponding raster stack to GeoTIFF files."
     )
     parser.add_argument(
         "-o", "--overwrite", action="store_true", help="Overwrite existing files."
@@ -38,6 +38,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
         dashboard_address=cfg.dask_dashboard,
         n_workers=syscfg.n_workers,
         memory_limit=syscfg.memory_limit,
+        threads_per_worker=syscfg.threads_per_worker,
     )
 
     out_dir = (
