@@ -721,7 +721,7 @@ autogluon:
   cv_fit_time_limit: 3600
   full_fit_time_limit: 12600 # 3.5 hours per trait
   num_gpus: 2
-  num_cpus: 100
+  num_cpus: 110
   feature_importance: true
   FI_time_limit: 1800
   FI_num_shuffle_sets: 10
