@@ -292,8 +292,38 @@ class TraitTrainer:
 
             if self.opts.cfg.autogluon.feature_importance:
                 log.info("Calculating feature importance...")
+                features = predictor.feature_metadata_in.get_features()
+                feat_ds_map = {
+                    "canopy_height": {"startswith": True, "match": "ETH"},
+                    "soilgrids": {
+                        "startswith": False,
+                        "match": "cm_mean",
+                    },
+                    "modis": {"startswith": True, "match": "sur_refl"},
+                    "vodca": {"startswith": True, "match": "vodca"},
+                    "worldclim": {"startswith": True, "match": "wc2.1"},
+                }
+                # Generate a list of tuples of (dataset, [features]) for each dataset
+                datasets = []
+                for ds, ds_info in feat_ds_map.items():
+                    if ds_info["startswith"]:
+                        ds_feats = [
+                            feat
+                            for feat in features
+                            if feat.startswith(ds_info["match"])
+                        ]
+                    else:
+                        ds_feats = [
+                            feat for feat in features if feat.endswith(ds_info["match"])
+                        ]
+                    datasets.append((ds, ds_feats))
+
+                # Now add all features as well
+                datasets += features
+
                 feature_importance = predictor.feature_importance(
                     val,
+                    features=datasets,
                     time_limit=self.opts.cfg.autogluon.FI_time_limit,
                     num_shuffle_sets=self.opts.cfg.autogluon.FI_num_shuffle_sets,
                 ).assign(fold=fold_id)
