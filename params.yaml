@@ -318,7 +318,7 @@ geos:
       memory_limit: 400GB
       impute_chunks: 2
     calc_spatial_autocorr:
-      n_workers: 100
+      n_workers: 3
       n_workers_variogram: 20  # For WGS84 coords only
       n_chunks: 16 # x direction only
     skcv_splits:
