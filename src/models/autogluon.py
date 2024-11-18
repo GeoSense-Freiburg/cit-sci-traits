@@ -227,6 +227,7 @@ class TraitTrainer:
     GBM_HYPERPARAMS: dict = {
         "GBM": {
             "min_child_weight": 1,
+            "device": "gpu",
         }
     }
 
