@@ -659,12 +659,14 @@ trydb:
     dir: TRY_6_gapfilled_for_distribution
     zip: TRY6_gapfilled_for_distribution.zip
     zipfile_csv: TRY6_gapfilled_for_distribution/TRY6_gapfilled_filtered_2.csv.zip
-    already_norm: [13, 47, 95, 78, 4]
     pfts: try_pft_v2.parquet
   interim:
     dir: try
     quantile_range: null  # Use [0.005, 0.995] for TRY5. No filtering needed for TRY6
+    transform: power # "log", "power" (yeo-johnson), null (no transformation)
+    already_norm: null
     filtered: traits.parquet
+    transformer_fn: power_transformer.pkl
 
 calc_spatial_autocorr:
   # Use existing spatial autocorrelation data from this model_res. To recompute, set to false.

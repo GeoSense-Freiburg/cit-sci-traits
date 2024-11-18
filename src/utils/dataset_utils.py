@@ -252,6 +252,15 @@ def compute_partitions(ddf: dd.DataFrame) -> pd.DataFrame:
     return pd.concat(dfs)
 
 
+def get_power_transformer_fn(config: ConfigBox = cfg) -> Path:
+    """Get the path to the power transformer file."""
+    return Path(
+        config.interim_dir,
+        config.trydb.interim.dir,
+        config.trydb.interim.transformer_fn,
+    )
+
+
 def check_y_set(y_set: str) -> None:
     """Check if the specified y_set is valid."""
     y_sets = ["gbif", "splot", "splot_gbif"]
