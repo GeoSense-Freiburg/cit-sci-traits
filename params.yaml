@@ -692,7 +692,7 @@ train:
   missing_val_thresh: 0.4 # Drop features with more than this fraction of missing values
   spatial_autocorr: spatial_autocorr.parquet
   cv_splits:
-    range_stat: "mean"
+    range_stat: "median"
     n_splits: 5
     n_sims: 100
     dir: skcv_splits
