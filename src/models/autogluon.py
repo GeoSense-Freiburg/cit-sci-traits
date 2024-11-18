@@ -341,7 +341,7 @@ class TraitTrainer:
                 val, auxiliary_metrics=True, detailed_report=True
             )
 
-            # Normalize RMSE by the standard deviation of the validation set
+            # Normalize RMSE by the 99th percentile - 1st percentile range of the target
             norm_factor = val[self.trait_name].quantile(0.99) - val[
                 self.trait_name
             ].quantile(0.01)
