@@ -5,7 +5,7 @@ random_seed: 42
 base_resolution: 0.01 # Shared best resolution of all EO datasets (used for masking)
 target_resolution: 0.2 # Target resolution for model training
 extent: [-180, -60, 180, 90] # Extent of the final dataset
-crs: "EPSG:6933" # Equal Area Cylindrical projection
+crs: "EPSG:4326"
 tmp_dir: tmp
 raw_dir: data/raw
 interim_dir: data/interim
