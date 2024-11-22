@@ -2,11 +2,10 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import xarray as xr
 
 from src.conf.conf import get_config
 from src.conf.environment import log
-from src.utils.dataset_utils import get_trait_map_fns, get_trait_maps_dir
+from src.utils.dataset_utils import get_trait_maps_dir
 from src.utils.raster_utils import open_raster
 from src.utils.spatial_utils import lat_weights, weighted_pearson_r
 
