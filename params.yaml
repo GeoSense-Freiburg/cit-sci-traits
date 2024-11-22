@@ -33,6 +33,7 @@ pylos:
       n_chunks: 6
       n_workers: 30
       memory_limit: null
+      threads_per_worker: 2
     build_predict:
       n_chunks: 5
       n_workers: null
@@ -78,6 +79,7 @@ pylos:
       n_chunks: 6
       n_workers: 30
       memory_limit: null
+      threads_per_worker: 5
     build_predict:
       n_chunks: 5
       n_workers: null
@@ -123,6 +125,7 @@ pylos:
       n_chunks: 1
       n_workers: 60
       memory_limit: null
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: null
@@ -168,6 +171,7 @@ pylos:
       n_chunks: 1
       n_workers: 60
       memory_limit: null
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: null
@@ -213,6 +217,7 @@ pylos:
       n_chunks: 1
       n_workers: 30
       memory_limit: null
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: null
@@ -258,6 +263,7 @@ pylos:
       n_chunks: 1
       n_workers: 30
       memory_limit: null
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: null
@@ -302,20 +308,22 @@ geos:
         n_workers: 80
         memory_limit: 40GB
     featurize_train:
-      n_chunks: 2
-      n_workers: 100
+      n_chunks: 10
+      n_workers: 8
       memory_limit: 150GB
+      threads_per_worker: 1
     build_predict:
       n_chunks: 3
       n_workers: 80
       memory_limit: 400GB
       impute_chunks: 2
     calc_spatial_autocorr:
-      n_workers: 100
+      n_workers: 3
       n_workers_variogram: 20  # For WGS84 coords only
       n_chunks: 16 # x direction only
     skcv_splits:
-      n_workers: 80
+      n_workers: 90
+      threads_per_worker: 1
     aoa:
       device_ids: [0, 1, 2, 3]
       predict_sample: 0.5
@@ -349,6 +357,7 @@ geos:
       n_chunks: 2
       n_workers: 100
       memory_limit: 150GB
+      threads_per_worker: 5
     build_predict:
       n_chunks: 3
       n_workers: 100
@@ -393,6 +402,7 @@ geos:
       n_chunks: 1
       n_workers: 100
       memory_limit: 150GB
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: 100
@@ -437,6 +447,7 @@ geos:
       n_chunks: 1
       n_workers: 100
       memory_limit: 150GB
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: 100
@@ -481,6 +492,7 @@ geos:
       n_chunks: 1
       n_workers: 100
       memory_limit: 150GB
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: 100
@@ -525,6 +537,7 @@ geos:
       n_chunks: 1
       n_workers: 100
       memory_limit: 150GB
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: 100
@@ -578,13 +591,11 @@ datasets:
     trait_stats: ["mean", "std", "median", "q05", "q95", "count"]
     trait_stat: 1 # ('mean', 'std', 'median', 'q05', 'q95', 'count') (bands start at 1)
     traits:
-      - 4 # Stem specific density (SSD) or wood density (stem dry mass per stem fresh volume)
+      - 4 # Stem specific density (SSD, stem dry mass per stem fresh volume) or wood density
       - 6 # Root rooting depth
-      - 11 # Leaf area per leaf dry mass (specific leaf area, SLA or 1/LMA): undefined if petiole is included or excluded)
       - 13 # Leaf carbon (C) content per leaf dry mass
       - 14 # Leaf nitrogen (N) content per leaf dry mass
       - 15 # Leaf phosphorus (P) content per leaf dry mass
-      - 18 # Plant height
       - 21 # Stem diameter
       - 26 # Seed dry mass
       - 27 # Seed length
@@ -594,7 +605,7 @@ datasets:
       - 55 # Leaf dry mass (single leaf)
       - 78 # Leaf nitrogen (N) isotope signature (delta 15N)
       - 95 # Seed germination rate (germination efficiency)
-      - 138 # Seed number per reproduction unit
+      - 138 # Seed number per reproducton unit
       - 144 # Leaf length
       - 145 # Leaf width
       - 146 # Leaf carbon/nitrogen (C/N) ratio
@@ -606,10 +617,16 @@ datasets:
       - 281 # Stem conduit diameter (vessels, tracheids)
       - 282 # Wood vessel element length; stem conduit (vessel and tracheids) element length
       - 289 # Wood fiber lengths
+      - 297 # Wood rays per millimetre (wood ray density)
+      - 351 # Seed number per dispersal unit
+      - 614 # Fine root length per fine root dry mass (specific fine root length, SRL)
       - 1080 # Root length per root dry mass (specific root length, SRL)
+      - 3106 # Plant height vegetative
+      - 3107 # Plant height generative
       - 3112 # Leaf area (in case of compound leaves: leaf, undefined if petiole in- or excluded)
       - 3113 # Leaf area (in case of compound leaves: leaflet, undefined if petiole is in- or excluded)
-      - 3114 # Leaf area (in case of compound leaves: undefined if leaf or leaflet, undefined if petiole is in- or excluded)
+      - 3114 # Leaf area (in case of compound leaves undefined if leaf or leaflet, undefined if petiole is in- or e
+      - 3117 # Leaf area per leaf dry mass (specific leaf area, SLA or 1/LMA): undefined if petiole is in- or exclu
       - 3120 # Leaf water content per leaf dry mass (not saturated)
 
 eo_data:
@@ -652,15 +669,17 @@ splot:
 
 trydb:
   raw:
-    dir: TRY_5_GapFilledData_2020
-    zip: TRY_5_GapFilledData_2020.zip
-    zipfile_csv: TRY_50_2020_01/gapfilled_data/mean_gap_filled_back_transformed_incl_species_names.csv
-    pfts: try_pft_v1.csv
+    dir: TRY_6_gapfilled_for_distribution
+    zip: TRY6_gapfilled_for_distribution.zip
+    zipfile_csv: TRY6_gapfilled_for_distribution/TRY6_gapfilled_filtered_2.csv.zip
+    pfts: try_pft_v2.parquet
   interim:
     dir: try
-    extracted_csv: mean_gf_bt_sp.csv
-    quantile_range: [0.005, 0.995]
-    filtered: mean_gf_bt_sp_filt.parquet
+    quantile_range: null  # Use [0.005, 0.995] for TRY5. No filtering needed for TRY6
+    transform: power # "log", "power" (yeo-johnson), null (no transformation)
+    already_norm: null
+    filtered: traits.parquet
+    transformer_fn: power_transformer.pkl
 
 calc_spatial_autocorr:
   # Use existing spatial autocorrelation data from this model_res. To recompute, set to false.
@@ -673,7 +692,7 @@ train:
   missing_val_thresh: 0.4 # Drop features with more than this fraction of missing values
   spatial_autocorr: spatial_autocorr.parquet
   cv_splits:
-    range_stat: "mean"
+    range_stat: "median"
     n_splits: 5
     n_sims: 100
     dir: skcv_splits
@@ -701,8 +720,8 @@ autogluon:
   set_best_to_refit_full: false
   cv_fit_time_limit: 3600
   full_fit_time_limit: 12600 # 3.5 hours per trait
-  num_gpus: "auto"
-  num_cpus: 48
+  num_gpus: 2
+  num_cpus: 110
   feature_importance: true
   FI_time_limit: 1800
   FI_num_shuffle_sets: 10
@@ -717,7 +736,7 @@ predict:
   dir: predict
   geos:
     n_workers: 14
-    batches: 24
+    batches: 28
   pylos:
     n_workers: 4
     batches: 24

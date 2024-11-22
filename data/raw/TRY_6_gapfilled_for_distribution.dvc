@@ -1,0 +1,6 @@
+outs:
+- md5: 85fb88337543d010867ce942cc758043.dir
+  size: 307941318
+  nfiles: 1
+  hash: md5
+  path: TRY_6_gapfilled_for_distribution
