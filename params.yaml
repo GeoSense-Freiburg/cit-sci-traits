@@ -5,7 +5,7 @@ random_seed: 42
 base_resolution: 0.01 # Shared best resolution of all EO datasets (used for masking)
 target_resolution: 2 # Target resolution for model training
 extent: [-180, -60, 180, 90] # Extent of the final dataset
-crs: "EPSG:6933" # Equal Area Cylindrical projection
+crs: "EPSG:4326"
 tmp_dir: tmp
 raw_dir: data/raw
 interim_dir: data/interim
@@ -33,6 +33,7 @@ pylos:
       n_chunks: 6
       n_workers: 30
       memory_limit: null
+      threads_per_worker: 2
     build_predict:
       n_chunks: 5
       n_workers: null
@@ -78,6 +79,7 @@ pylos:
       n_chunks: 6
       n_workers: 30
       memory_limit: null
+      threads_per_worker: 5
     build_predict:
       n_chunks: 5
       n_workers: null
@@ -123,6 +125,7 @@ pylos:
       n_chunks: 1
       n_workers: 60
       memory_limit: null
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: null
@@ -168,6 +171,7 @@ pylos:
       n_chunks: 1
       n_workers: 60
       memory_limit: null
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: null
@@ -213,6 +217,7 @@ pylos:
       n_chunks: 1
       n_workers: 30
       memory_limit: null
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: null
@@ -258,6 +263,7 @@ pylos:
       n_chunks: 1
       n_workers: 30
       memory_limit: null
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: null
@@ -302,20 +308,22 @@ geos:
         n_workers: 80
         memory_limit: 40GB
     featurize_train:
-      n_chunks: 2
-      n_workers: 100
+      n_chunks: 10
+      n_workers: 8
       memory_limit: 150GB
+      threads_per_worker: 1
     build_predict:
       n_chunks: 3
       n_workers: 80
       memory_limit: 400GB
       impute_chunks: 2
     calc_spatial_autocorr:
-      n_workers: 100
+      n_workers: 3
       n_workers_variogram: 20  # For WGS84 coords only
       n_chunks: 16 # x direction only
     skcv_splits:
-      n_workers: 80
+      n_workers: 90
+      threads_per_worker: 1
     aoa:
       device_ids: [0, 1, 2, 3]
       predict_sample: 0.5
@@ -349,6 +357,7 @@ geos:
       n_chunks: 2
       n_workers: 100
       memory_limit: 150GB
+      threads_per_worker: 5
     build_predict:
       n_chunks: 3
       n_workers: 100
@@ -393,6 +402,7 @@ geos:
       n_chunks: 1
       n_workers: 100
       memory_limit: 150GB
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: 100
@@ -437,6 +447,7 @@ geos:
       n_chunks: 1
       n_workers: 100
       memory_limit: 150GB
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: 100
@@ -481,6 +492,7 @@ geos:
       n_chunks: 1
       n_workers: 100
       memory_limit: 150GB
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: 100
@@ -525,6 +537,7 @@ geos:
       n_chunks: 1
       n_workers: 100
       memory_limit: 150GB
+      threads_per_worker: 5
     build_predict:
       n_chunks: 1
       n_workers: 100
@@ -673,7 +686,7 @@ train:
   missing_val_thresh: 0.4 # Drop features with more than this fraction of missing values
   spatial_autocorr: spatial_autocorr.parquet
   cv_splits:
-    range_stat: "mean"
+    range_stat: "median"
     n_splits: 5
     n_sims: 100
     dir: skcv_splits
@@ -701,8 +714,8 @@ autogluon:
   set_best_to_refit_full: false
   cv_fit_time_limit: 3600
   full_fit_time_limit: 12600 # 3.5 hours per trait
-  num_gpus: "auto"
-  num_cpus: 48
+  num_gpus: 2
+  num_cpus: 110
   feature_importance: true
   FI_time_limit: 1800
   FI_num_shuffle_sets: 10
@@ -717,7 +730,7 @@ predict:
   dir: predict
   geos:
     n_workers: 14
-    batches: 24
+    batches: 28
   pylos:
     n_workers: 4
     batches: 24

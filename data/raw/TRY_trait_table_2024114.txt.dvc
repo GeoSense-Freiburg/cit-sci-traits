@@ -1,0 +1,12 @@
+md5: 98c89e7afdd4ffee75d8a2c5846b7dcc
+frozen: true
+deps:
+- path: data/try/TRY_trait_table_2024114.txt
+  repo:
+    url: /mnt/gsdata/projects/panops/panops-data-registry/
+    rev_lock: 0128e130991b8ca338675f1b62c54e0ccc3ddabd
+outs:
+- md5: 70efe307d977f1d3061d2f0aa2dc421d
+  size: 172764
+  hash: md5
+  path: TRY_trait_table_2024114.txt

@@ -6,7 +6,6 @@ import shutil
 from functools import partial
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
-from re import I
 from typing import Any, Callable, Iterable
 
 import pandas as pd
@@ -112,7 +111,13 @@ def update_model_perf(
         model_arch=config[config.train.arch].included_model_types[0],
         run_id=model_dir.parent.name,
         trait_set=trait_set,
-    )[df.columns]
+    )
+    # If any columns exist on df but not on trait_df, add them to trait_df
+    for col in df.columns:
+        if col not in trait_df.columns:
+            trait_df[col] = None
+
+    trait_df = trait_df[df.columns]
 
     return pd.concat([df, trait_df], ignore_index=True).drop_duplicates()
 
