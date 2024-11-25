@@ -104,13 +104,19 @@ def assign_hexagons(
     """
 
     def _assign_hex_to_df(_df: pd.DataFrame) -> pd.DataFrame:
+        if _df.empty:
+            _df["hex_id"] = np.nan
+            return _df
         _df = _df.copy()
-        geo_to_h3_vectorized = np.vectorize(h3.geo_to_h3)
+        geo_to_h3_vectorized = np.vectorize(h3.geo_to_h3, otypes=[str])
         _df.loc[:, "hex_id"] = geo_to_h3_vectorized(_df[lat], _df[lon], resolution)
         return _df
 
     if dask:
-        return df.map_partitions(_assign_hex_to_df)  # pyright: ignore[reportCallIssue]
+        meta = df._meta.assign(hex_id=pd.Series(dtype="string"))
+        return df.map_partitions(
+            _assign_hex_to_df, meta=meta
+        )  # pyright: ignore[reportCallIssue]
 
     return _assign_hex_to_df(df)
 

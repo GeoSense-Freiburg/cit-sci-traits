@@ -23,7 +23,8 @@ from src.utils.dataset_utils import (
     get_predict_imputed_fn,
     get_predict_mask_fn,
 )
-from src.utils.df_utils import grid_df_to_raster, pipe_log
+from src.utils.df_utils import pipe_log, rasterize_points
+from src.utils.raster_utils import pack_xr, xr_to_raster
 
 
 def cli() -> argparse.Namespace:
@@ -164,6 +165,7 @@ def predict_traits_ag(
     predict_data: pd.DataFrame | dd.DataFrame,
     trait_model_dirs: list[Path] | Generator[Path, None, None],
     res: int | float,
+    crs: str,
     out_dir: str | Path,
     predict_cfg: ConfigBox,
     resume: bool = False,
@@ -223,7 +225,9 @@ def predict_traits_ag(
                 tmp_dir = None
 
             log.info("Writing predictions to raster...")
-            grid_df_to_raster(pred, res, out_fn)
+            pred_r = rasterize_points(pred, data=trait, res=res, crs=crs)
+            pred_r = pack_xr(pred_r)
+            xr_to_raster(pred_r, out_fn)
 
             if tmp_dir is not None:
                 shutil.rmtree(tmp_dir)
@@ -288,6 +292,7 @@ def main(args: argparse.Namespace, cfg: ConfigBox = get_config()) -> None:
             predict_data=predict,
             trait_model_dirs=model_dirs,
             res=cfg.target_resolution,
+            crs=cfg.crs,
             predict_cfg=predict_cfg,
             out_dir=out_dir,
             resume=args.resume,
