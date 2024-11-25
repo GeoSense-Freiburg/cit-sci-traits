@@ -1,4 +1,5 @@
 import argparse
+import pickle
 import shutil
 from pathlib import Path
 from typing import Any
@@ -18,18 +19,20 @@ from src.utils.dataset_utils import (
     get_cv_splits_dir,
     get_latest_run,
     get_models_dir,
+    get_power_transformer_fn,
     get_predict_imputed_fn,
     get_predict_mask_fn,
     get_y_fn,
 )
 from src.utils.spatial_utils import lat_weights, weighted_pearson_r
-from src.utils.training_utils import filter_trait_set
+from src.utils.stat_utils import yeo_johnson_inverse_transform, yeo_johnson_transform
+from src.utils.trait_utils import get_trait_number_from_id
 
 TMP_DIR = Path("tmp")
 
 
 @delayed
-def process_fold(fold_dir: Path, xy: pd.DataFrame) -> pd.DataFrame:
+def generate_fold_obs_vs_pred(fold_dir: Path, xy: pd.DataFrame) -> pd.DataFrame:
     """Process a single fold of data."""
     predictor = TabularPredictor.load(str(fold_dir))
     pred = pd.DataFrame({"pred": predictor.predict(xy)})
@@ -37,25 +40,38 @@ def process_fold(fold_dir: Path, xy: pd.DataFrame) -> pd.DataFrame:
 
 
 def get_stats(
-    cv_obs_vs_pred: pd.DataFrame, resolution: int | float, log_transform: bool = False
+    cv_obs_vs_pred: pd.DataFrame,
+    resolution: int | float,
+    transform: str | None = None,
+    wt_pearson: bool = False,
+    **kwargs: Any,
 ) -> dict[str, Any]:
     """Calculate statistics for a given DataFrame of observed and predicted values."""
     obs = cv_obs_vs_pred.obs.to_numpy()
     pred = cv_obs_vs_pred.pred.to_numpy()
 
-    if log_transform:
-        # scale obs and pred to avoid log(0)
-        scale = abs(min(obs.min(), pred.min()) - 1)
-        obs = np.log(obs + scale)
-        pred = np.log(pred + scale)
+    if transform:
+        if transform == "log":
+            # scale obs and pred to avoid log(0)
+            scale = abs(min(obs.min(), pred.min()) - 1)
+            obs = np.log(obs + scale)
+            pred = np.log(pred + scale)
+        elif transform == "power":
+            obs = yeo_johnson_transform(obs, **kwargs)
+            pred = yeo_johnson_transform(pred, **kwargs)
+        else:
+            raise ValueError(f"Invalid transform: {transform}")
         cv_obs_vs_pred = cv_obs_vs_pred.assign(obs=obs, pred=pred)
 
     r2 = metrics.r2_score(obs, pred)
     pearsonr = cv_obs_vs_pred[["obs", "pred"]].corr().iloc[0, 1]
-    pearsonr_wt = weighted_pearson_r(
-        cv_obs_vs_pred.set_index(["y", "x"]),
-        lat_weights(cv_obs_vs_pred.y.unique(), resolution),
-    )
+
+    pearsonr_wt = None
+    if wt_pearson:
+        pearsonr_wt = weighted_pearson_r(
+            cv_obs_vs_pred.set_index(["y", "x"]),
+            lat_weights(cv_obs_vs_pred.y.unique(), resolution),
+        )
     root_mean_squared_error = metrics.root_mean_squared_error(obs, pred)
     norm_root_mean_squared_error = root_mean_squared_error / (
         cv_obs_vs_pred.obs.quantile(0.99) - cv_obs_vs_pred.obs.quantile(0.01)
@@ -197,7 +213,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
             ]
 
             delayed_results = [
-                process_fold(fold_dir, fold_df)
+                generate_fold_obs_vs_pred(fold_dir, fold_df)
                 for fold_dir, fold_df in zip(fold_dirs, fold_dfs)
             ]
             log.info("Computing delayed results...")
@@ -205,6 +221,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
 
             log.info("Concatenating results...")
             cv_obs_vs_pred = pd.concat(coll, ignore_index=True)
+
             log.info("Writing results to disk...")
             cv_obs_vs_pred_path = Path(ts_dir, "cv_obs_vs_pred.parquet")
             if cv_obs_vs_pred_path.exists():
@@ -213,15 +230,54 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
 
             log.info("Calculating stats...")
             all_stats = pd.DataFrame()
-            stats = get_stats(cv_obs_vs_pred, cfg.target_resolution)
-            stats_ln = get_stats(
-                cv_obs_vs_pred, cfg.target_resolution, log_transform=True
+            pearsonr_wt = cfg.crs == "EPSG:4326"
+
+            # Back-transform if training data was log-transformed
+            if cfg.trydb.interim.transform == "log":
+                if "ln" in trait_id.split("_"):
+                    log.info(
+                        "Log-transformed trait detected. Back-transforming prior to "
+                        "stats calculation..."
+                    )
+                    cv_obs_vs_pred = cv_obs_vs_pred.assign(
+                        obs=np.expm1(cv_obs_vs_pred.obs),
+                        pred=np.expm1(cv_obs_vs_pred.pred),
+                    )
+            # Back-transform if training data was power-transformed
+            elif cfg.trydb.interim.transform == "power":
+                with open(get_power_transformer_fn(cfg), "rb") as f:
+                    pt = pickle.load(f)
+
+                log.info("Inverse transforming Y data...")
+                trait_num = get_trait_number_from_id(trait_id)
+                feature_nums = np.array(
+                    [get_trait_number_from_id(f) for f in pt.feature_names_in_]
+                )
+                lmbda = pt.lambdas_[np.where(feature_nums == trait_num)[0][0]]
+                inv = yeo_johnson_inverse_transform(
+                    cv_obs_vs_pred[["obs", "pred"]].to_numpy(), lmbda
+                )
+                cv_obs_vs_pred = cv_obs_vs_pred.assign(obs=inv[:, 0], pred=inv[:, 1])
+
+            # Get the stats on the non-transformed data
+            stats = get_stats(
+                cv_obs_vs_pred, cfg.target_resolution, wt_pearson=pearsonr_wt
+            )
+
+            # Get the stats on the transformed data (yes, this is a little redundant)
+            stats_tr = get_stats(
+                cv_obs_vs_pred,
+                cfg.target_resolution,
+                transform=cfg.trydb.interim.transform,
+                wt_pearson=pearsonr_wt,
             )
 
             all_stats = pd.concat(
                 [
                     pd.DataFrame(stats, index=[0]).assign(transform="none"),
-                    pd.DataFrame(stats_ln, index=[0]).assign(transform="log"),
+                    pd.DataFrame(stats_tr, index=[0]).assign(
+                        transform=cfg.trydb.interim.transform
+                    ),
                 ],
                 ignore_index=True,
             )

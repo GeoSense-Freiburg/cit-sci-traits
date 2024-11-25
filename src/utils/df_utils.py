@@ -1,6 +1,5 @@
 """Utility functions for working with DataFrames and GeoDataFrames."""
 
-import gc
 import warnings
 from pathlib import Path
 from typing import Any
@@ -17,10 +16,7 @@ from affine import Affine
 
 from src.conf.conf import get_config
 from src.conf.environment import log
-from src.utils.log_utils import setup_logger
-from src.utils.raster_utils import create_sample_raster, xr_to_raster
-
-log = setup_logger(__name__, "INFO")
+from src.utils.raster_utils import create_sample_raster
 
 
 def write_dgdf_parquet(dgdf: dgpd.GeoDataFrame, out_path: str | Path, **kwargs) -> None:
@@ -201,7 +197,7 @@ def filter_outliers(
 
 def reproject_geo_to_xy(
     df: pd.DataFrame, to_crs: str = "EPSG:6933", x: str = "x", y: str = "y"
-):
+) -> pd.DataFrame:
     """
     Reprojects geographical coordinates to a specified coordinate reference system (CRS).
 
@@ -215,7 +211,7 @@ def reproject_geo_to_xy(
     pd.DataFrame: DataFrame with reprojected x and y coordinates.
     """
     transformer = pyproj.Transformer.from_crs("EPSG:4326", to_crs, always_xy=True)
-    xy = transformer.transform(df[y].values, df[x].values)
+    xy = transformer.transform(df[x].values, df[y].values)
     df["x"] = xy[0]
     df["y"] = xy[1]
     return df
@@ -223,7 +219,7 @@ def reproject_geo_to_xy(
 
 def reproject_xy_to_geo(
     df: pd.DataFrame, from_crs: str = "EPSG:6933", x: str = "x", y: str = "y"
-):
+) -> pd.DataFrame:
     """
     Reprojects coordinates in meters to a geographic coordinate system.
 
@@ -236,6 +232,7 @@ def reproject_xy_to_geo(
     Returns:
     pd.DataFrame: DataFrame with x and y coordinates projected into the new CRS.
     """
+    df = df.copy()
     transformer = pyproj.Transformer.from_crs(from_crs, "EPSG:4326", always_xy=True)
     lon, lat = transformer.transform(df[x].values, df[y].values)
     df["lon"] = lon
@@ -293,6 +290,13 @@ def xy_to_rowcol_df(
     if isinstance(transform, tuple):
         transform = Affine.from_gdal(*transform)
 
+    # Check if x and y are indices instead of columns, and if so, convert them to columns
+    if x not in df.columns and y not in df.columns:
+        if x not in df.index.names and y not in df.index.names:
+            raise ValueError("x and y must be column names or index names.")
+
+        df = df.reset_index()
+
     idx = point_to_cell_index(df[x], df[y], transform)
     df["col"] = idx[0]
     df["row"] = idx[1]
@@ -343,7 +347,7 @@ def agg_df(
             "count": "count",
         }
 
-        if "species" in df.index.name:
+        if df.index.name is not None and "species" in df.index.name:
             funcs["species_count"] = lambda x: x.index.nunique()
 
         elif any("species" in col for col in df.columns):
@@ -370,13 +374,14 @@ def agg_df(
 
 def rasterize_points(
     df: pd.DataFrame,
-    data: str,
+    data: str | None = None,
     x: str = "x",
     y: str = "y",
     raster: xr.DataArray | xr.Dataset | None = None,
     res: int | float | None = None,
     crs: str | None = None,
     nodata: int | float = np.nan,
+    agg: bool = False,
     funcs: dict[str, Any] | None = None,
     n_min: int = 1,
     n_max: int | None = None,
@@ -441,13 +446,14 @@ def rasterize_points(
 
     transform = ref.rio.transform().to_gdal()
 
-    grid_df = (
-        xy_to_rowcol_df(df, transform, x=x, y=y)
-        .drop(columns=["x", "y"])
-        .pipe(
-            agg_df, by=["row", "col"], data=data, funcs=funcs, n_min=n_min, n_max=n_max
+    grid_df = xy_to_rowcol_df(df, transform, x=x, y=y).drop(columns=["x", "y"])
+
+    if agg:
+        if data is None:
+            raise ValueError("Data column must be provided for aggregation.")
+        grid_df = agg_df(
+            grid_df, by=["row", "col"], data=data, funcs=funcs, n_min=n_min, n_max=n_max
         )
-    )
 
     if dask.is_dask_collection(grid_df):
         grid_df = grid_df.compute()  # pyright: ignore[reportCallIssue]
@@ -552,47 +558,10 @@ def grid_df_to_raster(
     Returns:
         None
     """
-    ref = create_sample_raster(resolution=res)
-    decimals = coord_decimal_places(res)
-
-    ds = (
-        df.to_xarray()
-        .assign_coords(
-            x=lambda ds: np.round(ds["x"], decimals),
-            y=lambda ds: np.round(ds["y"], decimals),
-        )
-        .merge(ref, join="right")
-        .rio.write_crs(ref.rio.crs)
+    raise DeprecationWarning(
+        "'grid_df_to_raster' is deprecated and will be removed in a future version. "
+        "Use 'rasterize_points' instead."
     )
-
-    for var in ds.data_vars:
-        if "_FillValue" in ds[var].attrs:
-            nodata = ds[var].attrs["_FillValue"]
-            ds[var] = ds[var].where(ds[var] != nodata, np.nan)
-        else:
-            ds[var] = ds[var].where(~ds[var].isnull(), np.nan)
-
-        ds[var] = ds[var].rio.write_nodata(-32767.0, encoded=True)
-
-    ds.attrs["long_name"] = list(ds.data_vars)
-    if out is None:
-        ds.attrs["trait"] = name
-    else:
-        ds.attrs["trait"] = out.stem
-
-    if out is not None:
-        xr_to_raster(ds, out, *args, **kwargs)
-
-    ref.close()
-
-    if out is None:
-        return ds
-
-    ds.close()
-
-    del ref, ds
-    gc.collect()
-    return None
 
 
 def pipe_log(df: pd.DataFrame, message: str) -> pd.DataFrame:
