@@ -27,8 +27,8 @@ stages:
       size: 307941318
     - path: src/data/build_try_traits.py
       hash: md5
-      md5: 2e3f44bf4e467e6da01e73daf0d1afd1
-      size: 3432
+      md5: d238e1f50bacada6db5f15fb85591191
+      size: 4466
     params:
       params.yaml:
         trydb:
@@ -36,22 +36,23 @@ stages:
             dir: TRY_6_gapfilled_for_distribution
             zip: TRY6_gapfilled_for_distribution.zip
             zipfile_csv: TRY6_gapfilled_for_distribution/TRY6_gapfilled_filtered_2.csv.zip
-            already_norm:
-            - 13
-            - 47
-            - 95
-            - 78
-            - 4
             pfts: try_pft_v2.parquet
           interim:
             dir: try
             quantile_range:
+            transform: power
+            already_norm:
             filtered: traits.parquet
+            transformer_fn: power_transformer.pkl
     outs:
+    - path: data/interim/try/power_transformer.pkl
+      hash: md5
+      md5: 1baf90006b4ab6ec21964725243b8f9a
+      size: 2463
     - path: data/interim/try/traits.parquet
       hash: md5
-      md5: 546b4d12b8c75663f4e07d2a47ad828e
-      size: 18025426
+      md5: b2b7f0703fc52483df2ab7c17c76a251
+      size: 18311878
   match_gbif_pfts:
     cmd: python src/data/match_gbif_pfts.py
     deps:
@@ -77,8 +78,8 @@ stages:
     outs:
     - path: data/interim/gbif/gbif_pfts.parquet
       hash: md5
-      md5: c2cf56ca2bedf888ff4c99014a82320c.dir
-      size: 4473036358
+      md5: 2a71cab6ec8f6969a36ad7831473e3ee.dir
+      size: 4480158671
       nfiles: 159
   extract_splot:
     cmd: python src/data/extract_splot.py
@@ -180,13 +181,13 @@ stages:
     deps:
     - path: data/interim/gbif/gbif_pfts.parquet
       hash: md5
-      md5: c2cf56ca2bedf888ff4c99014a82320c.dir
-      size: 4473036358
+      md5: 2a71cab6ec8f6969a36ad7831473e3ee.dir
+      size: 4480158671
       nfiles: 159
     - path: data/interim/try/traits.parquet
       hash: md5
-      md5: 546b4d12b8c75663f4e07d2a47ad828e
-      size: 18025426
+      md5: b2b7f0703fc52483df2ab7c17c76a251
+      size: 18311878
     - path: src/data/build_gbif_maps.py
       hash: md5
       md5: 6099e2c7f230166cab58ad6837852d44
@@ -203,9 +204,9 @@ stages:
     outs:
     - path: data/interim/gbif/trait_maps/Shrub_Tree_Grass/1km
       hash: md5
-      md5: 58f3c663a5fc611ada505a202c448aa2.dir
-      size: 168341359
-      nfiles: 1
+      md5: 97086d9446fa834440f5d46f4a5a7aea.dir
+      size: 6288916641
+      nfiles: 37
   build_splot_maps:
     cmd: python src/data/build_splot_maps.py
     deps:
@@ -216,8 +217,8 @@ stages:
       nfiles: 3
     - path: data/interim/try/traits.parquet
       hash: md5
-      md5: 546b4d12b8c75663f4e07d2a47ad828e
-      size: 18025426
+      md5: b2b7f0703fc52483df2ab7c17c76a251
+      size: 18311878
     - path: data/raw/try_pft_v2.parquet
       hash: md5
       md5: d49a4b1611eebbd529c9e9aba6aa5f69
@@ -238,72 +239,111 @@ stages:
     outs:
     - path: data/interim/splot/trait_maps/Shrub_Tree_Grass/1km
       hash: md5
-      md5: 85edd33247000d5637efe2047d5f26d9.dir
-      size: 44030841
-      nfiles: 1
+      md5: 563bd60378353f767585359f1389bbe8.dir
+      size: 1609855561
+      nfiles: 37
   build_y:
     cmd: python src/features/build_y.py
     deps:
     - path: data/interim/gbif/trait_maps/Shrub_Tree_Grass/1km
       hash: md5
-      md5: 58f3c663a5fc611ada505a202c448aa2.dir
-      size: 168341359
-      nfiles: 1
+      md5: 97086d9446fa834440f5d46f4a5a7aea.dir
+      size: 6288916641
+      nfiles: 37
     - path: data/interim/splot/trait_maps/Shrub_Tree_Grass/1km
       hash: md5
-      md5: 85edd33247000d5637efe2047d5f26d9.dir
-      size: 44030841
-      nfiles: 1
+      md5: 563bd60378353f767585359f1389bbe8.dir
+      size: 1609855561
+      nfiles: 37
     - path: src/features/build_y.py
       hash: md5
-      md5: 969480c18cd6001ce1e389a6477e6312
-      size: 3007
+      md5: e9a14cfa9b16ee7fee7d3ba53ba6d38c
+      size: 2883
     params:
       params.yaml:
         datasets.Y.trait_stat: 1
         datasets.Y.traits:
+        - 4
+        - 6
+        - 13
+        - 14
+        - 15
+        - 21
+        - 26
+        - 27
+        - 46
+        - 47
+        - 50
+        - 55
+        - 78
+        - 95
+        - 138
+        - 144
+        - 145
+        - 146
+        - 163
+        - 169
+        - 223
+        - 224
+        - 237
+        - 281
+        - 282
+        - 289
+        - 297
+        - 351
+        - 614
+        - 1080
+        - 3106
+        - 3107
+        - 3112
+        - 3113
+        - 3114
         - 3117
+        - 3120
     outs:
     - path: data/features/Shrub_Tree_Grass/1km/Y.parquet
       hash: md5
-      md5: 957fe9ca320a21d63fd5ac543c65f75d
-      size: 25769252
+      md5: 1405b994e9e1b01c6fe5452db22b6fa3.dir
+      size: 947982002
+      nfiles: 156
   calculate_spatial_autocorr:
     cmd: python src/features/calc_spatial_autocorr.py
     deps:
     - path: data/features/Shrub_Tree_Grass/1km/Y.parquet
       hash: md5
-      md5: 957fe9ca320a21d63fd5ac543c65f75d
-      size: 25769252
+      md5: 1405b994e9e1b01c6fe5452db22b6fa3.dir
+      size: 947982002
+      nfiles: 156
     - path: src/features/calc_spatial_autocorr.py
       hash: md5
-      md5: e8d334d1bd363f837199343b5e705ea0
-      size: 12038
+      md5: d21e31831c335333a383652c4cfbb8ee
+      size: 10650
     params:
       params.yaml:
         calc_spatial_autocorr:
-          use_existing: false
+          use_existing: 1km
         train.spatial_autocorr: spatial_autocorr.parquet
     outs:
     - path: data/features/Shrub_Tree_Grass/1km/spatial_autocorr.parquet
       hash: md5
-      md5: eb1f23b7937edaf02e9c073bb0d26af0
-      size: 5985
+      md5: 441bd83e2018563b7f0a7458209b3c44
+      size: 8060
   build_cv_splits:
     cmd: python src/features/skcv_splits.py -o
     deps:
     - path: data/features/Shrub_Tree_Grass/1km/Y.parquet
       hash: md5
-      md5: 957fe9ca320a21d63fd5ac543c65f75d
-      size: 25769252
+      md5: 1405b994e9e1b01c6fe5452db22b6fa3.dir
+      size: 947982002
+      nfiles: 156
     - path: data/features/Shrub_Tree_Grass/1km/spatial_autocorr.parquet
       hash: md5
-      md5: eb1f23b7937edaf02e9c073bb0d26af0
-      size: 5985
+      md5: 441bd83e2018563b7f0a7458209b3c44
+      size: 8060
     - path: src/features/skcv_splits.py
       hash: md5
-      md5: 85c2af4062f128a52dc82f42e84ca494
-      size: 9511
+      md5: ddf3c4b22e1ea1b62b81dee31eed9a53
+      size: 10717
     params:
       params.yaml:
         train.cv_splits:
@@ -314,9 +354,9 @@ stages:
     outs:
     - path: data/features/Shrub_Tree_Grass/1km/skcv_splits
       hash: md5
-      md5: 70ae58d04b81b95cf8fec464ee87cd19.dir
-      size: 9796159
-      nfiles: 2
+      md5: 821e6a2c0bccb1baab988a2d030239d7.dir
+      size: 157255762
+      nfiles: 37
   train_models:
     cmd: python src/models/train_models.py -r && python src/models/cv_stats.py
     deps:
