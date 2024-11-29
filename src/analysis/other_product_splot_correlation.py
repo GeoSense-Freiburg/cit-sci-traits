@@ -65,11 +65,14 @@ def all_products_paths() -> list[Path]:
 def gather_results(target_res: int | float) -> pd.DataFrame:
     """Gather the results of the raster correlation analysis into a DataFrame."""
     splot_corr_path = Path("results/product_comparison.csv")
+    dtypes = {"trait_id": str, "author": str, "r": np.float64, "resolution": str}
     if splot_corr_path.exists():
         log.info("Loading existing results...")
-        splot_corr = pd.read_csv(splot_corr_path)
+        splot_corr = pd.read_csv(splot_corr_path, dtype=dtypes)
     else:
-        splot_corr = pd.DataFrame(columns=["trait_id", "author", "r", "resolution"])
+        splot_corr = pd.DataFrame(
+            columns=["trait_id", "author", "r", "resolution"], dtype=dtypes
+        )
 
     for fn in all_products_paths():
         res = fn.parent.stem
