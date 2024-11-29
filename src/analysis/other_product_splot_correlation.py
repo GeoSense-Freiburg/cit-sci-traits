@@ -1,8 +1,8 @@
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import xarray as xr
-from numpy import r_
 
 from src.conf.conf import get_config
 from src.conf.environment import log
@@ -83,13 +83,15 @@ def gather_results(target_res: int | float) -> pd.DataFrame:
         row = {"trait_id": trait_id, "author": author, "r": r, "resolution": res}
         splot_corr = pd.concat([splot_corr, pd.DataFrame([row])])
 
-    return splot_corr
+    return splot_corr.astype(
+        {"trait_id": str, "author": str, "r": np.float64, "resolution": str}
+    ).drop_duplicates(ignore_index=True)
 
 
 def main() -> None:
     cfg = get_config()
     results = gather_results(cfg.target_resolution)
-    results.to_csv("results/product_comparison.csv")
+    results.drop_duplicates().to_csv("results/product_comparison.csv", index=False)
 
 
 if __name__ == "__main__":

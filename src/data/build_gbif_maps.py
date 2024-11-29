@@ -14,13 +14,13 @@ from src.conf.environment import detect_system, log
 from src.utils.dask_utils import close_dask, init_dask
 from src.utils.df_utils import rasterize_points, reproject_geo_to_xy
 from src.utils.raster_utils import xr_to_raster
-from src.utils.trait_utils import filter_pft
+from src.utils.trait_utils import filter_pft, get_trait_number_from_id
 
 
 def cli() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Match subsampled GBIF data with filtered trait data, grid it, generate grid cell statistics, and write each trait's corresponding raster stack to GeoTIFF files."
+        description="Match GBIF data with TRY mean trait data, grid it, generate grid cell statistics, and write each trait's corresponding raster stack to GeoTIFF files."
     )
     parser.add_argument(
         "-o", "--overwrite", action="store_true", help="Overwrite existing files."
@@ -38,6 +38,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
         dashboard_address=cfg.dask_dashboard,
         n_workers=syscfg.n_workers,
         memory_limit=syscfg.memory_limit,
+        threads_per_worker=syscfg.threads_per_worker,
     )
 
     out_dir = (
@@ -68,12 +69,18 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
     )
 
     # Reproject coordinates to target CRS
-    merged = merged.map_partitions(
-        reproject_geo_to_xy, crs=cfg.crs, x="decimallongitude", y="decimallatitude"
-    ).drop(columns=["decimallatitude", "decimallongitude"])
+    if cfg.crs == "EPSG:6933":
+        merged = merged.map_partitions(
+            reproject_geo_to_xy,
+            to_crs=cfg.crs,
+            x="decimallongitude",
+            y="decimallatitude",
+        ).drop(columns=["decimallatitude", "decimallongitude"])
 
     # Grid trait stats (mean, STD, median, 5th and 95th quantiles) for each grid cell
     cols = [col for col in merged.columns if col.startswith("X")]
+    valid_traits = [str(trait_num) for trait_num in cfg.datasets.Y.traits]
+    cols = [col for col in cols if get_trait_number_from_id(col) in valid_traits]
 
     try:
         for col in cols:
@@ -88,6 +95,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
                 data=str(col),
                 res=cfg.target_resolution,
                 crs=cfg.crs,
+                agg=True,
                 n_min=cfg.gbif.interim.min_count,
                 n_max=cfg.gbif.interim.max_count,
             )

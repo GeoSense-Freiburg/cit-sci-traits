@@ -15,7 +15,11 @@ from src.conf.environment import detect_system, log
 from src.utils.dask_utils import close_dask, init_dask
 from src.utils.df_utils import rasterize_points, reproject_geo_to_xy
 from src.utils.raster_utils import xr_to_raster
-from src.utils.trait_utils import clean_species_name, filter_pft
+from src.utils.trait_utils import (
+    clean_species_name,
+    filter_pft,
+    get_trait_number_from_id,
+)
 
 
 def _cw_stats(g: pd.DataFrame, col: str) -> pd.Series:
@@ -100,7 +104,9 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
         .pipe(_repartition_if_set, sys_cfg.npartitions)
         .astype({"Longitude": np.float64, "Latitude": np.float64})
         .set_index("PlotObservationID")
-        .map_partitions(reproject_geo_to_xy, crs=cfg.crs, x="Longitude", y="Latitude")
+        .map_partitions(
+            reproject_geo_to_xy, to_crs=cfg.crs, x="Longitude", y="Latitude"
+        )
         .drop(columns=["Longitude", "Latitude"])
     )
 
@@ -115,9 +121,16 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
 
     # Load PFT data, filter by desired PFT, clean species names, and set them as index
     # for joining
+    pft_path = Path(cfg.raw_dir, cfg.trydb.raw.pfts)
+    if pft_path.suffix == ".csv":
+        pfts = dd.read_csv(Path(cfg.raw_dir, cfg.trydb.raw.pfts), encoding="latin-1")
+    elif pft_path.suffix == ".parquet":
+        pfts = dd.read_parquet(Path(cfg.raw_dir, cfg.trydb.raw.pfts))
+    else:
+        raise ValueError(f"Unsupported PFT file format: {pft_path.suffix}")
+
     pfts = (
-        dd.read_csv(Path(cfg.raw_dir) / cfg.trydb.raw.pfts, encoding="latin-1")
-        .pipe(_repartition_if_set, sys_cfg.npartitions)
+        pfts.pipe(_repartition_if_set, sys_cfg.npartitions)
         .pipe(filter_pft, cfg.PFT)
         .drop(columns=["AccSpeciesID"])
         .dropna(subset=["AccSpeciesName"])
@@ -158,6 +171,8 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
     out_dir.mkdir(parents=True, exist_ok=True)
 
     cols = [col for col in merged.columns if col.startswith("X")]
+    valid_traits = [str(trait_num) for trait_num in cfg.datasets.Y.traits]
+    cols = [col for col in cols if get_trait_number_from_id(col) in valid_traits]
 
     try:
         for col in cols:
@@ -206,6 +221,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
                     data=stat_col,
                     res=cfg.target_resolution,
                     crs=cfg.crs,
+                    agg=True,
                     funcs=funcs,
                 )
 
