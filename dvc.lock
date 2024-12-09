@@ -362,13 +362,14 @@ stages:
     deps:
     - path: data/features/Shrub_Tree_Grass/1km/Y.parquet
       hash: md5
-      md5: 303853c488a92aa723fc95930d1ae1df
-      size: 26349130
+      md5: 1405b994e9e1b01c6fe5452db22b6fa3.dir
+      size: 947982002
+      nfiles: 156
     - path: data/features/Shrub_Tree_Grass/1km/skcv_splits
       hash: md5
-      md5: 74a1f0729207dd5398829b8352bd2268.dir
-      size: 5201084
-      nfiles: 1
+      md5: 821e6a2c0bccb1baab988a2d030239d7.dir
+      size: 157255762
+      nfiles: 37
     - path: data/features/predict/1km/eo_predict_imputed.parquet
       hash: md5
       md5: 9372b044d0d211e6450b9bee0b772100
@@ -377,6 +378,10 @@ stages:
       hash: md5
       md5: a5b2d37a18df4f9d1ebcc60484d413d0
       size: 529921831
+    - path: data/interim/try/power_transformer.pkl
+      hash: md5
+      md5: 1baf90006b4ab6ec21964725243b8f9a
+      size: 2463
     - path: src/models/train_models.py
       hash: md5
       md5: 2cdb1448642111361ccb9267d132c598
@@ -387,25 +392,61 @@ stages:
           included_model_types:
           - GBM
           presets: high
-          save_bag_folds: true
+          save_bag_folds: false
           refit_full: false
           set_best_to_refit_full: false
           cv_fit_time_limit: 3600
           full_fit_time_limit: 12600
-          num_gpus: auto
-          num_cpus: 48
+          num_gpus: 4
+          num_cpus: 112
           feature_importance: true
           FI_time_limit: 1800
           FI_num_shuffle_sets: 10
         datasets.Y.traits:
-        - 11
+        - 4
+        - 6
+        - 13
+        - 14
+        - 15
+        - 21
+        - 26
+        - 27
+        - 46
+        - 47
+        - 50
+        - 55
+        - 78
+        - 95
+        - 138
+        - 144
+        - 145
+        - 146
+        - 163
+        - 169
+        - 223
+        - 224
+        - 237
+        - 281
+        - 282
+        - 289
+        - 297
+        - 351
+        - 614
+        - 1080
+        - 3106
+        - 3107
+        - 3112
+        - 3113
+        - 3114
+        - 3117
+        - 3120
         train.arch: autogluon
     outs:
     - path: models/Shrub_Tree_Grass/1km
       hash: md5
-      md5: a44b55e3bc1a8caf15c5f49118c5bfff.dir
-      size: 624708541
-      nfiles: 621
+      md5: 85f24b40c7a54be3c491fd19be2ce1ac.dir
+      size: 22141871966
+      nfiles: 22875
   predict:
     cmd: python src/models/predict_traits.py -r -v
     deps:
