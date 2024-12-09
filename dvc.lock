@@ -392,7 +392,7 @@ stages:
           included_model_types:
           - GBM
           presets: high
-          save_bag_folds: false
+          save_bag_folds: true
           refit_full: false
           set_best_to_refit_full: false
           cv_fit_time_limit: 3600
