@@ -34,16 +34,20 @@ def yeo_johnson_inverse_transform(x: np.ndarray, lmbda: int | float) -> np.ndarr
     """
     x_inv = np.zeros_like(x)
     pos = x >= 0
+    # Small epsilon for numerical stability (avoid raising a negative number to a fractional power)
+    eps = np.finfo(float).eps
 
     # when x >= 0
     if abs(lmbda) < np.spacing(1.0):
         x_inv[pos] = np.exp(x[pos]) - 1
     else:  # lmbda != 0
-        x_inv[pos] = np.power(x[pos] * lmbda + 1, 1 / lmbda) - 1
+        base = x[pos] * lmbda + 1
+        x_inv[pos] = np.power(np.maximum(base, eps), 1 / lmbda) - 1
 
     # when x < 0
     if abs(lmbda - 2) > np.spacing(1.0):
-        x_inv[~pos] = 1 - np.power(-(2 - lmbda) * x[~pos] + 1, 1 / (2 - lmbda))
+        base = -(2 - lmbda) * x[~pos] + 1
+        x_inv[~pos] = 1 - np.power(np.maximum(base, eps), 1 / (2 - lmbda))
     else:  # lmbda == 2
         x_inv[~pos] = 1 - np.exp(-x[~pos])
 
