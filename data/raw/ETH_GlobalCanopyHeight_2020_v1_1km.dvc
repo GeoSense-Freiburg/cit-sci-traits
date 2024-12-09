@@ -3,9 +3,8 @@ frozen: true
 deps:
 - path: data/canopy_height/ETH_GlobalCanopyHeight_2020_v1_1km
   repo:
-    url: https://github.com/GeoSense-Freiburg/panops-data-registry
+    url: /mnt/gsdata/projects/panops/panops-data-registry
     rev_lock: ac7118ccc38730b4309c8805f776e4cd61f275b6
-    remote: gcs
 outs:
 - md5: 7f7cab159554265edd5e012518dbb8eb.dir
   size: 188155434

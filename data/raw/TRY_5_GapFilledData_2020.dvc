@@ -3,7 +3,7 @@ frozen: true
 deps:
 - path: data/try/TRY_5_GapFilledData_2020
   repo:
-    url: https://github.com/GeoSense-Freiburg/panops-data-registry
+    url: /mnt/gsdata/projects/panops/panops-data-registry
     rev_lock: ac7118ccc38730b4309c8805f776e4cd61f275b6
 outs:
 - hash: md5
