@@ -30,7 +30,6 @@ from src.utils.trait_utils import get_trait_number_from_id
 
 TMP_DIR = Path("tmp")
 
-
 @delayed
 def generate_fold_obs_vs_pred(fold_dir: Path, xy: pd.DataFrame) -> pd.DataFrame:
     """Process a single fold of data."""
@@ -136,6 +135,7 @@ def load_y(trait_id: str) -> pd.DataFrame:
             how="inner",
             on=["x", "y"],
         )[["y", "x", trait_id, "fold"]]
+        .dropna(subset=[trait_id])
     )
 
     return y.compute().set_index(["y", "x"])
@@ -231,7 +231,9 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
             log.info("Calculating stats...")
             all_stats = pd.DataFrame()
             pearsonr_wt = cfg.crs == "EPSG:4326"
-
+            # Set lmbda to None before determining transform type because it needs to be
+            # passed to get_stats regardless.
+            lmbda = None
             # Back-transform if training data was log-transformed
             if cfg.trydb.interim.transform == "log":
                 if "ln" in trait_id.split("_"):
@@ -261,7 +263,10 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
 
             # Get the stats on the non-transformed data
             stats = get_stats(
-                cv_obs_vs_pred, cfg.target_resolution, wt_pearson=pearsonr_wt
+                cv_obs_vs_pred,
+                cfg.target_resolution,
+                wt_pearson=pearsonr_wt,
+                lmbda=lmbda,
             )
 
             # Get the stats on the transformed data (yes, this is a little redundant)
@@ -270,6 +275,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
                 cfg.target_resolution,
                 transform=cfg.trydb.interim.transform,
                 wt_pearson=pearsonr_wt,
+                lmbda=lmbda,
             )
 
             all_stats = pd.concat(
