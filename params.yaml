@@ -308,7 +308,7 @@ geos:
         n_workers: 80
         memory_limit: 40GB
     featurize_train:
-      n_chunks: 10
+      n_chunks: 9
       n_workers: 8
       memory_limit: 150GB
       threads_per_worker: 1
@@ -720,8 +720,8 @@ autogluon:
   set_best_to_refit_full: false
   cv_fit_time_limit: 3600
   full_fit_time_limit: 12600 # 3.5 hours per trait
-  num_gpus: 2
-  num_cpus: 110
+  num_gpus: 4
+  num_cpus: 112
   feature_importance: true
   FI_time_limit: 1800
   FI_num_shuffle_sets: 10
