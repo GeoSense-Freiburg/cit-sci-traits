@@ -2,11 +2,10 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import xarray as xr
 
 from src.conf.conf import get_config
 from src.conf.environment import log
-from src.utils.dataset_utils import get_trait_map_fns, get_trait_maps_dir
+from src.utils.dataset_utils import get_trait_maps_dir
 from src.utils.raster_utils import open_raster
 from src.utils.spatial_utils import lat_weights, weighted_pearson_r
 
@@ -66,11 +65,14 @@ def all_products_paths() -> list[Path]:
 def gather_results(target_res: int | float) -> pd.DataFrame:
     """Gather the results of the raster correlation analysis into a DataFrame."""
     splot_corr_path = Path("results/product_comparison.csv")
+    dtypes = {"trait_id": str, "author": str, "r": np.float64, "resolution": str}
     if splot_corr_path.exists():
         log.info("Loading existing results...")
-        splot_corr = pd.read_csv(splot_corr_path)
+        splot_corr = pd.read_csv(splot_corr_path, dtype=dtypes)
     else:
-        splot_corr = pd.DataFrame(columns=["trait_id", "author", "r", "resolution"])
+        splot_corr = pd.DataFrame(
+            columns=["trait_id", "author", "r", "resolution"], dtype=dtypes
+        )
 
     for fn in all_products_paths():
         res = fn.parent.stem
