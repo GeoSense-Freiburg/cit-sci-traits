@@ -40,33 +40,18 @@ def generate_fold_obs_vs_pred(fold_dir: Path, xy: pd.DataFrame) -> pd.DataFrame:
 
 def get_stats(
     cv_obs_vs_pred: pd.DataFrame,
-    resolution: int | float,
-    transform: str | None = None,
+    resolution: int | float | None,
     wt_pearson: bool = False,
-    **kwargs: Any,
 ) -> dict[str, Any]:
     """Calculate statistics for a given DataFrame of observed and predicted values."""
     obs = cv_obs_vs_pred.obs.to_numpy()
     pred = cv_obs_vs_pred.pred.to_numpy()
 
-    if transform:
-        if transform == "log":
-            # scale obs and pred to avoid log(0)
-            scale = abs(min(obs.min(), pred.min()) - 1)
-            obs = np.log(obs + scale)
-            pred = np.log(pred + scale)
-        elif transform == "power":
-            obs = yeo_johnson_transform(obs, **kwargs)
-            pred = yeo_johnson_transform(pred, **kwargs)
-        else:
-            raise ValueError(f"Invalid transform: {transform}")
-        cv_obs_vs_pred = cv_obs_vs_pred.assign(obs=obs, pred=pred)
-
     r2 = metrics.r2_score(obs, pred)
     pearsonr = cv_obs_vs_pred[["obs", "pred"]].corr().iloc[0, 1]
-
     pearsonr_wt = None
-    if wt_pearson:
+
+    if wt_pearson and resolution is not None:
         pearsonr_wt = weighted_pearson_r(
             cv_obs_vs_pred.set_index(["y", "x"]),
             lat_weights(cv_obs_vs_pred.y.unique(), resolution),
@@ -231,9 +216,8 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
             log.info("Calculating stats...")
             all_stats = pd.DataFrame()
             pearsonr_wt = cfg.crs == "EPSG:4326"
-            # Set lmbda to None before determining transform type because it needs to be
-            # passed to get_stats regardless.
-            lmbda = None
+            cv_obs_vs_pred_trans = None
+
             # Back-transform if training data was log-transformed
             if cfg.trydb.interim.transform == "log":
                 if "ln" in trait_id.split("_"):
@@ -241,6 +225,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
                         "Log-transformed trait detected. Back-transforming prior to "
                         "stats calculation..."
                     )
+                    cv_obs_vs_pred_trans = cv_obs_vs_pred.copy()
                     cv_obs_vs_pred = cv_obs_vs_pred.assign(
                         obs=np.expm1(cv_obs_vs_pred.obs),
                         pred=np.expm1(cv_obs_vs_pred.pred),
@@ -251,42 +236,52 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
                     pt = pickle.load(f)
 
                 log.info("Inverse transforming Y data...")
+                cv_obs_vs_pred_trans = cv_obs_vs_pred.copy()
+
                 trait_num = get_trait_number_from_id(trait_id)
                 feature_nums = np.array(
                     [get_trait_number_from_id(f) for f in pt.feature_names_in_]
                 )
-                lmbda = pt.lambdas_[np.where(feature_nums == trait_num)[0][0]]
-                inv = yeo_johnson_inverse_transform(
-                    cv_obs_vs_pred[["obs", "pred"]].to_numpy(), lmbda
-                )
-                cv_obs_vs_pred = cv_obs_vs_pred.assign(obs=inv[:, 0], pred=inv[:, 1])
+                ft_id = np.where(feature_nums == trait_num)[0][0]
+                inv_obs = pt.inverse_transform(
+                    pd.DataFrame(columns=pt.feature_names_in_)
+                    .assign(**{f"X{trait_num}": cv_obs_vs_pred.obs})
+                    .fillna(0)
+                )[:, ft_id]
+
+                inv_pred = pt.inverse_transform(
+                    pd.DataFrame(columns=pt.feature_names_in_)
+                    .assign(**{f"X{trait_num}": cv_obs_vs_pred.pred})
+                    .fillna(0)
+                )[:, ft_id]
+
+                cv_obs_vs_pred = cv_obs_vs_pred.assign(obs=inv_obs, pred=inv_pred)
 
             # Get the stats on the non-transformed data
             stats = get_stats(
                 cv_obs_vs_pred,
                 cfg.target_resolution,
                 wt_pearson=pearsonr_wt,
-                lmbda=lmbda,
             )
 
-            # Get the stats on the transformed data (yes, this is a little redundant)
-            stats_tr = get_stats(
-                cv_obs_vs_pred,
-                cfg.target_resolution,
-                transform=cfg.trydb.interim.transform,
-                wt_pearson=pearsonr_wt,
-                lmbda=lmbda,
-            )
+            if cv_obs_vs_pred_trans is not None:
+                stats_tr = get_stats(
+                    cv_obs_vs_pred_trans,
+                    cfg.target_resolution,
+                    wt_pearson=pearsonr_wt,
+                )
 
-            all_stats = pd.concat(
-                [
-                    pd.DataFrame(stats, index=[0]).assign(transform="none"),
-                    pd.DataFrame(stats_tr, index=[0]).assign(
-                        transform=cfg.trydb.interim.transform
-                    ),
-                ],
-                ignore_index=True,
-            )
+                all_stats = pd.concat(
+                    [
+                        pd.DataFrame(stats, index=[0]).assign(transform="none"),
+                        pd.DataFrame(stats_tr, index=[0]).assign(
+                            transform=cfg.trydb.interim.transform
+                        ),
+                    ],
+                    ignore_index=True,
+                )
+            else:
+                all_stats = pd.DataFrame(stats, index=[0]).assign(transform="none")
 
             log.info("Writing stats to disk...")
             results_path.rename(old_path)
