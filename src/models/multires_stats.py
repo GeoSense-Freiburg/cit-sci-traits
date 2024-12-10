@@ -119,7 +119,9 @@ def update_model_perf(
 
     trait_df = trait_df[df.columns]
 
-    return pd.concat([df, trait_df], ignore_index=True).drop_duplicates()
+    return pd.concat([df, trait_df], ignore_index=True).drop_duplicates(
+        subset=["run_id", "trait_set", "transform"], keep="last"
+    )
 
 
 def update_fi(model_dir: Path, df: pd.DataFrame, config: ConfigBox) -> pd.DataFrame:
@@ -194,7 +196,9 @@ def update_fi(model_dir: Path, df: pd.DataFrame, config: ConfigBox) -> pd.DataFr
         )
     )[df.columns]
 
-    return pd.concat([df, trait_fi], ignore_index=True).drop_duplicates()
+    return pd.concat([df, trait_fi], ignore_index=True).drop_duplicates(
+        subset=["run_id"]
+    )
 
 
 def map_to_trait_dfs(
