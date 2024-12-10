@@ -29,9 +29,9 @@ def main() -> None:
             authors = all_prods_nitm.attrs["long_name"]
             names = [n.lower() for n in authors]
 
-            for i, band in enumerate(all_prods_nitm):
-                if names[i] == "moreno":
-                    continue  # We received a separate file for this author
+            for i, _ in enumerate(all_prods_nitm):
+                if names[i] in ("moreno", "vallicrosa"):
+                    continue  # We received a separate file for these authors
 
                 out_path = Path(
                     cfg.interim_dir,
@@ -67,6 +67,28 @@ def main() -> None:
             "other_trait_maps",
             str(res).replace(".", ""),
             f"X14_moreno.tif",
+        )
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        log.info(f"Writing {out_path}")
+        xr_to_raster(r, out_path)
+
+    # Vallicrosa
+    src_path = Path(
+        cfg.raw_dir,
+        "other-trait-maps",
+        "vallicrosa_n_mean",
+        "N_mean_predictmap_NewPhy2.grd",
+    )
+
+    for res in resolutions:
+        ref_r = create_sample_raster(resolution=res, crs="EPSG:4326")
+        r = open_raster(src_path)
+        r = r.rio.reproject_match(ref_r)
+        out_path = Path(
+            cfg.interim_dir,
+            "other_trait_maps",
+            str(res).replace(".", ""),
+            f"X14_vallicrosa.tif",
         )
         out_path.parent.mkdir(parents=True, exist_ok=True)
         log.info(f"Writing {out_path}")
