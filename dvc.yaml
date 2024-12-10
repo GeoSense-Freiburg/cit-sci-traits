@@ -48,7 +48,7 @@ stages:
       - ${raw_dir}/other-trait-maps
     outs:
       - ${interim_dir}/other_trait_maps:
-          persist: true
+          persist: false
 
   ######################################################################################
   # RES-DEP., PFT-IND. -----------------------------------------------------------------
