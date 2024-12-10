@@ -444,8 +444,8 @@ stages:
     outs:
     - path: models/Shrub_Tree_Grass/1km
       hash: md5
-      md5: 85f24b40c7a54be3c491fd19be2ce1ac.dir
-      size: 22141871966
+      md5: 3533e5b2fb38bed4181989f363326117.dir
+      size: 22141861275
       nfiles: 22875
   predict:
     cmd: python src/models/predict_traits.py -r -v
@@ -488,8 +488,8 @@ stages:
     deps:
     - path: models/Shrub_Tree_Grass/1km
       hash: md5
-      md5: 85f24b40c7a54be3c491fd19be2ce1ac.dir
-      size: 22141871966
+      md5: 3533e5b2fb38bed4181989f363326117.dir
+      size: 22141861275
       nfiles: 22875
     - path: src/models/multires_stats.py
       hash: md5
