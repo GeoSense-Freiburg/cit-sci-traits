@@ -493,8 +493,8 @@ stages:
       nfiles: 22875
     - path: src/models/multires_stats.py
       hash: md5
-      md5: b55b605d378cfe462ad42108eb6236f1
-      size: 11089
+      md5: 3c7fb4a91762376643ce07e548f41860
+      size: 11190
     params:
       params.yaml:
         analysis:
