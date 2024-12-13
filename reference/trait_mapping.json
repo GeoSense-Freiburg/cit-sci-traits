@@ -80,7 +80,7 @@
         "unit": "days"
     },
     "138": {
-        "short": "Seed number",
+        "short": "Seed number (repr.)",
         "long": "Seed number per reproduction unit",
         "unit": "-"
     },
@@ -139,10 +139,35 @@
         "long": "Wood fiber lengths",
         "unit": "\u03bcm"
     },
+    "297": {
+        "short": "Wood ray density",
+        "long": "Wood rays per millimetre (wood ray density)",
+        "unit": "mm-1"
+    },
+    "351": {
+        "short": "Seed number (disp.)",
+        "long": "Seed number per dispersal unit",
+        "unit": "-"
+    },
+    "614": {
+        "short": "SRL (fine)",
+        "long": "Fine root length per fine root dry mass (specific fine root length, SRL)",
+        "unit": "cm g"
+    },
     "1080": {
         "short": "SRL",
         "long": "Root length per root dry mass (specific root length, SRL)",
         "unit": "cm g"
+    },
+    "3106": {
+        "short": "Plant height (veg.)",
+        "long": "Plant height vegetative",
+        "unit": "m"
+    },
+    "3107": {
+        "short": "Plant height (gen.)",
+        "long": "Plant height generative",
+        "unit": "m"
     },
     "3112": {
         "short": "Leaf area (3112)",
@@ -158,6 +183,11 @@
         "short": "Leaf area (3114)",
         "long": "Leaf area (in case of compound leaves: undefined if leaf or leaflet, undefined if petiole is in- or excluded)",
         "unit": "mm2"
+    },
+    "3117": {
+        "short": "SLA",
+        "long": "Leaf area per leaf dry mass (specific leaf area, SLA or 1/LMA): undefined if petiole is in- or excluded)",
+        "unit": "m2 kg\u22121"
     },
     "3120": {
         "short": "Leaf water content",

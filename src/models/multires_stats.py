@@ -120,7 +120,7 @@ def update_model_perf(
     trait_df = trait_df[df.columns]
 
     return pd.concat([df, trait_df], ignore_index=True).drop_duplicates(
-        subset=["run_id", "trait_set", "transform"], keep="last"
+        subset=["pft", "resolution", "run_id", "trait_set", "transform"], keep="last"
     )
 
 
