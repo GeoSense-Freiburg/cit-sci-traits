@@ -242,7 +242,13 @@ stages:
       - ${models.dir}/${PFT}/${model_res}
     params:
       - analysis
-      
+  
+  aggregate_aoa:
+    cmd: python src/analysis/multres_aoa.py
+    deps:
+      - src/analysis/multres_aoa.py
+      - ${processed.dir}/${PFT}/${model_res}/${aoa.dir}
+  
   other_product_splot_correlation:
     cmd: python src/analysis/other_product_splot_correlation.py
     deps:
