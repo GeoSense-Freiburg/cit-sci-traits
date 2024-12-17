@@ -2,6 +2,7 @@
 
 import argparse
 import errno
+import os
 import shutil
 from pathlib import Path
 from typing import Generator
@@ -206,6 +207,14 @@ def predict_traits_ag(
                     predict_data = df_to_dd(
                         predict_data, npartitions=predict_cfg.batches
                     )
+                # Set env vars according to n_workers and batches
+                defined_cpus = os.environ.get("OMP_NUM_THREADS", None)
+                defined_cpus = os.cpu_count() if defined_cpus is None else int(defined_cpus)
+                num_cpus = str(defined_cpus // predict_cfg.n_workers)
+                os.environ["OMP_NUM_THREADS"] = num_cpus
+                os.environ["MKL_NUM_THREADS"] = num_cpus
+                os.environ["OPENBLAS_NUM_THREADS"] = num_cpus
+                os.environ["LOKY_MAX_CPU_COUNT"] = num_cpus
 
                 client, cluster = init_dask(
                     dashboard_address=get_config().dask_dashboard,
