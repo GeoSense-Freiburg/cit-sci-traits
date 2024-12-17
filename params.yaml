@@ -736,10 +736,10 @@ aoa:
 predict:
   dir: predict
   geos:
-    n_workers: 14
-    batches: 28
+    n_workers: 1
+    batches: 8
   pylos:
-    n_workers: 4
+    n_workers: 1
     batches: 24
 
 cov:
