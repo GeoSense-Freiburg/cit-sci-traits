@@ -144,6 +144,11 @@ def predict_cov_dask(
     log.info("Calculating CoV...")
     cov = (
         pd.concat(dfs, axis=1)
+        # Add minimum value to all values. This is necessary because CoV is only
+        # meaningful when zero is meaningful. If the data was power or log-transformed,
+        # zero becomes meaningless, and may even result in the mean being zero or close
+        # to zero, which would result in a CoV of infinity.
+        .pipe(lambda _df: _df + abs(_df.min().min()))
         .pipe(lambda _df: _df.std(axis=1) / _df.mean(axis=1))  # CoV calculation
         .rename("cov")
         .to_frame()
