@@ -458,31 +458,35 @@ stages:
       hash: md5
       md5: a5b2d37a18df4f9d1ebcc60484d413d0
       size: 529921831
+    - path: data/interim/try/power_transformer.pkl
+      hash: md5
+      md5: 1baf90006b4ab6ec21964725243b8f9a
+      size: 2463
     - path: models/Shrub_Tree_Grass/1km
       hash: md5
-      md5: a44b55e3bc1a8caf15c5f49118c5bfff.dir
-      size: 624708541
-      nfiles: 621
+      md5: 3533e5b2fb38bed4181989f363326117.dir
+      size: 22141861275
+      nfiles: 22875
     - path: src/models/predict_traits.py
       hash: md5
-      md5: 2d55b55272eb2cc0a23deda34e7d4ae4
-      size: 10350
+      md5: 32e6c89746fe95fe47a3635f0cd46122
+      size: 11381
     params:
       params.yaml:
         predict:
           dir: predict
           geos:
-            n_workers: 14
-            batches: 28
+            n_workers: 1
+            batches: 8
           pylos:
             n_workers: 4
             batches: 24
     outs:
     - path: data/processed/Shrub_Tree_Grass/1km/predict
       hash: md5
-      md5: 5cda4b36b3ac8546a552c9acfec23330.dir
-      size: 615260362
-      nfiles: 2
+      md5: 31b13f7edca7ef69b45936fb4071c3f9.dir
+      size: 23184134154
+      nfiles: 75
   aggregate_all_stats:
     cmd: python src/models/multires_stats.py -mfc
     deps:
@@ -501,3 +505,45 @@ stages:
           dir: results
           multires_results_fn: all_results.parquet
           multires_fi_fn: all_fi.parquet
+  cov:
+    cmd: python src/models/predict_traits.py -r -v --cov
+    deps:
+    - path: data/features/predict/1km/eo_predict_imputed.parquet
+      hash: md5
+      md5: 9372b044d0d211e6450b9bee0b772100
+      size: 28557279604
+    - path: data/features/predict/1km/eo_predict_mask.parquet
+      hash: md5
+      md5: a5b2d37a18df4f9d1ebcc60484d413d0
+      size: 529921831
+    - path: data/interim/try/power_transformer.pkl
+      hash: md5
+      md5: 1baf90006b4ab6ec21964725243b8f9a
+      size: 2463
+    - path: models/Shrub_Tree_Grass/1km
+      hash: md5
+      md5: 3533e5b2fb38bed4181989f363326117.dir
+      size: 22141861275
+      nfiles: 22875
+    - path: src/models/predict_traits.py
+      hash: md5
+      md5: 32e6c89746fe95fe47a3635f0cd46122
+      size: 11381
+    params:
+      params.yaml:
+        cov:
+          dir: cov
+        predict:
+          dir: predict
+          geos:
+            n_workers: 1
+            batches: 8
+          pylos:
+            n_workers: 4
+            batches: 24
+    outs:
+    - path: data/processed/Shrub_Tree_Grass/1km/cov
+      hash: md5
+      md5: 161460c2762980b06665115fa08dba00.dir
+      size: 21912302781
+      nfiles: 81
