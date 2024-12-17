@@ -255,10 +255,11 @@ def load_predict(tmp_predict_fn: Path, batches: int = 1) -> pd.DataFrame | dd.Da
             .pipe(pipe_log, "Setting index to ['y', 'x']")
             .set_index(["y", "x"])
             .pipe(pipe_log, "Reading mask and masking imputed features...")
-            .mask(pd.read_parquet(get_predict_mask_fn()).set_index(["y", "x"]))
+            .mask(dd.read_parquet(get_predict_mask_fn()).compute().set_index(["y", "x"]))
             .reset_index()
         )
 
+        log.info("Writing masked predict data to disk for later usage...")
         predict.to_parquet(tmp_predict_fn, compression="zstd")
 
     else:
