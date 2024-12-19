@@ -19,7 +19,7 @@ from rioxarray.merge import merge_arrays, merge_datasets
 from src.conf.environment import log
 
 
-def encode_nodata(da: xr.DataArray, dtype: str | np.dtype) -> xr.DataArray:
+def set_nodata(da: xr.DataArray, dtype: str | np.dtype) -> xr.DataArray:
     """Encode the nodata value of a DataArray."""
     da = da.copy()
     nodata = np.iinfo(dtype).min if np.issubdtype(dtype, np.integer) else np.nan
@@ -61,16 +61,18 @@ def xr_to_raster(
     dtype: np.dtype | str | None = None,
     compress: str = "ZSTD",
     num_threads: int = -1,
+    encode_nodata: bool = True,
     **kwargs: dict[str, Any],
 ) -> None:
     """Write a DataArray to a raster file."""
-    if isinstance(data, xr.DataArray):
-        dtype = dtype if dtype is not None else data.dtype
-        data = encode_nodata(data, dtype)
-    else:
-        dtype = dtype if dtype is not None else data[list(data.data_vars)[0]].dtype
-        for dv in data.data_vars:
-            data[dv] = encode_nodata(data[dv], dtype)
+    if encode_nodata:
+        if isinstance(data, xr.DataArray):
+            dtype = dtype if dtype is not None else data.dtype
+            data = set_nodata(data, dtype)
+        else:
+            dtype = dtype if dtype is not None else data[list(data.data_vars)[0]].dtype
+            for dv in data.data_vars:
+                data[dv] = set_nodata(data[dv], dtype)
 
     if num_threads == -1:
         num_threads = multiprocessing.cpu_count()
