@@ -616,3 +616,15 @@ stages:
       md5: 052df589bd9748464c91aca1674f25a0.dir
       size: 20236890649
       nfiles: 77
+  aggregate_aoa:
+    cmd: python src/analysis/multires_aoa.py
+    deps:
+    - path: data/processed/Shrub_Tree_Grass/1km/aoa
+      hash: md5
+      md5: 052df589bd9748464c91aca1674f25a0.dir
+      size: 20236890649
+      nfiles: 77
+    - path: src/analysis/multires_aoa.py
+      hash: md5
+      md5: c24832274df1c9615d161e87e6d82277
+      size: 2969
