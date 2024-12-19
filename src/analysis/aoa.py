@@ -339,7 +339,7 @@ def calc_di_predict(
 
     distances["di"] = distances["distance"] / mean_distance
     distances["aoa"] = distances["di"] > di_threshold
-    return distances.to_pandas()
+    return distances.drop(columns=["distance"]).to_pandas()
 
 
 def calc_aoa(
