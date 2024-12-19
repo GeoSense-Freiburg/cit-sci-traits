@@ -469,8 +469,8 @@ stages:
       nfiles: 22875
     - path: src/models/predict_traits.py
       hash: md5
-      md5: 32e6c89746fe95fe47a3635f0cd46122
-      size: 11381
+      md5: 545fd84021c7ce29335076f87b284355
+      size: 11352
     params:
       params.yaml:
         predict:
@@ -479,7 +479,7 @@ stages:
             n_workers: 1
             batches: 8
           pylos:
-            n_workers: 4
+            n_workers: 1
             batches: 24
     outs:
     - path: data/processed/Shrub_Tree_Grass/1km/predict
@@ -497,8 +497,8 @@ stages:
       nfiles: 22875
     - path: src/models/multires_stats.py
       hash: md5
-      md5: 3c7fb4a91762376643ce07e548f41860
-      size: 11190
+      md5: f3c369b3a540ffc3f0a309f26dd3975a
+      size: 11211
     params:
       params.yaml:
         analysis:
@@ -527,8 +527,8 @@ stages:
       nfiles: 22875
     - path: src/models/predict_traits.py
       hash: md5
-      md5: 32e6c89746fe95fe47a3635f0cd46122
-      size: 11381
+      md5: 545fd84021c7ce29335076f87b284355
+      size: 11352
     params:
       params.yaml:
         cov:
@@ -539,7 +539,7 @@ stages:
             n_workers: 1
             batches: 8
           pylos:
-            n_workers: 4
+            n_workers: 1
             batches: 24
     outs:
     - path: data/processed/Shrub_Tree_Grass/1km/cov
