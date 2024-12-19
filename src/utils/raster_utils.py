@@ -282,7 +282,7 @@ def raster_to_df(
     Notes:
         - The function converts the raster data to a DataFrame or GeoDataFrame.
         - If `gdf` is True, the function returns a GeoDataFrame with geometry based on the
-          x and y coordinates of the DataFrame.
+            x and y coordinates of the DataFrame.
 
     """
     if rast_name is None:
@@ -312,7 +312,7 @@ def raster_to_df(
 
 
 def pack_data(
-    data: np.ndarray, nbits: int = 16, signed: bool = True
+    data: np.ndarray, nbits: int = 16, signed: bool = True, cast_only: bool = False
 ) -> tuple[np.float64, np.float64, int, np.ndarray]:
     """
     Packs the given data into a specified integer format with optional scaling and offset.
@@ -341,22 +341,32 @@ def pack_data(
     This function scales and offsets the input data to fit into the specified integer format.
     It handles NaN values by replacing them with a designated nodata value.
     """
+    np.seterr(invalid="raise")
 
     data_min = np.nanmin(data)
     data_max = np.nanmax(data)
     dtype = f"int{nbits}" if signed else f"uint{nbits}"
 
     nodata_value: int = -(2 ** (nbits - 1)) if signed else 0
-    scale = (data_max - data_min) / (2**nbits - 2)
-    scale = np.float64(scale)
-    offset = (data_max + data_min) / 2 if signed else data_min - scale
-    offset = np.float64(offset)
 
-    np.seterr(invalid="raise")
+    if cast_only:
+        if data_min <= nodata_value or data_max == nodata_value:
+            raise ValueError("Data range overlaps with nodata value.")
+        scale = np.float64(1.0)
+        offset = np.float64(0.0)
+    else:
+        scale = (data_max - data_min) / (2**nbits - 2)
+        scale = np.float64(scale)
+        offset = (data_max + data_min) / 2 if signed else data_min - scale
+        offset = np.float64(offset)
+
     try:
-        data_int16 = np.where(
-            np.isnan(data), nodata_value, np.round((data - offset) / scale)
-        ).astype(dtype)
+        if cast_only:
+            packed_data = np.where(np.isnan(data), nodata_value, data).astype(dtype)
+        else:
+            packed_data = np.where(
+                np.isnan(data), nodata_value, np.round((data - offset) / scale)
+            ).astype(dtype)
     except FloatingPointError as e:
         log.error("FloatingPointError: %s", e)
         log.error("data_min: %s", data_min)
@@ -385,11 +395,14 @@ def pack_data(
         log.error("max: %s", np.nanmax(cast_data))
         raise
 
-    return scale, offset, nodata_value, data_int16
+    return scale, offset, nodata_value, packed_data
 
 
 def pack_xr(
-    data: xr.DataArray | xr.Dataset, nbits: int = 16, signed: bool = True
+    data: xr.DataArray | xr.Dataset,
+    nbits: int = 16,
+    signed: bool = True,
+    cast_only: list[int] | bool = False,
 ) -> xr.DataArray | xr.Dataset:
     """
     Pack the given xarray DataArray or Dataset into a specified integer format with optional scaling and offset.
@@ -414,21 +427,31 @@ def pack_xr(
     This function scales and offsets the input data to fit into the specified integer format.
     It handles NaN values by replacing them with a designated nodata value.
     """
-    data = data.copy()
+    data = data.copy(deep=True)
 
     if isinstance(data, xr.DataArray):
-        scale, offset, nodata_value, data_int16 = pack_data(data.values, nbits, signed)
-        data.values = data_int16
+        if isinstance(cast_only, list):
+            raise ValueError("cast_only must be a boolean value for DataArray.")
+        scale, offset, nodata_value, packed_data = pack_data(data.values, nbits, signed, cast_only)
+        data.values = packed_data
         data.attrs["scale_factor"] = scale
         data.attrs["add_offset"] = offset
         data = data.rio.write_nodata(nodata_value, encoded=False)
         return data
-
-    for var in data.data_vars:
-        scale, offset, nodata_value, data_int16 = pack_data(
-            data[var].values, nbits, signed
+    
+    # Dataset
+    def set_cast_only(cast_only: list[int] | bool, i: int) -> bool:
+        if isinstance(cast_only, bool):
+            return cast_only
+        if isinstance(cast_only, list) and i in cast_only:
+            return True
+        return False
+    for i, var in enumerate(data.data_vars):
+        cast = set_cast_only(cast_only, i)
+        scale, offset, nodata_value, packed_data = pack_data(
+            data[var].values, nbits, signed, cast_only=cast
         )
-        data[var].values = data_int16
+        data[var].values = packed_data
         data[var].attrs["scale_factor"] = scale
         data[var].attrs["add_offset"] = offset
         data[var] = data[var].rio.write_nodata(nodata_value, encoded=False)
