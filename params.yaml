@@ -329,6 +329,7 @@ geos:
       device_ids: [0, 1, 2, 3]
       predict_sample: 0.5
       splot:
+        chunked_dist: false
         train_sample: 1
         avg_dist_batch_size: 10000
         predict_partitions: null

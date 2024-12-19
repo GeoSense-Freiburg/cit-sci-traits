@@ -4,6 +4,9 @@ import gc
 import multiprocessing
 import os
 from pathlib import Path
+import shutil
+import subprocess
+import tempfile
 from typing import Any, Optional
 
 import geopandas as gpd
@@ -19,7 +22,7 @@ from rioxarray.merge import merge_arrays, merge_datasets
 from src.conf.environment import log
 
 
-def encode_nodata(da: xr.DataArray, dtype: str | np.dtype) -> xr.DataArray:
+def set_nodata(da: xr.DataArray, dtype: str | np.dtype) -> xr.DataArray:
     """Encode the nodata value of a DataArray."""
     da = da.copy()
     nodata = np.iinfo(dtype).min if np.issubdtype(dtype, np.integer) else np.nan
@@ -55,22 +58,150 @@ def scale_data(
     ) + np.iinfo(dtype).min
 
 
+def xr_to_raster_rasterio(
+    data: xr.DataArray | xr.Dataset,
+    out_path: Path | str,
+    nodata: int | float | None = None,
+) -> None:
+    """Write a DataArray or Dataset to a raster file using rasterio."""
+    if isinstance(out_path, str):
+        out_path = Path(out_path)
+
+    if isinstance(data, xr.DataArray):
+        da_count = 1
+        dtype = data.dtype
+        nodata = data.attrs.get("_FillValue", np.nan) if nodata is None else nodata
+        scales = [data.attrs.get("scale_factor", 1)]
+        offsets = [data.attrs.get("add_offset", 0)]
+    else:  # Dataset
+        da_count = len(data.data_vars)
+        dtype = data[list(data.data_vars)[0]].dtype
+        if nodata is None:
+            nodata = data[list(data.data_vars)[0]].attrs.get("_FillValue", np.nan)
+        scales = []
+        offsets = []
+        for var in data.data_vars:
+            scales.append(data[var].attrs.get("scale_factor", 1))
+            offsets.append(data[var].attrs.get("add_offset", 0))
+
+    log.info("Generating metadata...")
+    bounds = data.rio.bounds()
+    spatial_extent = (
+        f"min_x: {bounds[0]}, min_y: {bounds[1]}, "
+        f"max_x: {bounds[2]}, max_y: {bounds[3]}"
+    )
+
+    raster_meta = {
+        "crs": str(data.rio.crs),
+        "resolution": data.rio.resolution(),
+        "geospatial_units": "degrees",
+        "grid_coordinate_system": "WGS 84",
+        "transform": str(data.rio.transform()),
+        "spatial_extent": spatial_extent,
+        "nodata": nodata,
+    }
+
+    # Read data from the original file
+    cog_profile = {}
+
+    # Ensure new profile is configured to write as a COG
+    cog_profile.update(
+        count=da_count,
+        driver="GTiff",
+        tiled=True,
+        blockxsize=256,
+        blockysize=256,
+        compress="ZSTD",
+        copy_src_overviews=True,
+        interleave="band",
+        width=data.rio.width,
+        height=data.rio.height,
+        dtype=dtype,
+        crs=str(data.rio.crs),
+        transform=data.rio.transform(),
+        nodata=nodata,
+    )
+
+    tags = data.attrs.copy()
+    for key, value in raster_meta.items():
+        tags[key] = value
+
+    log.info("Writing new file...")
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tmp_file_path = Path(
+            temp_dir,
+            out_path.name,
+        )
+
+        # Create a new file with updated metadata and original data
+        with rasterio.open(
+            tmp_file_path,
+            "w",
+            **cog_profile,
+        ) as new_dataset:
+            new_dataset.update_tags(**tags)
+
+            log.info("Setting scales and offsets...")
+            scales = np.array(scales, dtype=np.float64)
+            offsets = np.array(offsets, dtype=np.float64)
+            new_dataset._set_all_scales(scales)  # pylint: disable=protected-access
+            new_dataset._set_all_offsets(offsets)  # pylint: disable=protected-access
+
+            for i in range(1, da_count + 1):
+                new_dataset.update_tags(i, _FillValue=nodata)
+
+            log.info("Writing bands...")
+            if isinstance(data, xr.DataArray):
+                new_dataset.write(data.values, 1)
+                new_dataset.set_band_description(1, data.name)
+            else:
+                for i, var in enumerate(data.data_vars):
+                    new_dataset.write(data[var].values, i + 1)
+                    new_dataset.set_band_description(i + 1, var)
+
+        cog_path = (
+            tmp_file_path.parent / f"{tmp_file_path.stem}_cog{tmp_file_path.suffix}"
+        )
+        log.info("Writing COG...")
+        # Run command: rio cogeo create new_file_path cog_path
+        subprocess.run(
+            [
+                "rio",
+                "cogeo",
+                "create",
+                "--overview-resampling",
+                "average",
+                "--in-memory",
+                str(tmp_file_path),
+                str(cog_path),
+            ],
+            check=True,
+        )
+
+        out_dir = out_path.parent
+        out_dir.mkdir(parents=True, exist_ok=True)
+        shutil.move(cog_path, out_path)
+        data.close()
+
+
 def xr_to_raster(
     data: xr.DataArray | xr.Dataset,
     out: str | os.PathLike,
     dtype: np.dtype | str | None = None,
     compress: str = "ZSTD",
     num_threads: int = -1,
+    encode_nodata: bool = True,
     **kwargs: dict[str, Any],
 ) -> None:
     """Write a DataArray to a raster file."""
-    if isinstance(data, xr.DataArray):
-        dtype = dtype if dtype is not None else data.dtype
-        data = encode_nodata(data, dtype)
-    else:
-        dtype = dtype if dtype is not None else data[list(data.data_vars)[0]].dtype
-        for dv in data.data_vars:
-            data[dv] = encode_nodata(data[dv], dtype)
+    if encode_nodata:
+        if isinstance(data, xr.DataArray):
+            dtype = dtype if dtype is not None else data.dtype
+            data = set_nodata(data, dtype)
+        else:
+            dtype = dtype if dtype is not None else data[list(data.data_vars)[0]].dtype
+            for dv in data.data_vars:
+                data[dv] = set_nodata(data[dv], dtype)
 
     if num_threads == -1:
         num_threads = multiprocessing.cpu_count()
@@ -280,7 +411,7 @@ def raster_to_df(
     Notes:
         - The function converts the raster data to a DataFrame or GeoDataFrame.
         - If `gdf` is True, the function returns a GeoDataFrame with geometry based on the
-          x and y coordinates of the DataFrame.
+            x and y coordinates of the DataFrame.
 
     """
     if rast_name is None:
@@ -310,7 +441,7 @@ def raster_to_df(
 
 
 def pack_data(
-    data: np.ndarray, nbits: int = 16, signed: bool = True
+    data: np.ndarray, nbits: int = 16, signed: bool = True, cast_only: bool = False
 ) -> tuple[np.float64, np.float64, int, np.ndarray]:
     """
     Packs the given data into a specified integer format with optional scaling and offset.
@@ -339,22 +470,32 @@ def pack_data(
     This function scales and offsets the input data to fit into the specified integer format.
     It handles NaN values by replacing them with a designated nodata value.
     """
+    np.seterr(invalid="raise")
 
     data_min = np.nanmin(data)
     data_max = np.nanmax(data)
     dtype = f"int{nbits}" if signed else f"uint{nbits}"
 
     nodata_value: int = -(2 ** (nbits - 1)) if signed else 0
-    scale = (data_max - data_min) / (2**nbits - 2)
-    scale = np.float64(scale)
-    offset = (data_max + data_min) / 2 if signed else data_min - scale
-    offset = np.float64(offset)
 
-    np.seterr(invalid="raise")
+    if cast_only:
+        if data_min <= nodata_value or data_max == nodata_value:
+            raise ValueError("Data range overlaps with nodata value.")
+        scale = np.float64(1.0)
+        offset = np.float64(0.0)
+    else:
+        scale = (data_max - data_min) / (2**nbits - 2)
+        scale = np.float64(scale)
+        offset = (data_max + data_min) / 2 if signed else data_min - scale
+        offset = np.float64(offset)
+
     try:
-        data_int16 = np.where(
-            np.isnan(data), nodata_value, np.round((data - offset) / scale)
-        ).astype(dtype)
+        if cast_only:
+            packed_data = np.where(np.isnan(data), nodata_value, data).astype(dtype)
+        else:
+            packed_data = np.where(
+                np.isnan(data), nodata_value, np.round((data - offset) / scale)
+            ).astype(dtype)
     except FloatingPointError as e:
         log.error("FloatingPointError: %s", e)
         log.error("data_min: %s", data_min)
@@ -383,11 +524,14 @@ def pack_data(
         log.error("max: %s", np.nanmax(cast_data))
         raise
 
-    return scale, offset, nodata_value, data_int16
+    return scale, offset, nodata_value, packed_data
 
 
 def pack_xr(
-    data: xr.DataArray | xr.Dataset, nbits: int = 16, signed: bool = True
+    data: xr.DataArray | xr.Dataset,
+    nbits: int = 16,
+    signed: bool = True,
+    cast_only: list[int] | bool = False,
 ) -> xr.DataArray | xr.Dataset:
     """
     Pack the given xarray DataArray or Dataset into a specified integer format with optional scaling and offset.
@@ -412,21 +556,31 @@ def pack_xr(
     This function scales and offsets the input data to fit into the specified integer format.
     It handles NaN values by replacing them with a designated nodata value.
     """
-    data = data.copy()
+    data = data.copy(deep=True)
 
     if isinstance(data, xr.DataArray):
-        scale, offset, nodata_value, data_int16 = pack_data(data.values, nbits, signed)
-        data.values = data_int16
+        if isinstance(cast_only, list):
+            raise ValueError("cast_only must be a boolean value for DataArray.")
+        scale, offset, nodata_value, packed_data = pack_data(data.values, nbits, signed, cast_only)
+        data.values = packed_data
         data.attrs["scale_factor"] = scale
         data.attrs["add_offset"] = offset
         data = data.rio.write_nodata(nodata_value, encoded=False)
         return data
-
-    for var in data.data_vars:
-        scale, offset, nodata_value, data_int16 = pack_data(
-            data[var].values, nbits, signed
+    
+    # Dataset
+    def set_cast_only(cast_only: list[int] | bool, i: int) -> bool:
+        if isinstance(cast_only, bool):
+            return cast_only
+        if isinstance(cast_only, list) and i in cast_only:
+            return True
+        return False
+    for i, var in enumerate(data.data_vars):
+        cast = set_cast_only(cast_only, i)
+        scale, offset, nodata_value, packed_data = pack_data(
+            data[var].values, nbits, signed, cast_only=cast
         )
-        data[var].values = data_int16
+        data[var].values = packed_data
         data[var].attrs["scale_factor"] = scale
         data[var].attrs["add_offset"] = offset
         data[var] = data[var].rio.write_nodata(nodata_value, encoded=False)
