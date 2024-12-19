@@ -4,6 +4,9 @@ import gc
 import multiprocessing
 import os
 from pathlib import Path
+import shutil
+import subprocess
+import tempfile
 from typing import Any, Optional
 
 import geopandas as gpd
@@ -53,6 +56,132 @@ def scale_data(
     return (da - da.min()) * (np.iinfo(dtype).max - np.iinfo(dtype).min - 1) / (
         da.max() - da.min()
     ) + np.iinfo(dtype).min
+
+
+def xr_to_raster_rasterio(
+    data: xr.DataArray | xr.Dataset,
+    out_path: Path | str,
+    nodata: int | float | None = None,
+) -> None:
+    """Write a DataArray or Dataset to a raster file using rasterio."""
+    if isinstance(out_path, str):
+        out_path = Path(out_path)
+
+    if isinstance(data, xr.DataArray):
+        da_count = 1
+        dtype = data.dtype
+        nodata = data.attrs.get("_FillValue", np.nan) if nodata is None else nodata
+        scales = [data.attrs.get("scale_factor", 1)]
+        offsets = [data.attrs.get("add_offset", 0)]
+    else:  # Dataset
+        da_count = len(data.data_vars)
+        dtype = data[list(data.data_vars)[0]].dtype
+        if nodata is None:
+            nodata = data[list(data.data_vars)[0]].attrs.get("_FillValue", np.nan)
+        scales = []
+        offsets = []
+        for var in data.data_vars:
+            scales.append(data[var].attrs.get("scale_factor", 1))
+            offsets.append(data[var].attrs.get("add_offset", 0))
+
+    log.info("Generating metadata...")
+    bounds = data.rio.bounds()
+    spatial_extent = (
+        f"min_x: {bounds[0]}, min_y: {bounds[1]}, "
+        f"max_x: {bounds[2]}, max_y: {bounds[3]}"
+    )
+
+    raster_meta = {
+        "crs": str(data.rio.crs),
+        "resolution": data.rio.resolution(),
+        "geospatial_units": "degrees",
+        "grid_coordinate_system": "WGS 84",
+        "transform": str(data.rio.transform()),
+        "spatial_extent": spatial_extent,
+        "nodata": nodata,
+    }
+
+    # Read data from the original file
+    cog_profile = {}
+
+    # Ensure new profile is configured to write as a COG
+    cog_profile.update(
+        count=da_count,
+        driver="GTiff",
+        tiled=True,
+        blockxsize=256,
+        blockysize=256,
+        compress="ZSTD",
+        copy_src_overviews=True,
+        interleave="band",
+        width=data.rio.width,
+        height=data.rio.height,
+        dtype=dtype,
+        crs=str(data.rio.crs),
+        transform=data.rio.transform(),
+        nodata=nodata,
+    )
+
+    tags = data.attrs.copy()
+    for key, value in raster_meta.items():
+        tags[key] = value
+
+    log.info("Writing new file...")
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tmp_file_path = Path(
+            temp_dir,
+            out_path.name,
+        )
+
+        # Create a new file with updated metadata and original data
+        with rasterio.open(
+            tmp_file_path,
+            "w",
+            **cog_profile,
+        ) as new_dataset:
+            new_dataset.update_tags(**tags)
+
+            log.info("Setting scales and offsets...")
+            scales = np.array(scales, dtype=np.float64)
+            offsets = np.array(offsets, dtype=np.float64)
+            new_dataset._set_all_scales(scales)  # pylint: disable=protected-access
+            new_dataset._set_all_offsets(offsets)  # pylint: disable=protected-access
+
+            for i in range(1, da_count + 1):
+                new_dataset.update_tags(i, _FillValue=nodata)
+
+            log.info("Writing bands...")
+            if isinstance(data, xr.DataArray):
+                new_dataset.write(data.values, 1)
+                new_dataset.set_band_description(1, data.name)
+            else:
+                for i, var in enumerate(data.data_vars):
+                    new_dataset.write(data[var].values, i + 1)
+                    new_dataset.set_band_description(i + 1, var)
+
+        cog_path = (
+            tmp_file_path.parent / f"{tmp_file_path.stem}_cog{tmp_file_path.suffix}"
+        )
+        log.info("Writing COG...")
+        # Run command: rio cogeo create new_file_path cog_path
+        subprocess.run(
+            [
+                "rio",
+                "cogeo",
+                "create",
+                "--overview-resampling",
+                "average",
+                "--in-memory",
+                str(tmp_file_path),
+                str(cog_path),
+            ],
+            check=True,
+        )
+
+        out_dir = out_path.parent
+        out_dir.mkdir(parents=True, exist_ok=True)
+        shutil.move(cog_path, out_path)
+        data.close()
 
 
 def xr_to_raster(
