@@ -13,7 +13,7 @@ import numpy as np
 import rasterio
 from box import ConfigBox
 from dask import compute, delayed
-from scipy.spatial import KDTree
+from scipy.spatial.distance import cdist
 
 from src.conf.conf import get_config
 from src.conf.environment import detect_system, log
@@ -25,49 +25,8 @@ from src.utils.dataset_utils import (
     get_processed_dir,
 )
 from src.utils.raster_utils import pack_data
+from src.utils.spatial_utils import interpolate_like
 from src.utils.trait_utils import get_trait_number_from_id
-
-
-def interpolate_like(
-    decimated: np.ndarray, reference_valid_mask: np.ndarray
-) -> np.ndarray:
-    """
-    Interpolate a decimated raster to match the extent of a reference.
-
-    Parameters:
-    decimated (np.ndarray): The decimated raster array where values are either 1, 0, or NaN.
-    reference_valid_mask (np.ndarray): A boolean mask indicating valid reference locations.
-
-    Returns:
-    np.ndarray: The interpolated raster array with the same shape as the input, where NaN values
-                in the decimated array are filled based on the nearest valid values.
-    """
-    # ensure all values that are not equal to 1 or 0 are set to nan
-    decimated = np.where((decimated == 1) | (decimated == 0), decimated, np.nan)
-    nan_mask = np.isnan(decimated)
-    interpolation_mask = nan_mask & reference_valid_mask
-
-    x_coords, y_coords = np.meshgrid(
-        np.arange(decimated.shape[1]), np.arange(decimated.shape[0])
-    )
-
-    valid_x = x_coords[~nan_mask].ravel()
-    valid_y = y_coords[~nan_mask].ravel()
-    valid_values = decimated[~nan_mask].ravel()
-
-    tree = KDTree(np.c_[valid_x, valid_y])
-
-    interp_x = x_coords[interpolation_mask].ravel()
-    interp_y = y_coords[interpolation_mask].ravel()
-
-    _, indices = tree.query(np.c_[interp_x, interp_y], k=1)
-
-    interpolated_values = valid_values[indices]
-
-    filled_raster = decimated.copy()
-    filled_raster[interpolation_mask] = interpolated_values
-
-    return filled_raster
 
 
 @delayed
