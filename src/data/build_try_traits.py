@@ -60,6 +60,9 @@ def _power_transform(df: pd.DataFrame, transformer_fn: Path) -> pd.DataFrame:
 def _transform(df: pd.DataFrame, transform: str | None, **kwargs) -> pd.DataFrame:
     """Apply a transformation to the data."""
     if transform is None:
+        # Write a placeholder transformer file to satisfy DVC
+        with open(kwargs["transformer_fn"], "wb") as f:
+            pickle.dump(None, f)
         return df
 
     if transform == "log":
