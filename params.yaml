@@ -23,12 +23,12 @@ pylos:
       n_workers: 80
       n_partitions: 80
     build_gbif_maps:
-      n_workers: 50
+      n_workers: 20
       threads_per_worker: 5
     build_splot_maps:
       npartitions: 60
       dask:
-        n_workers: 40
+        n_workers: 20
         memory_limit: 40GB
     featurize_train:
       n_chunks: 6
@@ -300,13 +300,14 @@ geos:
       n_workers: 60
       n_partitions: 80
     build_gbif_maps:
-      n_workers: 80
+      n_workers: 60 # 80 was throwing too many files open error...
       threads_per_worker: 5
       memory_limit: 15GB
     build_splot_maps:
-      npartitions: 60
+      npartitions: 60  
       dask:
-        n_workers: 80
+        n_workers: 40
+        threads_per_worker: 5
         memory_limit: 40GB
     featurize_train:
       n_chunks: 10
@@ -323,7 +324,7 @@ geos:
       n_workers_variogram: 20  # For WGS84 coords only
       n_chunks: 16 # x direction only
     skcv_splits:
-      n_workers: 90
+      n_workers: 50
       threads_per_worker: 1
     aoa:
       device_ids: [0, 1, 2, 3]
