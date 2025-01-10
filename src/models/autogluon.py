@@ -224,19 +224,24 @@ class TraitTrainer:
 
     # We set this to avoid a bug in LightGBM when used with GPU.
     # See https://github.com/microsoft/LightGBM/issues/3679
-    GBM_HYPERPARAMS: dict = {
-        "GBM": {
-            "min_child_weight": 1,
-            "device": "gpu",
-        }
-    }
 
     def _train_full_model(self, ts_info: TraitSetInfo):
         train_full = TabularDataset(
             self.xy.pipe(filter_trait_set, ts_info.trait_set)
+            .dropna(subset=[self.trait_name])
             .pipe(assign_weights, w_gbif=self.opts.cfg.train.weights.gbif)
             .drop(columns=["x", "y", "source", "fold"])
         )
+
+        HYPERPARAMS: dict = {
+            "GBM": {
+                "device": "cpu",
+                # "ag_args_fit": {
+                #     "num_gpus": self.opts.cfg.autogluon.num_gpus // 4,
+                #     "num_cpus": self.opts.cfg.autogluon.num_cpus // 4,
+                # },
+            }
+        }
 
         predictor = TabularPredictor(
             label=ts_info.trait_name,
@@ -249,7 +254,9 @@ class TraitTrainer:
             num_cpus=self.opts.cfg.autogluon.num_cpus,
             presets=self.opts.cfg.autogluon.presets,
             time_limit=self.opts.cfg.autogluon.full_fit_time_limit,
-            hyperparameters=self.GBM_HYPERPARAMS,
+            save_bag_folds=self.opts.cfg.autogluon.save_bag_folds,
+            hyperparameters=HYPERPARAMS,
+            feature_prune_kwargs={},
         )
 
         ts_info.mark_full_model_complete()
@@ -259,16 +266,28 @@ class TraitTrainer:
         log.info("Training model for fold %d...", fold_id)
         fold_model_path = cv_dir / f"fold_{fold_id}"
 
+        HYPERPARAMS: dict = {
+            "GBM": {
+                "device": "cpu",
+                # "ag_args_fit": {
+                #     "num_gpus": self.opts.cfg.autogluon.num_gpus // 4,
+                #     "num_cpus": self.opts.cfg.autogluon.num_cpus // 4,
+                # },
+            }
+        }
+
         train = TabularDataset(
             self.xy[self.xy["fold"] != fold_id]
             .pipe(filter_trait_set, trait_set)
+            .dropna(subset=[self.trait_name])
             .pipe(assign_weights, w_gbif=self.opts.cfg.train.weights.gbif)
-            .drop(columns=["x", "y", "source"])
+            .drop(columns=["x", "y", "source", "fold"])
             .reset_index(drop=True)
         )
         val = TabularDataset(
             self.xy[self.xy["fold"] == fold_id]
             .query("source == 's'")
+            .dropna(subset=[self.trait_name])
             .assign(weights=1.0)
             .drop(columns=["x", "y", "source", "fold"])
             .reset_index(drop=True)
@@ -277,7 +296,6 @@ class TraitTrainer:
         try:
             predictor = TabularPredictor(
                 label=self.trait_name,
-                groups="fold",
                 sample_weight="weights",  # pyright: ignore[reportArgumentType]
                 path=str(fold_model_path),
             ).fit(
@@ -287,7 +305,10 @@ class TraitTrainer:
                 num_cpus=self.opts.cfg.autogluon.num_cpus,
                 presets=self.opts.cfg.autogluon.presets,
                 time_limit=self.opts.cfg.autogluon.cv_fit_time_limit,
-                hyperparameters=self.GBM_HYPERPARAMS,
+                save_bag_folds=self.opts.cfg.autogluon.save_bag_folds,
+                hyperparameters=HYPERPARAMS,
+                # ds_args={"validation_procedure": "holdout", "holdout_data": val},
+                feature_prune_kwargs={},
             )
 
             if self.opts.cfg.autogluon.feature_importance:
@@ -451,6 +472,7 @@ def prep_full_xy(
     Returns:
         pd.DataFrame: The prepared input data for modeling.
     """
+    # TODO: #13 Speed up by leveraging dask for masking and merging
     log.info("Loading splits...")
     splits = (
         dd.read_parquet(get_cv_splits_dir() / f"{label_col}.parquet")
