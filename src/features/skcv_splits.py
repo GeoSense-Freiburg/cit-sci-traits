@@ -255,9 +255,9 @@ def _assign_trait_splits(
         trait_col,
     )
 
-    trait_df[["x", "y", "fold"]].drop_duplicates().reset_index(drop=True).to_parquet(
-        splits_fn, compression="zstd"
-    )
+    trait_df[["x", "y", "fold"]].drop_duplicates(subset=["x", "y"]).reset_index(
+        drop=True
+    ).to_parquet(splits_fn, compression="zstd")
     return None
 
 
