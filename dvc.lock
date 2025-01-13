@@ -27,8 +27,8 @@ stages:
       size: 307941318
     - path: src/data/build_try_traits.py
       hash: md5
-      md5: d238e1f50bacada6db5f15fb85591191
-      size: 4466
+      md5: 178b7e508d456465569dcf8cd90a39c5
+      size: 4617
     params:
       params.yaml:
         trydb:
@@ -108,8 +108,8 @@ stages:
     deps:
     - path: src/data/harmonize_eo_data.py
       hash: md5
-      md5: d126d484230df9e34370466830219d7e
-      size: 7789
+      md5: 6d6518fbd723a6d1689b1be572658c9f
+      size: 8191
     params:
       params.yaml:
         base_resolution: 1000
@@ -190,8 +190,8 @@ stages:
       size: 18311878
     - path: src/data/build_gbif_maps.py
       hash: md5
-      md5: 6099e2c7f230166cab58ad6837852d44
-      size: 3682
+      md5: 58efa57b08c69d098fdcb0207b7b4252
+      size: 4065
     params:
       params.yaml:
         PFT: Shrub_Tree_Grass
@@ -342,8 +342,8 @@ stages:
       size: 8060
     - path: src/features/skcv_splits.py
       hash: md5
-      md5: ddf3c4b22e1ea1b62b81dee31eed9a53
-      size: 10717
+      md5: e812972d5af2afbe35f720d7f710c907
+      size: 10734
     params:
       params.yaml:
         train.cv_splits:
@@ -566,8 +566,8 @@ stages:
       nfiles: 22875
     - path: src/analysis/aoa.py
       hash: md5
-      md5: 7b8dc270316de3ea55125e570e25126f
-      size: 15785
+      md5: b1f01afcf1303145330b22e503654342
+      size: 15771
     params:
       params.yaml:
         aoa:
