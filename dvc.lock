@@ -357,3 +357,192 @@ stages:
       md5: 104809dac13d053afd7749200a1b4c41.dir
       size: 4740716
       nfiles: 37
+  train_models:
+    cmd: python src/models/train_models.py -r && python src/models/cv_stats.py
+    deps:
+    - path: data/features/Shrub_Tree_Grass/22km/Y.parquet
+      hash: md5
+      md5: 5dab8fd13b963d7b66b4fe392362fdf5.dir
+      size: 59960360
+      nfiles: 256
+    - path: data/features/Shrub_Tree_Grass/22km/skcv_splits
+      hash: md5
+      md5: 104809dac13d053afd7749200a1b4c41.dir
+      size: 4740716
+      nfiles: 37
+    - path: data/features/predict/22km/eo_predict_imputed.parquet
+      hash: md5
+      md5: d573ba7a4172b94b7fbb5d86800ec284
+      size: 61922033
+    - path: data/features/predict/22km/eo_predict_mask.parquet
+      hash: md5
+      md5: 03450ad71bd92c9ac59b49472a4a9d49
+      size: 965771
+    - path: data/interim/try/power_transformer.pkl
+      hash: md5
+      md5: 1baf90006b4ab6ec21964725243b8f9a
+      size: 2463
+    - path: src/models/train_models.py
+      hash: md5
+      md5: 2cdb1448642111361ccb9267d132c598
+      size: 1135
+    params:
+      params.yaml:
+        autogluon:
+          included_model_types:
+          - GBM
+          presets: high
+          save_bag_folds: true
+          refit_full: false
+          set_best_to_refit_full: false
+          cv_fit_time_limit: 3600
+          full_fit_time_limit: 12600
+          num_gpus: 2
+          num_cpus: 110
+          feature_importance: true
+          FI_time_limit: 1800
+          FI_num_shuffle_sets: 10
+        datasets.Y.traits:
+        - 4
+        - 6
+        - 13
+        - 14
+        - 15
+        - 21
+        - 26
+        - 27
+        - 46
+        - 47
+        - 50
+        - 55
+        - 78
+        - 95
+        - 138
+        - 144
+        - 145
+        - 146
+        - 163
+        - 169
+        - 223
+        - 224
+        - 237
+        - 281
+        - 282
+        - 289
+        - 297
+        - 351
+        - 614
+        - 1080
+        - 3106
+        - 3107
+        - 3112
+        - 3113
+        - 3114
+        - 3117
+        - 3120
+        train.arch: autogluon
+    outs:
+    - path: models/Shrub_Tree_Grass/22km
+      hash: md5
+      md5: 680cb84ecdb6438ddc98def4e3c19066.dir
+      size: 27879513307
+      nfiles: 22613
+  aoa:
+    cmd: python src/analysis/aoa.py
+    deps:
+    - path: data/features/Shrub_Tree_Grass/22km/Y.parquet
+      hash: md5
+      md5: 5dab8fd13b963d7b66b4fe392362fdf5.dir
+      size: 59960360
+      nfiles: 256
+    - path: data/features/predict/22km/eo_predict_imputed.parquet
+      hash: md5
+      md5: d573ba7a4172b94b7fbb5d86800ec284
+      size: 61922033
+    - path: models/Shrub_Tree_Grass/22km
+      hash: md5
+      md5: 680cb84ecdb6438ddc98def4e3c19066.dir
+      size: 27879513307
+      nfiles: 22613
+    - path: src/analysis/aoa.py
+      hash: md5
+      md5: b1f01afcf1303145330b22e503654342
+      size: 15771
+    params:
+      params.yaml:
+        aoa:
+          dir: aoa
+        datasets.Y.traits:
+        - 4
+        - 6
+        - 13
+        - 14
+        - 15
+        - 21
+        - 26
+        - 27
+        - 46
+        - 47
+        - 50
+        - 55
+        - 78
+        - 95
+        - 138
+        - 144
+        - 145
+        - 146
+        - 163
+        - 169
+        - 223
+        - 224
+        - 237
+        - 281
+        - 282
+        - 289
+        - 297
+        - 351
+        - 614
+        - 1080
+        - 3106
+        - 3107
+        - 3112
+        - 3113
+        - 3114
+        - 3117
+        - 3120
+    outs:
+    - path: data/processed/Shrub_Tree_Grass/22km/aoa
+      hash: md5
+      md5: f139ef23d893f34cdeac8bc20039c7b8.dir
+      size: 51675929
+      nfiles: 74
+  aggregate_all_stats:
+    cmd: python src/models/multires_stats.py -mfc
+    deps:
+    - path: models/Shrub_Tree_Grass/22km
+      hash: md5
+      md5: 680cb84ecdb6438ddc98def4e3c19066.dir
+      size: 27879513307
+      nfiles: 22613
+    - path: src/models/multires_stats.py
+      hash: md5
+      md5: f3c369b3a540ffc3f0a309f26dd3975a
+      size: 11211
+    params:
+      params.yaml:
+        analysis:
+          dir: results
+          multires_results_fn: all_results.parquet
+          multires_fi_fn: all_fi.parquet
+  aggregate_aoa:
+    cmd: python src/analysis/multires_aoa.py
+    deps:
+    - path: data/processed/Shrub_Tree_Grass/22km/aoa
+      hash: md5
+      md5: f139ef23d893f34cdeac8bc20039c7b8.dir
+      size: 51675929
+      nfiles: 74
+    - path: src/analysis/multires_aoa.py
+      hash: md5
+      md5: c24832274df1c9615d161e87e6d82277
+      size: 2969
