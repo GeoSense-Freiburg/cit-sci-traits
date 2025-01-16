@@ -25,10 +25,10 @@ from src.utils.dataset_utils import (
     get_y_fn,
 )
 from src.utils.spatial_utils import lat_weights, weighted_pearson_r
-from src.utils.stat_utils import yeo_johnson_inverse_transform, yeo_johnson_transform
 from src.utils.trait_utils import get_trait_number_from_id
 
 TMP_DIR = Path("tmp")
+
 
 @delayed
 def generate_fold_obs_vs_pred(fold_dir: Path, xy: pd.DataFrame) -> pd.DataFrame:
@@ -120,6 +120,7 @@ def load_y(trait_id: str) -> pd.DataFrame:
             how="inner",
             on=["x", "y"],
         )[["y", "x", trait_id, "fold"]]
+        .dropna()
     )
 
     return y.compute().set_index(["y", "x"])
