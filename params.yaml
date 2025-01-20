@@ -8,11 +8,11 @@ container:
   def: "cit-sci-traits.def"
   image: "cit-sci-traits.sif"
 
-model_res: "1km"
+model_res: "55km"
 PFT: "Shrub_Tree_Grass"
 random_seed: 42
 base_resolution: 1000 # Shared best resolution of all EO datasets (used for masking)
-target_resolution: 1000 # Target resolution for model training
+target_resolution: 55000 # Target resolution for model training
 extent: [-180, -60, 180, 90] # Extent of the final dataset
 crs: "EPSG:6933" # Equal Area Cylindrical projection
 tmp_dir: tmp
