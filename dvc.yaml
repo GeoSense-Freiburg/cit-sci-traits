@@ -226,7 +226,7 @@ stages:
           persist: true
 
   build_final_product:
-    cmd: python src/data/build_final_product.py
+    cmd: python src/data/build_final_product.py -o
     deps:
       - src/data/build_final_product.py
       - reference/trait_mapping.json
