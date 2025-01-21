@@ -469,8 +469,8 @@ stages:
       nfiles: 22875
     - path: src/models/predict_traits.py
       hash: md5
-      md5: 545fd84021c7ce29335076f87b284355
-      size: 11352
+      md5: 5d6f0f22799936fd4e30580e2c11c796
+      size: 12260
     params:
       params.yaml:
         predict:
@@ -484,9 +484,9 @@ stages:
     outs:
     - path: data/processed/Shrub_Tree_Grass/1km/predict
       hash: md5
-      md5: 31b13f7edca7ef69b45936fb4071c3f9.dir
-      size: 23184134154
-      nfiles: 75
+      md5: 879fd0ec3ec2719dac1e3f09227cd2c3.dir
+      size: 21091629826
+      nfiles: 76
   aggregate_all_stats:
     cmd: python src/models/multires_stats.py -mfc
     deps:
@@ -527,8 +527,8 @@ stages:
       nfiles: 22875
     - path: src/models/predict_traits.py
       hash: md5
-      md5: 545fd84021c7ce29335076f87b284355
-      size: 11352
+      md5: 5d6f0f22799936fd4e30580e2c11c796
+      size: 12260
     params:
       params.yaml:
         cov:
@@ -628,3 +628,45 @@ stages:
       hash: md5
       md5: c24832274df1c9615d161e87e6d82277
       size: 2969
+  build_final_product:
+    cmd: python src/data/build_final_product.py -o
+    deps:
+    - path: data/processed/Shrub_Tree_Grass/1km/aoa
+      hash: md5
+      md5: 052df589bd9748464c91aca1674f25a0.dir
+      size: 20236890649
+      nfiles: 77
+    - path: data/processed/Shrub_Tree_Grass/1km/cov
+      hash: md5
+      md5: 161460c2762980b06665115fa08dba00.dir
+      size: 21912302781
+      nfiles: 81
+    - path: data/processed/Shrub_Tree_Grass/1km/predict
+      hash: md5
+      md5: 879fd0ec3ec2719dac1e3f09227cd2c3.dir
+      size: 21091629826
+      nfiles: 76
+    - path: reference/trait_mapping.json
+      hash: md5
+      md5: 589681813fb9cf686d07e0ebc8764768
+      size: 5497
+    - path: reference/trait_stat_mapping.json
+      hash: md5
+      md5: 849cf0970f8069d7351f66056f8c5ff5
+      size: 104
+    - path: src/data/build_final_product.py
+      hash: md5
+      md5: bf319797595ca7ee426f16b17e803847
+      size: 11801
+    params:
+      params.yaml:
+        public:
+          destination: both
+          local_dir: final
+          sftp_dir: PANOPS/cit-sci-traits/trait_maps
+    outs:
+    - path: data/processed/Shrub_Tree_Grass/1km/final
+      hash: md5
+      md5: cba9936dec6c9db9bf4bc1e6edda11d9.dir
+      size: 23837286390
+      nfiles: 37
