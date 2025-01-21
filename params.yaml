@@ -60,7 +60,7 @@ pylos:
         avg_dist_batch_size: 5000
         predict_partitions: null
     build_final_product:
-      n_workers: 3
+      n_workers: 5
       threads_per_worker: 1
   "001":
     harmonize_eo_data:
