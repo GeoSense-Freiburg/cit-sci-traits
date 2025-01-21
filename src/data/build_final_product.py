@@ -16,6 +16,7 @@ from dask import compute, delayed
 
 from src.conf.conf import get_config
 from src.conf.environment import detect_system, log
+from src.data.build_final_metadata import build_metadata
 from src.io.upload_sftp import upload_file_sftp
 from src.utils.dask_utils import close_dask, init_dask
 from src.utils.dataset_utils import (
@@ -343,6 +344,9 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
     compute(*tasks)
 
     close_dask(client, cluster)
+
+    log.info("Computing metadata...")
+    build_metadata()
 
     log.info("Done!")
 
