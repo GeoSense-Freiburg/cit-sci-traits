@@ -1,4 +1,4 @@
-""""Match sPlot data with filtered trait data, calculate CWMs, and grid it."""
+""" "Match sPlot data with filtered trait data, calculate CWMs, and grid it."""
 
 import argparse
 from pathlib import Path
@@ -66,6 +66,11 @@ def _cw_quantile(data: np.ndarray, weights: np.ndarray, quantile: float) -> floa
     return quantile_value
 
 
+def _filter_certain_plots(df: pd.DataFrame, givd_nu: str) -> pd.DataFrame:
+    """Filter out certain plots."""
+    return df[df["GIVD_NU"] != givd_nu]
+
+
 def cli() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
@@ -99,9 +104,11 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
     header = (
         dd.read_parquet(
             splot_dir / "header.parquet",
-            columns=["PlotObservationID", "Longitude", "Latitude"],
+            columns=["PlotObservationID", "Longitude", "Latitude", "GIVD_NU"],
         )
         .pipe(_repartition_if_set, sys_cfg.npartitions)
+        .pipe(_filter_certain_plots, "00-RU-008")
+        .drop(columns=["GIVD_NU"])
         .astype({"Longitude": np.float64, "Latitude": np.float64})
         .set_index("PlotObservationID")
         .map_partitions(
