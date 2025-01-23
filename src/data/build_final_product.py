@@ -224,7 +224,7 @@ def process_single_trait_map(
 
             new_dataset.set_band_description(
                 1,
-                f"{trait_meta['short']} ({trait_agg[str(cfg.datasets.Y.trait_stat)]})",
+                f"{trait_meta['short']} ({trait_agg[trait_set][str(cfg.datasets.Y.trait_stat)]})",
             )
             new_dataset.set_band_description(2, "Coefficient of Variation")
             new_dataset.set_band_description(3, "Area of Applicability mask")
