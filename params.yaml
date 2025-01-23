@@ -1,9 +1,9 @@
 version: "1.1.0"
-model_res: "1km"
+model_res: "111km"
 PFT: "Shrub_Tree_Grass"
 random_seed: 42
 base_resolution: 1000 # Shared best resolution of all EO datasets (used for masking)
-target_resolution: 1000 # Target resolution for model training
+target_resolution: 111000 # Target resolution for model training
 extent: [-180, -60, 180, 90] # Extent of the final dataset
 crs: "EPSG:6933" # Equal Area Cylindrical projection
 tmp_dir: tmp
@@ -572,6 +572,56 @@ geos:
       splot_gbif:
         chunked_dist: false
         train_sample: 0.5
+        avg_dist_batch_size: 5000
+        predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
+  "111km":
+    harmonize_eo_data:
+      n_workers: 20
+    match_gbif_pfts:
+      n_workers: 60
+      n_partitions: 80
+    build_gbif_maps:
+      n_partitions: null
+      n_workers: 40 # 80 was throwing too many files open error...
+      threads_per_worker: 4
+      memory_limit: 40GB
+    build_splot_maps:
+      npartitions: 40
+      dask:
+        n_workers: 40
+        threads_per_worker: 4
+        memory_limit: 40GB
+    featurize_train:
+      n_chunks: 10
+      n_workers: 8
+      memory_limit: 150GB
+      threads_per_worker: 1
+    build_predict:
+      n_chunks: 2
+      n_workers: 80
+      memory_limit: 400GB
+      impute_chunks: 1
+    calc_spatial_autocorr:
+      n_workers: 1
+      n_workers_variogram: 20  # For WGS84 coords only
+      n_chunks: 4 # x direction only
+    skcv_splits:
+      n_workers: 50
+      threads_per_worker: 1
+    aoa:
+      device_ids: [1, 2, 3]
+      predict_sample: 1
+      splot:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        chunked_dist: true
+        train_sample: 1
         avg_dist_batch_size: 5000
         predict_partitions: null
     build_final_product:
