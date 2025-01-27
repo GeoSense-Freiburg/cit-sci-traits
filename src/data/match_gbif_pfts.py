@@ -58,6 +58,7 @@ def main(cfg: ConfigBox = get_config()):
         .dropna(subset=["AccSpeciesName"])
         .pipe(clean_species_name, "AccSpeciesName", "speciesname")
         .drop(columns=["AccSpeciesName"])
+        .drop_duplicates(subset=["speciesname"])
         .set_index("speciesname")
     )
 
