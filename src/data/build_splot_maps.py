@@ -74,7 +74,9 @@ def _filter_certain_plots(df: pd.DataFrame, givd_nu: str) -> pd.DataFrame:
 def cli() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Match sPlot data with filtered trait data, calculate CWMs, and grid it."
+        description="""
+        Match sPlot data with filtered trait data, calculate CWMs, and grid it.
+        """
     )
     parser.add_argument(
         "-r", "--resume", action="store_true", help="Resume from last run."
@@ -143,6 +145,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
         .dropna(subset=["AccSpeciesName"])
         .pipe(clean_species_name, "AccSpeciesName", "speciesname")
         .drop(columns=["AccSpeciesName"])
+        .drop_duplicates(subset=["speciesname"])
         .set_index("speciesname")
     )
 
