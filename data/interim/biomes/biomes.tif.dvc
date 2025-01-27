@@ -1,0 +1,5 @@
+outs:
+- md5: 51ed88596e19778028270cb21f0f1aeb
+  size: 4015124
+  hash: md5
+  path: biomes.tif

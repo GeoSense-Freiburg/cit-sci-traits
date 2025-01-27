@@ -1,0 +1,13 @@
+md5: 286c58f1105de9d32c81c42a4cb34ff1
+frozen: true
+deps:
+- path: data/landcover/wwf_terr_biomes
+  repo:
+    url: /mnt/gsdata/projects/panops/panops-data-registry
+    rev_lock: 8ab2f180ae1dd5580abbccc574e19655c5d9635f
+outs:
+- md5: 607f424a1564077a588b07b114a6f36b.dir
+  size: 4094574
+  nfiles: 2
+  hash: md5
+  path: wwf_terr_biomes
