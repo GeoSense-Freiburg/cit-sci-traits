@@ -108,8 +108,8 @@ stages:
     deps:
     - path: src/data/harmonize_eo_data.py
       hash: md5
-      md5: 6d6518fbd723a6d1689b1be572658c9f
-      size: 8191
+      md5: 364b84bb720f57c2eadf2bd47e1b987d
+      size: 8078
     params:
       params.yaml:
         base_resolution: 1000
