@@ -74,7 +74,9 @@ def _filter_certain_plots(df: pd.DataFrame, givd_nu: str) -> pd.DataFrame:
 def cli() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Match sPlot data with filtered trait data, calculate CWMs, and grid it."
+        description="""
+        Match sPlot data with filtered trait data, calculate CWMs, and grid it.
+        """
     )
     parser.add_argument(
         "-r", "--resume", action="store_true", help="Resume from last run."
@@ -143,6 +145,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
         .dropna(subset=["AccSpeciesName"])
         .pipe(clean_species_name, "AccSpeciesName", "speciesname")
         .drop(columns=["AccSpeciesName"])
+        .drop_duplicates(subset=["speciesname"])
         .set_index("speciesname")
     )
 
@@ -220,7 +223,10 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
             for stat_col, stat_name in zip(stat_cols, stat_names):
                 log.info("Rasterizing %s...", stat_col)
                 funcs = mean
-                if stat_col == "cwm":
+
+                # cw_95 is the last column and so we get the count now so that it will
+                # be the last layer on the final trait map.
+                if stat_col == "cw_q95":
                     funcs = mean_and_count
 
                 ds = rasterize_points(

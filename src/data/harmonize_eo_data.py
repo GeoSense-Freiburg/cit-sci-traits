@@ -35,8 +35,7 @@ def process_file(
     overwrite: bool = False,
 ):
     """
-    Process a file by reprojecting and masking a raster, converting it to a GeoDataFrame,
-    optimizing the data types of the columns, and writing it to a Parquet file.
+    Process a file by reprojecting and masking a raster.
 
     Args:
         filename (str or os.PathLike): The path to the input raster file.

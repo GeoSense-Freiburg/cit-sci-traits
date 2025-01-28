@@ -3,3 +3,5 @@
 
 # Do not ignore .parquet files in the base directory
 !/*.parquet
+
+all_biome_results.bak.parquet

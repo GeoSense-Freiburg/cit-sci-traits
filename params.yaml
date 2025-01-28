@@ -741,7 +741,7 @@ datasets:
   Y:
     splot: splot4-0
     gbif: all_tracheophyta_non-cult_2024-04-10
-    trait_stats: ["mean", "std", "median", "q05", "q95", "count"] # GBIF trait stats order
+    trait_stats: ["mean", "std", "median", "q05", "q95", "count"]
     trait_stat: 1 # ('mean', 'std', 'median', 'q05', 'q95', 'count') (bands start at 1)
     traits:
       - 4 # Stem specific density (SSD, stem dry mass per stem fresh volume) or wood density
@@ -834,6 +834,25 @@ trydb:
     filtered: traits.parquet
     transformer_fn: power_transformer.pkl
 
+biomes: # Used for model analysis by biome
+  reclassification:
+    1: 1  # Tropical and Subtropical Forests
+    2: 1
+    3: 1
+    4: 2  # Temperate Forests
+    5: 2
+    12: 2
+    6: 3  # Boreal Forests/Taiga
+    7: 4  # Grasslands and Savannas
+    8: 4
+    9: 8  # Wetlands and Mangroves
+    10: 5  # Alpine Grassland and Shrublands
+    11: 6  # Tundra
+    13: 7  # Deserts and Xeric Shrublands
+    14: 8  # Wetlands and Mangroves
+  raw_path: wwf_terr_biomes/wwf_terr_biomes.tif # Relative to raw_dir
+  interim_path: biomes/biomes.tif # Relative to interim_dir
+  
 calc_spatial_autocorr:
   # Use existing spatial autocorrelation data from this model_res. To recompute, set to false.
   use_existing: "1km"
@@ -843,6 +862,7 @@ train:
   Y:
     fn: Y.parquet
   missing_val_thresh: 0.4 # Drop features with more than this fraction of missing values
+  trait_sets: ["splot", "gbif", "splot_gbif"]
   spatial_autocorr: spatial_autocorr.parquet
   cv_splits:
     range_stat: "median"
