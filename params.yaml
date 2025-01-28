@@ -812,6 +812,7 @@ train:
   Y:
     fn: Y.parquet
   missing_val_thresh: 0.4 # Drop features with more than this fraction of missing values
+  trait_sets: ["splot", "gbif", "splot_gbif"]
   spatial_autocorr: spatial_autocorr.parquet
   cv_splits:
     range_stat: "median"
