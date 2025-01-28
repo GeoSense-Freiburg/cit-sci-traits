@@ -223,7 +223,10 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
             for stat_col, stat_name in zip(stat_cols, stat_names):
                 log.info("Rasterizing %s...", stat_col)
                 funcs = mean
-                if stat_col == "cwm":
+
+                # cw_95 is the last column and so we get the count now so that it will
+                # be the last layer on the final trait map.
+                if stat_col == "cw_q95":
                     funcs = mean_and_count
 
                 ds = rasterize_points(
