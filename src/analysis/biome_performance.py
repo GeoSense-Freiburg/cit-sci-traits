@@ -1,3 +1,4 @@
+import argparse
 import gc
 from pathlib import Path
 
@@ -21,9 +22,113 @@ from src.utils.dataset_utils import (
 from src.utils.raster_utils import open_raster
 
 cfg = get_config()
+N_FILES = None
 
 
-def create_or_open_all_biome_results() -> pd.DataFrame:
+# def cli() -> argparse.Namespace:
+#     parser = argparse.ArgumentParser(
+#         description="Calculate model performance metrics per biome."
+#     )
+#     parser.add_argument("-o", "--overwrite", action="store_true")
+#     return parser.parse_args()
+
+
+def main() -> None:
+    log.info("Calculating model stats per biome...")
+    calc_model_stats_per_biome(overwrite=True)
+    log.info("Calculating mean COV per biome...")
+    calc_cov_per_biome()
+    log.info("Calculating fraction inside AOA per biome...")
+    calc_inside_aoa_pct_per_biome()
+
+
+def calc_model_stats_per_biome(overwrite: bool = False) -> None:
+    client, cluster = init_dask(dashboard_address=cfg.dask_dashboard)
+
+    all_model_dirs = get_all_trait_models()
+    if N_FILES is not None:
+        all_model_dirs = list(all_model_dirs)[:N_FILES]
+
+    tasks = [delayed(process_model_dir)(d) for d in all_model_dirs]
+    results = compute(*tasks)
+
+    close_dask(client, cluster)
+
+    model_stats_df = pd.concat(results)
+    all_biome_results_df = create_or_open_all_biome_results(overwrite=overwrite)
+
+    all_biome_results_df = (
+        pd.concat([all_biome_results_df, model_stats_df])
+        .sort_values(by="run_id", ascending=False)
+        .drop_duplicates(
+            subset=["trait_id", "trait_set", "resolution", "pft", "transform", "biome"]
+        )
+    )
+    results_path = Path("results/all_biome_results.parquet")
+    all_biome_results_df.to_parquet(results_path)
+
+
+def calc_cov_per_biome() -> None:
+    all_cov_maps = get_all_cov()
+    if N_FILES is not None:
+        all_cov_maps = list(all_cov_maps)[:N_FILES]
+
+    merge_cols = [
+        "biome",
+        "trait_id",
+        "trait_set",
+        "run_id",
+        "pft",
+        "resolution",
+        "transform",
+    ]
+    client, cluster = init_dask(
+        dashboard_address=cfg.dask_dashboard, n_workers=8, threads_per_worker=1
+    )
+    tasks = [delayed(process_cov)(raster) for raster in all_cov_maps]
+    results = compute(*tasks)
+    close_dask(client, cluster)
+    all_cov_means = pd.concat(results)
+    all_biome_results_df = create_or_open_all_biome_results()
+    all_biome_results_df = pd.merge(
+        all_biome_results_df, all_cov_means, on=merge_cols, how="left"
+    )
+    results_path = Path("results/all_biome_results.parquet")
+    all_biome_results_df.to_parquet(results_path)
+
+
+def calc_inside_aoa_pct_per_biome() -> None:
+    all_aoa_maps = get_all_aoa()
+    if N_FILES is not None:
+        all_aoa_maps = list(all_aoa_maps)[:N_FILES]
+
+    merge_cols = [
+        "biome",
+        "trait_id",
+        "trait_set",
+        "run_id",
+        "pft",
+        "resolution",
+        "transform",
+    ]
+    client, cluster = init_dask(
+        dashboard_address=cfg.dask_dashboard, n_workers=8, threads_per_worker=1
+    )
+    tasks = [delayed(process_aoa)(raster) for raster in all_aoa_maps]
+    results = compute(*tasks)
+    close_dask(client, cluster)
+    all_aoa_fracs = pd.concat(results)
+    all_biome_results_df = create_or_open_all_biome_results()
+    all_biome_results_df = pd.merge(
+        all_biome_results_df, all_aoa_fracs, on=merge_cols, how="left"
+    )
+    results_path = Path("results/all_biome_results.parquet")
+    all_biome_results_df.to_parquet(results_path)
+
+
+def create_or_open_all_biome_results(overwrite: bool = False) -> pd.DataFrame:
+    if overwrite:
+        return pd.DataFrame()
     results_path = Path("results/all_biome_results.parquet")
     if results_path.exists():
         return pd.read_parquet(results_path)
@@ -70,29 +175,6 @@ def assign_biome_to_points(df: pd.DataFrame) -> pd.DataFrame:
         # Assign biome value for each row,col
         df["biome"] = [biome_band[r, c] for r, c in row_cols]
     return df
-
-
-def calc_model_stats_per_biome() -> None:
-    client, cluster = init_dask(dashboard_address=cfg.dask_dashboard)
-
-    all_model_dirs = get_all_trait_models()
-    tasks = [delayed(process_model_dir)(d) for d in all_model_dirs]
-    results = compute(*tasks)
-
-    close_dask(client, cluster)
-
-    model_stats_df = pd.concat(results)
-    all_biome_results_df = create_or_open_all_biome_results()
-
-    all_biome_results_df = (
-        pd.concat([all_biome_results_df, model_stats_df])
-        .sort_values(by="run_id", ascending=False)
-        .drop_duplicates(
-            subset=["trait_id", "trait_set", "resolution", "pft", "transform", "biome"]
-        )
-    )
-    results_path = Path("results/all_biome_results.parquet")
-    all_biome_results_df.to_parquet(results_path)
 
 
 def compute_means_per_discrete_class(discrete_array, continuous_array):
@@ -176,32 +258,6 @@ def process_cov(fn: Path) -> pd.DataFrame:
     return df
 
 
-def calc_cov_per_biome() -> None:
-    all_cov_maps = get_all_cov()
-    merge_cols = [
-        "biome",
-        "trait_id",
-        "trait_set",
-        "run_id",
-        "pft",
-        "resolution",
-        "transform",
-    ]
-    client, cluster = init_dask(
-        dashboard_address=cfg.dask_dashboard, n_workers=8, threads_per_worker=1
-    )
-    tasks = [delayed(process_cov)(raster) for raster in all_cov_maps]
-    results = compute(*tasks)
-    close_dask(client, cluster)
-    all_cov_means = pd.concat(results)
-    all_biome_results_df = create_or_open_all_biome_results()
-    all_biome_results_df = pd.merge(
-        all_biome_results_df, all_cov_means, on=merge_cols, how="left"
-    )
-    results_path = Path("results/all_biome_results_cov.parquet")
-    all_biome_results_df.to_parquet(results_path)
-
-
 def compute_aoa_frac_per_discrete_class(
     discrete_array: np.ndarray, aoa_array: np.ndarray
 ):
@@ -261,45 +317,6 @@ def process_aoa(fn: Path) -> pd.DataFrame:
     gc.collect()
 
     return df
-
-
-def calc_inside_aoa_pct_per_biome() -> None:
-    all_aoa_maps = get_all_aoa()
-    merge_cols = [
-        "biome",
-        "trait_id",
-        "trait_set",
-        "run_id",
-        "pft",
-        "resolution",
-        "transform",
-    ]
-    client, cluster = init_dask(
-        dashboard_address=cfg.dask_dashboard, n_workers=8, threads_per_worker=1
-    )
-    tasks = [delayed(process_aoa)(raster) for raster in all_aoa_maps]
-    results = compute(*tasks)
-    close_dask(client, cluster)
-    all_aoa_fracs = pd.concat(results)
-    all_biome_results_df = create_or_open_all_biome_results()
-    all_biome_results_df = pd.merge(
-        all_biome_results_df, all_aoa_fracs, on=merge_cols, how="left"
-    )
-    results_path = Path("results/all_biome_results_aoa.parquet")
-    all_biome_results_df.to_parquet(results_path)
-
-
-def main() -> None:
-    # Calculate performance stats (r, R2, RMSE, MAE, slope, y-intercept) for each
-    # mdoel's obs vs pred BY BIOME
-    # Calculate mean COV for splot and splot_gbif predictions PER BIOME
-    # Calculate % inside AOA for splot and splot_gbif predictions PER BIOME
-    # log.info("Calculating model stats per biome...")
-    # calc_model_stats_per_biome()
-    # log.info("Calculating mean COV per biome...")
-    # calc_cov_per_biome()
-    log.info("Calculating fraction inside AOA per biome...")
-    calc_inside_aoa_pct_per_biome()
 
 
 if __name__ == "__main__":
