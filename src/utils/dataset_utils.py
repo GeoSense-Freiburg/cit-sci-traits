@@ -1,5 +1,6 @@
 """Get the filenames of datasets based on the specified stage of processing."""
 
+import json
 from pathlib import Path
 from typing import Generator
 
@@ -501,6 +502,11 @@ def add_cv_splits_to_column(
 def get_final_fns(config: ConfigBox = cfg) -> Generator[Path, None, None]:
     """Get the filenames of the final trait maps."""
     return Path(get_processed_dir(config) / config.public.local_dir).glob("*.tif")
+
+
+def get_biome_mapping() -> dict:
+    with open("reference/biomes.json") as f:
+        return json.load(f)
 
 
 if __name__ == "__main__":
