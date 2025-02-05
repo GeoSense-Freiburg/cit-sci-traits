@@ -91,15 +91,16 @@ def plot_observed_vs_predicted(
 
 
 def plot_splot_correlations(
-    axes: list[Axes],
     df: pd.DataFrame,
     pft: str,
     trait_set_ids: list[str],
+    trait_set_ids_col: str = "trait_set_id",
+    axes: list[Axes] | None = None,
     unit: str = "km",
     out_path: Path | None = None,
 ):
     """Plot sPlot correlations for GBIF and sPlot extrapolations for the given PFT"""
-    if len(axes) != len(trait_set_ids):
+    if axes is not None and len(axes) != len(trait_set_ids):
         raise ValueError("The number of axes must be equal to the number of trait sets")
 
     if unit not in ["km", "deg"]:
@@ -111,19 +112,19 @@ def plot_splot_correlations(
     else:
         df = df.query(
             f"pft == '{pft}' and transform == 'none' and resolution != '1km'"
-        )[["trait_id", "trait_set_id", "pearsonr", "resolution"]]
+        )[["trait_id", trait_set_ids_col, "pearsonr", "resolution"]]
 
     traits = df.trait_id.unique()
 
-    resolution_labels = ["1 km", "22 km", "55 km", "111 km"]
-    resolutions = ["1km", "22km", "55km", "111km"]
+    resolution_labels = ["1 km", "22 km", "55 km", "111 km", "222km"]
+    resolutions = ["1km", "22km", "55km", "111km", "222km"]
     if unit == "deg":
         resolution_labels = ["0.01", "0.2", "0.5", "1", "2"]
         resolutions = ["001", "02", "05", "1", "2"]
 
     # Figure directory
     ncols = 1
-    if len(axes) > 1:
+    if axes is None or len(axes) > 1:
         nrows = 1
         ncols = len(trait_set_ids)
         _, axes = plt.subplots(
@@ -132,7 +133,7 @@ def plot_splot_correlations(
         if ncols > 1:
             axes = axes.flatten()
 
-    Y_LIM = (0.1, 0.82)
+    Y_LIM = (0, 0.82)
 
     for ax, trait_set_id in zip(axes, trait_set_ids):
         text_x = 0.98
@@ -155,7 +156,7 @@ def plot_splot_correlations(
 
             # Plot sPlot data with solid line and circular markers
             # splot_data = trait_data.xs("sPlot", axis=0, level=1)
-            ts_data = trait_data.query(f"trait_set_id == '{trait_set_id}'")
+            ts_data = trait_data.query(f"{trait_set_ids_col} == '{trait_set_id}'")
             y_positions.append(ts_data.pearsonr.values[-1])
 
             ax.plot(
@@ -217,12 +218,17 @@ def plot_splot_correlations(
         ax.set_xticks(range(len(resolutions)), resolution_labels)
         ax.set_xticklabels(resolution_labels)
 
-        ax.set_xlabel("Resolution ($\degree$)")
-        ax.set_ylabel("$r$")
+        if unit == "km":
+            ax.set_xlabel("Resolution")
+        else:
+            ax.set_xlabel("Resolution [$\degree$]")
+        ax.set_ylabel("Pearson's $r$")
+        ax.set_title(f"{trait_set_id}", x=0.7)
         # ax.invert_xaxis()
 
         # Remove the gridlines
         ax.grid(False)
+        sns.despine(ax=ax)
 
     # add space between plots
     plt.subplots_adjust(wspace=0.5)
