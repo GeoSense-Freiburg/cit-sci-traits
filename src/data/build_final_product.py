@@ -13,10 +13,10 @@ import numpy as np
 import rasterio
 from box import ConfigBox
 from dask import compute, delayed
-from scipy.spatial.distance import cdist
 
 from src.conf.conf import get_config
 from src.conf.environment import detect_system, log
+from src.data.build_final_metadata import build_metadata
 from src.io.upload_sftp import upload_file_sftp
 from src.utils.dask_utils import close_dask, init_dask
 from src.utils.dataset_utils import (
@@ -27,6 +27,14 @@ from src.utils.dataset_utils import (
 from src.utils.raster_utils import pack_data
 from src.utils.spatial_utils import interpolate_like
 from src.utils.trait_utils import get_trait_number_from_id
+
+
+def _check_is_packed(ds: rasterio.DatasetReader) -> bool:
+    return (
+        ds.scales[0] is not None
+        and ds.offsets[0] is not None
+        and not np.isnan(ds.nodata)
+    )
 
 
 @delayed
@@ -46,7 +54,7 @@ def process_single_trait_map(
     if destination not in ["sftp", "local", "both"]:
         raise ValueError("Invalid destination. Must be one of 'sftp', 'local', 'both'.")
 
-    output_file_name = f"{trait_map.stem}_{cfg.PFT}_{cfg.model_res}_deg.tif"
+    output_file_name = f"{trait_map.stem}_{cfg.PFT}_{cfg.model_res}.tif"
 
     if destination in ("local", "both") and not overwrite:
         local_dest_dir = get_processed_dir() / cfg.public.local_dir
@@ -64,16 +72,25 @@ def process_single_trait_map(
     log.info("Reading and packing predict...")
     predict_path = trait_map / trait_set / f"{trait_map.stem}_{trait_set}_predict.tif"
     predict_ds = rasterio.open(predict_path, "r")
+    predict_is_packed = _check_is_packed(predict_ds)
     predict = predict_ds.read(1)
-    predict_valid_mask = ~np.isnan(predict)
+    if predict_is_packed:
+        predict_valid_mask = predict != predict_ds.nodata
+    else:
+        predict_valid_mask = ~np.isnan(predict)
 
     scales = []
     offsets = []
-    predict = pack_data(predict_ds.read(1))
-    scales.append(predict[0])
-    offsets.append(predict[1])
-    nodata = predict[2]
-    predict = predict[3]
+    if not predict_is_packed:
+        predict = pack_data(predict_ds.read(1))
+        scales.append(predict[0])
+        offsets.append(predict[1])
+        nodata = predict[2]
+        predict = predict[3]
+    else:
+        scales.append(predict_ds.scales[0])
+        offsets.append(predict_ds.offsets[0])
+        nodata = predict_ds.nodata
 
     ds_count += 1
 
@@ -86,10 +103,16 @@ def process_single_trait_map(
         / f"{trait_map.stem}_{trait_set}_cov.tif"
     )
     cov_dataset = rasterio.open(cov_path, "r")
-    cov = pack_data(cov_dataset.read(1))
-    scales.append(cov[0])
-    offsets.append(cov[1])
-    cov = cov[3]
+    cov_is_packed = _check_is_packed(cov_dataset)
+    cov = cov_dataset.read(1)
+    if cov_is_packed:
+        scales.append(cov_dataset.scales[0])
+        offsets.append(cov_dataset.offsets[0])
+    else:
+        cov = pack_data(cov_dataset.read(1))
+        scales.append(cov[0])
+        offsets.append(cov[1])
+        cov = cov[3]
     ds_count += 1
 
     log.info("Reading AoA...")
@@ -101,9 +124,12 @@ def process_single_trait_map(
         / f"{trait_map.stem}_{trait_set}_aoa.tif"
     )
     aoa_dataset = rasterio.open(aoa_path, "r")
+    aoa_is_packed = _check_is_packed(aoa_dataset)
     log.info("Interpolating AoA...")
-    aoa = interpolate_like(aoa_dataset.read(2), predict_valid_mask)
-
+    aoa_nodata = aoa_dataset.nodata if aoa_is_packed else None
+    aoa = interpolate_like(
+        aoa_dataset.read(2), predict_valid_mask, use_gpu=False, nodata_value=aoa_nodata
+    )
     log.info("Masking and downcasting AoA...")
     aoa = np.where(np.isnan(aoa), nodata, aoa).astype("int16")
     scales.append(1)
@@ -111,12 +137,18 @@ def process_single_trait_map(
     ds_count += 1
 
     log.info("Gathering model performance metrics...")
-    mp = get_model_performance(trait_map.stem, trait_set).query("transform == 'none'")
+    xform = cfg.trydb.interim.transform
+    xform = xform if xform is not None else "none"
+    mp = get_model_performance(trait_map.stem, trait_set).query(
+        f"transform == '{xform}'"
+    )
+    pearson_r = "pearsonr_wt" if cfg.crs == "EPSG:4326" else "pearsonr"
     mp_dict = {
         "R2": mp["r2"].values[0].round(2),
-        "Pearson's r": mp["pearsonr_wt"].values[0].round(2),
+        "Pearson's r": mp[pearson_r].values[0].round(2),
         "nRMSE": mp["norm_root_mean_squared_error"].values[0].round(2),
         "RMSE": mp["root_mean_squared_error"].values[0].round(2),
+        "MAE": mp["mean_absolute_error"].values[0].round(2),
     }
 
     log.info("Generating metadata...")
@@ -165,7 +197,7 @@ def process_single_trait_map(
     with tempfile.TemporaryDirectory() as temp_dir:
         new_file_path = Path(
             temp_dir,
-            f"{trait_map.stem}_{cfg.PFT}_{cfg.model_res}_deg.tif",
+            f"{trait_map.stem}_{cfg.PFT}_{cfg.model_res}.tif",
         )
 
         # Create a new file with updated metadata and original data
@@ -220,7 +252,8 @@ def process_single_trait_map(
             local_dest_dir = get_processed_dir() / cfg.public.local_dir
             local_dest_dir.mkdir(parents=True, exist_ok=True)
             # shutil move
-            shutil.move(cog_path, local_dest_dir / new_file_path.name)
+            log.info("Copying to local directory...")
+            shutil.copy2(cog_path, local_dest_dir / new_file_path.name)
             # copy(cog_path, dest_dir / new_file_path.name, driver="COG")
 
         if destination in ("sftp", "both"):
@@ -232,7 +265,7 @@ def process_single_trait_map(
                     Path(
                         cfg.public.sftp_dir,
                         cfg.PFT,
-                        f"{cfg.model_res}deg",
+                        cfg.model_res,
                         new_file_path.name,
                     )
                 ),
@@ -311,6 +344,9 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
     compute(*tasks)
 
     close_dask(client, cluster)
+
+    log.info("Computing metadata...")
+    build_metadata()
 
     log.info("Done!")
 

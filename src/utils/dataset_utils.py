@@ -1,5 +1,6 @@
 """Get the filenames of datasets based on the specified stage of processing."""
 
+import json
 from pathlib import Path
 from typing import Generator
 
@@ -281,8 +282,7 @@ def get_trait_models_dir(trait: str, config: ConfigBox = cfg) -> Path:
 def get_all_trait_models(config: ConfigBox = cfg) -> Generator[Path, None, None]:
     """Get all trait models from each trait_set for a specific configuration."""
     for model_dir in get_models_dir().glob("X*"):
-        for ts_dir in get_latest_run(model_dir / config.train.arch).iterdir():
-            yield ts_dir
+        yield from get_latest_run(model_dir / config.train.arch).iterdir()
 
 
 def get_latest_run(runs_path: Path) -> Path:
@@ -362,6 +362,29 @@ def get_aoa_dir(config: ConfigBox = cfg) -> Path:
 def get_cov_dir(config: ConfigBox = cfg) -> Path:
     """Get the path to the cov directory for a specific configuration."""
     return get_processed_dir(config) / config.cov.dir
+
+
+def get_all_cov(config: ConfigBox = cfg) -> Generator[Path, None, None]:
+    """Get all cov maps for a given configuration."""
+    for trait_dir in get_cov_dir().glob("X*"):
+        yield from [
+            list(trait_set_dir.glob("*.tif"))[0]
+            for trait_set_dir in trait_dir.iterdir()
+        ]
+
+
+def get_all_aoa(config: ConfigBox = cfg) -> Generator[Path, None, None]:
+    """Get all cov maps for a given configuration."""
+    for trait_dir in get_aoa_dir().glob("X*"):
+        yield from [
+            list(trait_set_dir.glob("*.tif"))[0]
+            for trait_set_dir in trait_dir.iterdir()
+        ]
+
+
+def get_biome_map_fn(config: ConfigBox = cfg) -> Path:
+    """Get the path to the biome map file for a specific configuration."""
+    return Path(config.interim_dir, config.biomes.interim_path)
 
 
 def get_splot_corr_fn(config: ConfigBox = cfg) -> Path:
@@ -479,6 +502,11 @@ def add_cv_splits_to_column(
 def get_final_fns(config: ConfigBox = cfg) -> Generator[Path, None, None]:
     """Get the filenames of the final trait maps."""
     return Path(get_processed_dir(config) / config.public.local_dir).glob("*.tif")
+
+
+def get_biome_mapping() -> dict:
+    with open("reference/biomes.json") as f:
+        return json.load(f)
 
 
 if __name__ == "__main__":

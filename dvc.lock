@@ -10,14 +10,14 @@ stages:
       nfiles: 1509
     - path: src/data/standardize_other_products.py
       hash: md5
-      md5: c3c9eb9f6ba01d9f1e6adde34ce45951
-      size: 3195
+      md5: 37b12df5780061efd0d40deb71753b93
+      size: 4094
     outs:
     - path: data/interim/other_trait_maps
       hash: md5
-      md5: 4bd4fca33ed1d9595208a9cc6b71001a.dir
-      size: 850876041
-      nfiles: 43
+      md5: c0ed98d4e92778f29cdacb367ee7d9d3.dir
+      size: 751587043
+      nfiles: 55
   get_TRY_mean_traits:
     cmd: python src/data/build_try_traits.py
     deps:
