@@ -108,6 +108,52 @@ pylos:
     build_final_product:
       n_workers: 3
       threads_per_worker: 1
+  "22km":
+    harmonize_eo_data:
+      n_workers: 20
+    match_gbif_pfts:
+      n_workers: 80
+      n_partitions: 80
+    build_gbif_maps:
+      n_workers: 50
+      threads_per_worker: 5
+    build_splot_maps:
+      npartitions: 60
+      dask:
+        n_workers: 60
+        memory_limit: 40GB
+    featurize_train:
+      n_chunks: 1
+      n_workers: 60
+      memory_limit: null
+      threads_per_worker: 5
+    build_predict:
+      n_chunks: 1
+      n_workers: null
+      memory_limit: 100GB
+      impute_chunks: 1
+    calc_spatial_autocorr:
+      n_workers: 60
+      n_workers_variogram: 5
+      n_chunks: 4
+    skcv_splits:
+      n_workers: 60
+    aoa:
+      device_ids: [0, 1]
+      predict_sample: 1
+      splot:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "02":
     harmonize_eo_data:
       n_workers: 20
@@ -694,43 +740,43 @@ datasets:
     trait_stats: ["mean", "std", "median", "q05", "q95", "count"]
     trait_stat: 1 # ('mean', 'std', 'median', 'q05', 'q95', 'count') (bands start at 1)
     traits:
-      - 4 # Stem specific density (SSD, stem dry mass per stem fresh volume) or wood density
-      - 6 # Root rooting depth
-      - 13 # Leaf carbon (C) content per leaf dry mass
+      # - 4 # Stem specific density (SSD, stem dry mass per stem fresh volume) or wood density
+      # - 6 # Root rooting depth
+      # - 13 # Leaf carbon (C) content per leaf dry mass
       - 14 # Leaf nitrogen (N) content per leaf dry mass
-      - 15 # Leaf phosphorus (P) content per leaf dry mass
-      - 21 # Stem diameter
-      - 26 # Seed dry mass
-      - 27 # Seed length
-      - 46 # Leaf thickness
-      - 47 # Leaf dry mass per leaf fresh mass (leaf dry matter content, LDMC)
+      # - 15 # Leaf phosphorus (P) content per leaf dry mass
+      # - 21 # Stem diameter
+      # - 26 # Seed dry mass
+      # - 27 # Seed length
+      # - 46 # Leaf thickness
+      # - 47 # Leaf dry mass per leaf fresh mass (leaf dry matter content, LDMC)
       - 50 # Leaf nitrogen (N) content per leaf area
-      - 55 # Leaf dry mass (single leaf)
-      - 78 # Leaf nitrogen (N) isotope signature (delta 15N)
-      - 95 # Seed germination rate (germination efficiency)
-      - 138 # Seed number per reproducton unit
-      - 144 # Leaf length
-      - 145 # Leaf width
-      - 146 # Leaf carbon/nitrogen (C/N) ratio
-      - 163 # Leaf fresh mass
-      - 169 # Stem conduit density (vessels and tracheids)
-      - 223 # Species genotype: chromosome number
-      - 224 # Species genotype: chromosome cDNA content
-      - 237 # Dispersal unit length
-      - 281 # Stem conduit diameter (vessels, tracheids)
-      - 282 # Wood vessel element length; stem conduit (vessel and tracheids) element length
-      - 289 # Wood fiber lengths
-      - 297 # Wood rays per millimetre (wood ray density)
-      - 351 # Seed number per dispersal unit
-      - 614 # Fine root length per fine root dry mass (specific fine root length, SRL)
-      - 1080 # Root length per root dry mass (specific root length, SRL)
-      - 3106 # Plant height vegetative
-      - 3107 # Plant height generative
-      - 3112 # Leaf area (in case of compound leaves: leaf, undefined if petiole in- or excluded)
-      - 3113 # Leaf area (in case of compound leaves: leaflet, undefined if petiole is in- or excluded)
-      - 3114 # Leaf area (in case of compound leaves undefined if leaf or leaflet, undefined if petiole is in- or e
+      # - 55 # Leaf dry mass (single leaf)
+      # - 78 # Leaf nitrogen (N) isotope signature (delta 15N)
+      # - 95 # Seed germination rate (germination efficiency)
+      # - 138 # Seed number per reproducton unit
+      # - 144 # Leaf length
+      # - 145 # Leaf width
+      # - 146 # Leaf carbon/nitrogen (C/N) ratio
+      # - 163 # Leaf fresh mass
+      # - 169 # Stem conduit density (vessels and tracheids)
+      # - 223 # Species genotype: chromosome number
+      # - 224 # Species genotype: chromosome cDNA content
+      # - 237 # Dispersal unit length
+      # - 281 # Stem conduit diameter (vessels, tracheids)
+      # - 282 # Wood vessel element length; stem conduit (vessel and tracheids) element length
+      # - 289 # Wood fiber lengths
+      # - 297 # Wood rays per millimetre (wood ray density)
+      # - 351 # Seed number per dispersal unit
+      # - 614 # Fine root length per fine root dry mass (specific fine root length, SRL)
+      # - 1080 # Root length per root dry mass (specific root length, SRL)
+      # - 3106 # Plant height vegetative
+      # - 3107 # Plant height generative
+      # - 3112 # Leaf area (in case of compound leaves: leaf, undefined if petiole in- or excluded)
+      # - 3113 # Leaf area (in case of compound leaves: leaflet, undefined if petiole is in- or excluded)
+      # - 3114 # Leaf area (in case of compound leaves undefined if leaf or leaflet, undefined if petiole is in- or e
       - 3117 # Leaf area per leaf dry mass (specific leaf area, SLA or 1/LMA): undefined if petiole is in- or exclu
-      - 3120 # Leaf water content per leaf dry mass (not saturated)
+      # - 3120 # Leaf water content per leaf dry mass (not saturated)
 
 eo_data:
   interim:
@@ -779,7 +825,7 @@ trydb:
   interim:
     dir: try
     quantile_range: null  # Use [0.005, 0.995] for TRY5. No filtering needed for TRY6
-    transform: power # "log", "power" (yeo-johnson), null (no transformation)
+    transform: null # "log", "power" (yeo-johnson), null (no transformation)
     already_norm: null
     filtered: traits.parquet
     transformer_fn: power_transformer.pkl
