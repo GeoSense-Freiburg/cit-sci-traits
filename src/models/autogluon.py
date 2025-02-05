@@ -4,6 +4,7 @@ import datetime
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable
 
 import dask.dataframe as dd
 import pandas as pd
@@ -508,6 +509,7 @@ def load_data() -> tuple[dd.DataFrame, pd.DataFrame, dd.DataFrame]:
 
 
 def train_models(
+    trait_sets: Iterable[str] | None = None,
     sample: float = 1.0,
     debug: bool = False,
     resume: bool = True,
@@ -524,7 +526,6 @@ def train_models(
     feats, feats_mask, labels = load_data()
 
     for label_col in labels.columns.difference(["x", "y", "source"]):
-
         tmp_xy_path = get_trait_models_dir(label_col) / "tmp" / "xy.parquet"
 
         if not tmp_xy_path.exists() and resume:
@@ -542,11 +543,9 @@ def train_models(
                 )
             else:
                 latest_run = max(
-                    (
-                        run
-                        for run in get_trait_models_dir(label_col).glob("*")
-                        if run.is_dir() and "tmp" not in run.name
-                    )
+                    run
+                    for run in get_trait_models_dir(label_col).glob("*")
+                    if run.is_dir() and "tmp" not in run.name
                 )
 
                 completed = [
@@ -585,9 +584,22 @@ def train_models(
                 xy = dd.read_parquet(tmp_xy_path).compute().reset_index(drop=True)
 
         trait_trainer = TraitTrainer(xy, label_col, train_opts)
-        trait_trainer.train_splot()
-        trait_trainer.train_gbif()
-        trait_trainer.train_splot_gbif()
+
+        valid_trait_sets = ("splot", "gbif", "splot_gbif")
+
+        if trait_sets is None:
+            trait_sets = valid_trait_sets
+
+        for ts in trait_sets:
+            if ts not in valid_trait_sets:
+                raise ValueError(f"Invalid trait set: {ts}")
+
+            if ts == "splot":
+                trait_trainer.train_splot()
+            elif ts == "gbif":
+                trait_trainer.train_gbif()
+            elif ts == "splot_gbif":
+                trait_trainer.train_splot_gbif()
 
         log.info("Cleaning up...%s", dry_run_text)
         if not dry_run:
