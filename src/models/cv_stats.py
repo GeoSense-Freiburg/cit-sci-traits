@@ -40,7 +40,7 @@ def generate_fold_obs_vs_pred(fold_dir: Path, xy: pd.DataFrame) -> pd.DataFrame:
 
 def get_stats(
     cv_obs_vs_pred: pd.DataFrame,
-    resolution: int | float | None,
+    resolution: int | float | None = None,
     wt_pearson: bool = False,
 ) -> dict[str, Any]:
     """Calculate statistics for a given DataFrame of observed and predicted values."""

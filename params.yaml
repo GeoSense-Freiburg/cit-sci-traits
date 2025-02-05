@@ -108,6 +108,52 @@ pylos:
     build_final_product:
       n_workers: 3
       threads_per_worker: 1
+  "22km":
+    harmonize_eo_data:
+      n_workers: 20
+    match_gbif_pfts:
+      n_workers: 80
+      n_partitions: 80
+    build_gbif_maps:
+      n_workers: 50
+      threads_per_worker: 5
+    build_splot_maps:
+      npartitions: 60
+      dask:
+        n_workers: 60
+        memory_limit: 40GB
+    featurize_train:
+      n_chunks: 1
+      n_workers: 60
+      memory_limit: null
+      threads_per_worker: 5
+    build_predict:
+      n_chunks: 1
+      n_workers: null
+      memory_limit: 100GB
+      impute_chunks: 1
+    calc_spatial_autocorr:
+      n_workers: 60
+      n_workers_variogram: 5
+      n_chunks: 4
+    skcv_splits:
+      n_workers: 60
+    aoa:
+      device_ids: [0, 1]
+      predict_sample: 1
+      splot:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "02":
     harmonize_eo_data:
       n_workers: 20
@@ -834,6 +880,27 @@ trydb:
     filtered: traits.parquet
     transformer_fn: power_transformer.pkl
 
+biomes: # Used for model analysis by biome
+  reclassification:
+    1: 1  # Tropical/Subtropical Forests
+    2: 1
+    3: 1
+    4: 2  # Temperate/Boreal Forests
+    5: 2
+    6: 2
+    7: 3  # Grasslands and Savannas
+    8: 3
+    12: 4 # Mediterranean
+    13: 5  # Deserts
+    9: 6  # Wetlands
+    14: 6  
+    98: 6
+    10: 7  # Alpine/Polar
+    11: 7
+    99: 7
+  raw_path: wwf_terr_biomes/wwf_terr_biomes.tif # Relative to raw_dir
+  interim_path: biomes/biomes.tif # Relative to interim_dir
+  
 calc_spatial_autocorr:
   # Use existing spatial autocorrelation data from this model_res. To recompute, set to false.
   use_existing: "1km"
@@ -843,6 +910,7 @@ train:
   Y:
     fn: Y.parquet
   missing_val_thresh: 0.4 # Drop features with more than this fraction of missing values
+  trait_sets: ["splot", "gbif", "splot_gbif"]
   spatial_autocorr: spatial_autocorr.parquet
   cv_splits:
     range_stat: "median"
