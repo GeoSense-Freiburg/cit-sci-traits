@@ -19,7 +19,8 @@ def raster_correlation(
     """Calculate the weighted Pearson correlation coefficient between a pair of trait maps."""
     log.info("Loading and filtering data for %s...", product_fn.stem)
     splot_r = open_raster(splot_fn).sel(band=1)
-    product_r = open_raster(product_fn).sel(band=1)
+    product_band = 2 if "wolf" in product_fn.stem else 1
+    product_r = open_raster(product_fn).sel(band=product_band)
 
     # Ensure the rasters are aligned
     # r_right = r_right.rio.reproject_match(r_left)
