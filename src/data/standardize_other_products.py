@@ -10,6 +10,14 @@ from src.utils.raster_utils import create_sample_raster, open_raster, xr_to_rast
 def main() -> None:
     cfg = get_config()
 
+    # van Bodegom, Boonman, Butler, Madani, Schiller maps
+    standardize_grouped_products(cfg)
+    standardize_moreno_maps(cfg)
+    standardize_vallicrosa_maps(cfg)
+    standardize_wolf_maps(cfg)
+
+
+def standardize_grouped_products(cfg):
     mapping = {"nit": "X14", "nita": "X50", "sla": "X3117"}
 
     src_dir = Path(
@@ -49,34 +57,40 @@ def main() -> None:
                 r.attrs["long_name"] = names[i]
                 xr_to_raster(r, out_path)
 
-    # Moreno
-    src_path = Path(
-        cfg.raw_dir, "other-trait-maps", "AMM_Trait_maps_v3_2023", "LNC_1km_v3.tif"
-    )
 
+def standardize_moreno_maps(cfg):
     resolutions = ["1km", "22km", "55km", "111km", "222km"]
-    r = open_raster(src_path).sel(band=1)
 
-    # The corresponding values should be masked (-2, -1, 100, 0)
-    r = r.where(r > 0)
-    r = r.rio.write_nodata(np.nan)
+    raw_dir = Path(cfg.raw_dir, "other-trait-maps", "AMM_Trait_maps_v3_2023")
+    src_paths = [raw_dir / "LNC_1km_v3.tif", raw_dir / "SLA_1km_v3.tif"]
+    trait_ids = ["X14", "X3117"]
 
-    for res in resolutions:
-        ref_r = create_sample_raster(
-            resolution=int(res.split("km")[0]) * 1000, crs="EPSG:6933"
-        )
-        r = r.rio.reproject_match(ref_r)
-        out_path = Path(
-            cfg.interim_dir,
-            "other_trait_maps",
-            res,
-            "X14_moreno.tif",
-        )
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        log.info(f"Writing {out_path}")
-        xr_to_raster(r, out_path)
+    for fn, tid in zip(src_paths, trait_ids):
+        r = open_raster(fn).sel(band=1)
 
-    # Vallicrosa
+        # The corresponding values should be masked (-2, -1, 100, 0)
+        r = r.where(r > 0)
+        r = r.rio.write_nodata(np.nan)
+
+        for res in resolutions:
+            ref_r = create_sample_raster(
+                resolution=int(res.split("km")[0]) * 1000, crs="EPSG:6933"
+            )
+            r = r.rio.reproject_match(ref_r)
+            out_path = Path(
+                cfg.interim_dir,
+                "other_trait_maps",
+                res,
+                f"{tid}_moreno.tif",
+            )
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            log.info(f"Writing {out_path}")
+            xr_to_raster(r, out_path)
+
+
+def standardize_vallicrosa_maps(cfg):
+    resolutions = ["1km", "22km", "55km", "111km", "222km"]
+
     src_path = Path(
         cfg.raw_dir,
         "other-trait-maps",
@@ -100,6 +114,8 @@ def main() -> None:
         log.info(f"Writing {out_path}")
         xr_to_raster(r, out_path)
 
+
+def standardize_wolf_maps(cfg):
     src_dir = Path(cfg.raw_dir, "other-trait-maps", "gbif_spo_wolf", "Shrub_Tree_Grass")
     resolutions = ["22km", "55km", "111km", "222km"]
     wolf_resolutions = ["02deg", "05deg", "05deg_to_111km", "2deg"]
