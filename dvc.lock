@@ -5,19 +5,19 @@ stages:
     deps:
     - path: data/raw/other-trait-maps
       hash: md5
-      md5: 4e2634f828ab66f4fe29d28e5e9db7cf.dir
-      size: 32055984651
-      nfiles: 1509
+      md5: 848dac77f0897cf7e58f41a196fe1d68.dir
+      size: 32055985074
+      nfiles: 1510
     - path: src/data/standardize_other_products.py
       hash: md5
-      md5: 37b12df5780061efd0d40deb71753b93
-      size: 4094
+      md5: 2e4c967cc9dda5883850576253521e00
+      size: 4665
     outs:
     - path: data/interim/other_trait_maps
       hash: md5
-      md5: c0ed98d4e92778f29cdacb367ee7d9d3.dir
-      size: 751587043
-      nfiles: 55
+      md5: 4ce80d8ff95ecdcbad3f7738ed93d461.dir
+      size: 1183362520
+      nfiles: 63
   get_TRY_mean_traits:
     cmd: python src/data/build_try_traits.py
     deps:
