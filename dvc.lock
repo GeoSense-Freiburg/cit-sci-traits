@@ -67,8 +67,8 @@ stages:
       size: 2232209
     - path: src/data/match_gbif_pfts.py
       hash: md5
-      md5: 7d1a4ba3531b7f4adfaebae71825792b
-      size: 2507
+      md5: 3df32335940ce1cd561f810db81ebc7d
+      size: 2556
     params:
       params.yaml:
         datasets.Y.gbif: all_tracheophyta_non-cult_2024-04-10
@@ -78,8 +78,8 @@ stages:
     outs:
     - path: data/interim/gbif/gbif_pfts.parquet
       hash: md5
-      md5: 2a71cab6ec8f6969a36ad7831473e3ee.dir
-      size: 4480158671
+      md5: acbfa2731602ad9bac1086935a43cce3.dir
+      size: 4028146339
       nfiles: 159
   extract_splot:
     cmd: python src/data/extract_splot.py
@@ -108,8 +108,8 @@ stages:
     deps:
     - path: src/data/harmonize_eo_data.py
       hash: md5
-      md5: 6d6518fbd723a6d1689b1be572658c9f
-      size: 8191
+      md5: 364b84bb720f57c2eadf2bd47e1b987d
+      size: 8078
     params:
       params.yaml:
         base_resolution: 1000
@@ -144,16 +144,16 @@ stages:
     outs:
     - path: data/interim/eo_data/1km
       hash: md5
-      md5: f647487e3ff8b6aed0d0c49eac9613be.dir
-      size: 30797034288
+      md5: 7d5faaed05a0dbc3f204ced4c6ac0528.dir
+      size: 38505160200
       nfiles: 150
   build_predict:
     cmd: python src/features/featurize_predict.py
     deps:
     - path: data/interim/eo_data/1km
       hash: md5
-      md5: f647487e3ff8b6aed0d0c49eac9613be.dir
-      size: 30797034288
+      md5: 7d5faaed05a0dbc3f204ced4c6ac0528.dir
+      size: 38505160200
       nfiles: 150
     - path: src/features/featurize_predict.py
       hash: md5
@@ -170,19 +170,19 @@ stages:
     outs:
     - path: data/features/predict/1km/eo_predict_imputed.parquet
       hash: md5
-      md5: 9372b044d0d211e6450b9bee0b772100
-      size: 28557279604
+      md5: a73a26d25eeda9cd1af7afae4c6ae8c4
+      size: 28563239893
     - path: data/features/predict/1km/eo_predict_mask.parquet
       hash: md5
-      md5: a5b2d37a18df4f9d1ebcc60484d413d0
-      size: 529921831
+      md5: c69720df7cea9520178af44555a1dd98
+      size: 506092612
   build_gbif_maps:
     cmd: python src/data/build_gbif_maps.py
     deps:
     - path: data/interim/gbif/gbif_pfts.parquet
       hash: md5
-      md5: 2a71cab6ec8f6969a36ad7831473e3ee.dir
-      size: 4480158671
+      md5: acbfa2731602ad9bac1086935a43cce3.dir
+      size: 4028146339
       nfiles: 159
     - path: data/interim/try/traits.parquet
       hash: md5
@@ -204,8 +204,8 @@ stages:
     outs:
     - path: data/interim/gbif/trait_maps/Shrub_Tree_Grass/1km
       hash: md5
-      md5: 97086d9446fa834440f5d46f4a5a7aea.dir
-      size: 6288916641
+      md5: cee12b2a158b52b52d3b13ec564e4f6a.dir
+      size: 5516067949
       nfiles: 37
   build_splot_maps:
     cmd: python src/data/build_splot_maps.py
@@ -225,8 +225,8 @@ stages:
       size: 2232209
     - path: src/data/build_splot_maps.py
       hash: md5
-      md5: 609ddfc2299ec8e4be2d53e602a3fe91
-      size: 8800
+      md5: c8c6b1d35dfeb304bae62f2e6710b03c
+      size: 9272
     params:
       params.yaml:
         PFT: Shrub_Tree_Grass
@@ -239,8 +239,8 @@ stages:
     outs:
     - path: data/interim/splot/trait_maps/Shrub_Tree_Grass/1km
       hash: md5
-      md5: 563bd60378353f767585359f1389bbe8.dir
-      size: 1609855561
+      md5: e7e24d49d1dd02e6d5317dd4d75b9eaa.dir
+      size: 1478608549
       nfiles: 37
   build_y:
     cmd: python src/features/build_y.py
