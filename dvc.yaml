@@ -12,9 +12,9 @@ stages:
       - trydb
     outs:
       - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}:
-          persist: true
+          persist: false
       - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.transformer_fn}:
-          persist: true
+          persist: false
 
   match_gbif_pfts:
     cmd: python src/data/match_gbif_pfts.py
@@ -29,7 +29,7 @@ stages:
       - gbif.interim.matched
     outs:
       - ${interim_dir}/${gbif.interim.dir}/${gbif.interim.matched}:
-          persist: true
+          persist: false
 
   extract_splot:
     cmd: python src/data/extract_splot.py
@@ -41,7 +41,7 @@ stages:
       - splot.interim.dir
     outs:
       - ${interim_dir}/${splot.interim.dir}/${splot.interim.extracted}:
-          persist: true
+          persist: false
 
   standardize_other_products:
     cmd: python src/data/standardize_other_products.py
@@ -180,7 +180,7 @@ stages:
       - datasets.Y.traits
     outs:
       - ${models.dir}/${PFT}/${model_res}:
-          persist: true
+          persist: false
   
   aoa:
     cmd: python src/analysis/aoa.py
@@ -194,7 +194,7 @@ stages:
       - aoa
     outs:
       - ${processed.dir}/${PFT}/${model_res}/${aoa.dir}:
-          persist: true
+          persist: false
 
   predict:
     cmd: python src/models/predict_traits.py -r -v
@@ -208,7 +208,7 @@ stages:
       - predict
     outs:
       - ${processed.dir}/${PFT}/${model_res}/${predict.dir}:
-          persist: true
+          persist: false
 
   cov:
     cmd: python src/models/predict_traits.py -r -v --cov
@@ -223,7 +223,7 @@ stages:
       - cov
     outs:
       - ${processed.dir}/${PFT}/${model_res}/${cov.dir}:
-          persist: true
+          persist: false
 
   build_final_product:
     cmd: python src/data/build_final_product.py -o
@@ -238,7 +238,7 @@ stages:
       - public
     outs:
       - ${processed.dir}/${PFT}/${model_res}/${public.local_dir}:
-          persist: true
+          persist: false
 
   aggregate_all_stats:
     cmd: python src/models/multires_stats.py -mfc
