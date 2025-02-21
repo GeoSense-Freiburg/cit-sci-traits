@@ -2,11 +2,13 @@
 
 import argparse
 import errno
+import os
 import shutil
 from pathlib import Path
 from typing import Generator
 
 import dask.dataframe as dd
+import numpy as np
 import pandas as pd
 from autogluon.tabular import TabularPredictor
 from box import ConfigBox
@@ -25,6 +27,8 @@ from src.utils.dataset_utils import (
 )
 from src.utils.df_utils import pipe_log, rasterize_points
 from src.utils.raster_utils import pack_xr, xr_to_raster
+from src.utils.stat_utils import power_back_transform
+from src.utils.trait_utils import get_trait_number_from_id
 
 
 def cli() -> argparse.Namespace:
@@ -143,6 +147,11 @@ def predict_cov_dask(
     log.info("Calculating CoV...")
     cov = (
         pd.concat(dfs, axis=1)
+        # Add minimum value to all values. This is necessary because CoV is only
+        # meaningful when zero is meaningful. If the data was power or log-transformed,
+        # zero becomes meaningless, and may even result in the mean being zero or close
+        # to zero, which would result in a CoV of infinity.
+        .pipe(lambda _df: _df + abs(_df.min().min()))
         .pipe(lambda _df: _df.std(axis=1) / _df.mean(axis=1))  # CoV calculation
         .rename("cov")
         .to_frame()
@@ -206,6 +215,16 @@ def predict_traits_ag(
                     predict_data = df_to_dd(
                         predict_data, npartitions=predict_cfg.batches
                     )
+                # Set env vars according to n_workers and batches
+                defined_cpus = os.environ.get("OMP_NUM_THREADS", None)
+                defined_cpus = (
+                    os.cpu_count() if defined_cpus is None else int(defined_cpus)
+                )
+                num_cpus = str(defined_cpus // predict_cfg.n_workers)
+                os.environ["OMP_NUM_THREADS"] = num_cpus
+                os.environ["MKL_NUM_THREADS"] = num_cpus
+                os.environ["OPENBLAS_NUM_THREADS"] = num_cpus
+                os.environ["LOKY_MAX_CPU_COUNT"] = num_cpus
 
                 client, cluster = init_dask(
                     dashboard_address=get_config().dask_dashboard,
@@ -225,6 +244,20 @@ def predict_traits_ag(
                 tmp_dir = None
 
             log.info("Writing predictions to raster...")
+            xform = get_config().trydb.interim.transform
+            if xform is not None:
+                if xform not in ("log", "power"):
+                    raise ValueError(f"Unknown transform: {xform}")
+                log.info("Detected %s transform. Back-transforming...", xform)
+                if xform == "log":
+                    pred = pred.apply(lambda x: np.expm1(x.values), axis=1).to_frame()
+                elif xform == "power":
+                    pred = pred.apply(
+                        lambda x: power_back_transform(
+                            x.values, get_trait_number_from_id(trait)
+                        ),
+                        axis=1,
+                    ).to_frame()
             pred_r = rasterize_points(pred, data=trait, res=res, crs=crs)
             pred_r = pack_xr(pred_r)
             xr_to_raster(pred_r, out_fn)
@@ -246,10 +279,13 @@ def load_predict(tmp_predict_fn: Path, batches: int = 1) -> pd.DataFrame | dd.Da
             .pipe(pipe_log, "Setting index to ['y', 'x']")
             .set_index(["y", "x"])
             .pipe(pipe_log, "Reading mask and masking imputed features...")
-            .mask(pd.read_parquet(get_predict_mask_fn()).set_index(["y", "x"]))
+            .mask(
+                dd.read_parquet(get_predict_mask_fn()).compute().set_index(["y", "x"])
+            )
             .reset_index()
         )
 
+        log.info("Writing masked predict data to disk for later usage...")
         predict.to_parquet(tmp_predict_fn, compression="zstd")
 
     else:

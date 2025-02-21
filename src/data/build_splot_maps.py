@@ -1,4 +1,4 @@
-""""Match sPlot data with filtered trait data, calculate CWMs, and grid it."""
+""" "Match sPlot data with filtered trait data, calculate CWMs, and grid it."""
 
 import argparse
 from pathlib import Path
@@ -66,10 +66,17 @@ def _cw_quantile(data: np.ndarray, weights: np.ndarray, quantile: float) -> floa
     return quantile_value
 
 
+def _filter_certain_plots(df: pd.DataFrame, givd_nu: str) -> pd.DataFrame:
+    """Filter out certain plots."""
+    return df[df["GIVD_NU"] != givd_nu]
+
+
 def cli() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Match sPlot data with filtered trait data, calculate CWMs, and grid it."
+        description="""
+        Match sPlot data with filtered trait data, calculate CWMs, and grid it.
+        """
     )
     parser.add_argument(
         "-r", "--resume", action="store_true", help="Resume from last run."
@@ -99,9 +106,11 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
     header = (
         dd.read_parquet(
             splot_dir / "header.parquet",
-            columns=["PlotObservationID", "Longitude", "Latitude"],
+            columns=["PlotObservationID", "Longitude", "Latitude", "GIVD_NU"],
         )
         .pipe(_repartition_if_set, sys_cfg.npartitions)
+        .pipe(_filter_certain_plots, "00-RU-008")
+        .drop(columns=["GIVD_NU"])
         .astype({"Longitude": np.float64, "Latitude": np.float64})
         .set_index("PlotObservationID")
         .map_partitions(
@@ -136,6 +145,7 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
         .dropna(subset=["AccSpeciesName"])
         .pipe(clean_species_name, "AccSpeciesName", "speciesname")
         .drop(columns=["AccSpeciesName"])
+        .drop_duplicates(subset=["speciesname"])
         .set_index("speciesname")
     )
 
@@ -213,7 +223,10 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
             for stat_col, stat_name in zip(stat_cols, stat_names):
                 log.info("Rasterizing %s...", stat_col)
                 funcs = mean
-                if stat_col == "cwm":
+
+                # cw_95 is the last column and so we get the count now so that it will
+                # be the last layer on the final trait map.
+                if stat_col == "cw_q95":
                     funcs = mean_and_count
 
                 ds = rasterize_points(
