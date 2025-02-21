@@ -32,6 +32,13 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
     """Main function."""
     syscfg = cfg[detect_system()][cfg.model_res]["build_gbif_maps"]
 
+    def _repartition_if_set(df: dd.DataFrame, npartitions: int | None) -> dd.DataFrame:
+        return (
+            df.repartition(npartitions=npartitions) if npartitions is not None else df
+        )
+
+    npartitions = syscfg.get("npartitions", None)
+
     # Initialize Dask client
     log.info("Initializing Dask client...")
     client, cluster = init_dask(
@@ -55,13 +62,18 @@ def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> Non
         dd.read_parquet(
             Path(cfg.interim_dir, cfg.gbif.interim.dir, cfg.gbif.interim.matched)
         )
+        .pipe(_repartition_if_set, npartitions)
         .pipe(filter_pft, cfg.PFT)
         .set_index("speciesname")
     )
 
-    mn_traits = dd.read_parquet(
-        Path(cfg.interim_dir, cfg.trydb.interim.dir, cfg.trydb.interim.filtered)
-    ).set_index("speciesname")
+    mn_traits = (
+        dd.read_parquet(
+            Path(cfg.interim_dir, cfg.trydb.interim.dir, cfg.trydb.interim.filtered)
+        )
+        .pipe(_repartition_if_set, npartitions)
+        .set_index("speciesname")
+    )
 
     # Merge GBIF and trait data
     merged = (

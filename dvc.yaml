@@ -13,8 +13,6 @@ stages:
     outs:
       - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.filtered}:
           persist: true
-      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.transformer_fn}:
-          persist: true
 
   match_gbif_pfts:
     cmd: python src/data/match_gbif_pfts.py
@@ -50,7 +48,7 @@ stages:
       - ${raw_dir}/other-trait-maps
     outs:
       - ${interim_dir}/other_trait_maps:
-          persist: true
+          persist: false
 
   ######################################################################################
   # RES-DEP., PFT-IND. -----------------------------------------------------------------
@@ -173,7 +171,6 @@ stages:
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}
       - ${train.dir}/${PFT}/${model_res}/${train.Y.fn}
       - ${train.dir}/${PFT}/${model_res}/${train.cv_splits.dir}
-      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.transformer_fn}
     params:
       - train.arch
       - autogluon
@@ -203,7 +200,6 @@ stages:
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.mask_fn}
       - ${models.dir}/${PFT}/${model_res}
-      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.transformer_fn}
     params:
       - predict
     outs:
@@ -217,7 +213,6 @@ stages:
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.imputed_fn}
       - ${train.dir}/${eo_data.predict.dir}/${model_res}/${eo_data.predict.mask_fn}
       - ${models.dir}/${PFT}/${model_res}
-      - ${interim_dir}/${trydb.interim.dir}/${trydb.interim.transformer_fn}
     params:
       - predict
       - cov
@@ -226,7 +221,7 @@ stages:
           persist: true
 
   build_final_product:
-    cmd: python src/data/build_final_product.py
+    cmd: python src/data/build_final_product.py -o
     deps:
       - src/data/build_final_product.py
       - reference/trait_mapping.json
@@ -247,7 +242,13 @@ stages:
       - ${models.dir}/${PFT}/${model_res}
     params:
       - analysis
-      
+  
+  aggregate_aoa:
+    cmd: python src/analysis/multires_aoa.py
+    deps:
+      - src/analysis/multires_aoa.py
+      - ${processed.dir}/${PFT}/${model_res}/${aoa.dir}
+  
   other_product_splot_correlation:
     cmd: python src/analysis/other_product_splot_correlation.py
     deps:

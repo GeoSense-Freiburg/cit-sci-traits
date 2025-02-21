@@ -80,10 +80,14 @@ def get_trait_number_from_id(trait_id: str) -> str:
     return tnum.group()
 
 
+def load_trait_mapping() -> dict:
+    with open(get_config().trait_mapping, encoding="utf-8") as f:
+        return json.load(f)
+
+
 def get_trait_name_from_id(trait_id: str, length: str = "short") -> tuple[str, str]:
     """Returns the name of a trait from its id as well as the unit of the trait."""
-    with open(get_config().trait_mapping, encoding="utf-8") as f:
-        mapping = json.load(f)
+    mapping = load_trait_mapping()
 
     tnum = get_trait_number_from_id(trait_id)
 

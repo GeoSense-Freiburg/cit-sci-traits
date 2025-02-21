@@ -2,6 +2,7 @@ import shutil
 from pathlib import Path
 
 import pandas as pd
+from box import BoxKeyError
 from dask import compute, delayed
 
 from src.conf.conf import get_config
@@ -13,6 +14,7 @@ from src.utils.raster_utils import open_raster
 
 def main() -> None:
     cfg = get_config()
+    transform = getattr(cfg.trydb.interim, "transform", "none")
 
     log.info("Gathering filenames...")
     splot_fns = [
@@ -47,30 +49,55 @@ def main() -> None:
     close_dask(client, cluster)
 
     log.info("Updating results...")
-    all_results = pd.read_parquet("results/all_results.parquet")
-
-    for trait_id, aoa in splot_aoa_fracs:
-        rows = all_results.query(
-            f"trait_id == '{trait_id}' and "
-            "trait_set == 'splot' and "
-            f"resolution == '{cfg.model_res}'"
+    all_aoa_fn = Path("results/all_aoa.parquet")
+    if all_aoa_fn.exists():
+        all_aoa = pd.read_parquet(all_aoa_fn)
+        # Back up the results
+        log.info("Backing up results...")
+        shutil.copy("results/all_aoa.parquet", "results/all_aoa.parquet.bak")
+    else:
+        all_aoa = pd.DataFrame(
+            columns=[
+                "pft",
+                "resolution",
+                "trait_id",
+                "trait_set",
+                "transform",
+                "aoa",
+            ]
         )
-        all_results.loc[rows.index, "aoa"] = aoa
 
-    for trait_id, aoa in comb_aoa_fracs:
-        rows = all_results.query(
-            f"trait_id == '{trait_id}' and "
-            "trait_set == 'splot_gbif' and "
-            f"resolution == '{cfg.model_res}'"
-        )
-        all_results.loc[rows.index, "aoa"] = aoa
+    df_splot = pd.DataFrame(
+        {
+            "pft": cfg.PFT,
+            "resolution": cfg.model_res,
+            "trait_id": [s[0] for s in splot_aoa_fracs],
+            "trait_set": "splot",
+            "transform": transform,
+            "aoa": [s[1] for s in splot_aoa_fracs],
+        }
+    )
 
-    # Back up the results
-    log.info("Backing up results...")
-    shutil.copy("results/all_results.parquet", "results/all_results.parquet.bak")
+    df_comb = pd.DataFrame(
+        {
+            "pft": cfg.PFT,
+            "resolution": cfg.model_res,
+            "trait_id": [s[0] for s in comb_aoa_fracs],
+            "trait_set": "splot_gbif",
+            "transform": transform,
+            "aoa": [s[1] for s in comb_aoa_fracs],
+        }
+    )
+
+    all_aoa = pd.concat(
+        [all_aoa, df_splot, df_comb], ignore_index=True
+    ).drop_duplicates(
+        subset=["pft", "resolution", "trait_id", "trait_set", "transform"],
+        ignore_index=True,
+    )
 
     log.info("Saving updated results...")
-    all_results.to_parquet("results/all_results.parquet")
+    all_aoa.to_parquet("results/all_aoa.parquet")
 
     log.info("Done!")
 

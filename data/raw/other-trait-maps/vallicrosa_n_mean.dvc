@@ -1,0 +1,6 @@
+outs:
+- md5: dc846bf12ec3ddbb28dd815c8b54a8e5.dir
+  size: 3110400460
+  nfiles: 2
+  hash: md5
+  path: vallicrosa_n_mean

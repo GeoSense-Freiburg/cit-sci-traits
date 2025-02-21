@@ -21,6 +21,7 @@ from src.utils.raster_utils import (
     open_raster,
     pack_xr,
     xr_to_raster,
+    xr_to_raster_rasterio,
 )
 
 
@@ -34,8 +35,7 @@ def process_file(
     overwrite: bool = False,
 ):
     """
-    Process a file by reprojecting and masking a raster, converting it to a GeoDataFrame,
-    optimizing the data types of the columns, and writing it to a Parquet file.
+    Process a file by reprojecting and masking a raster.
 
     Args:
         filename (str or os.PathLike): The path to the input raster file.
@@ -101,13 +101,23 @@ def process_file(
         rast_masked.attrs["long_name"] = Path(filename).stem
 
     if not dry_run:
-        xr_to_raster(
-            rast_masked,
-            out_path,
-            compression_level=18,  # pyright: ignore[reportArgumentType]
-            num_threads=1,
-            dtype=dtype,
-        )
+        match dtype:
+            case "uint8":
+                nodata = np.iinfo(np.uint8).max
+            case "int8":
+                nodata = np.iinfo(np.int8).min
+            case "int16":
+                nodata = np.iinfo(np.int16).min
+            case _:
+                nodata = np.nan
+        # xr_to_raster(
+        #     rast_masked,
+        #     out_path,
+        #     compression_level=18,  # pyright: ignore[reportArgumentType]
+        #     num_threads=1,
+        #     dtype=dtype,
+        # )
+        xr_to_raster_rasterio(rast_masked, out_path, nodata=nodata)
 
     rast_masked.close()
     del rast_masked

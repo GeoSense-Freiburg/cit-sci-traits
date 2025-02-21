@@ -13,6 +13,7 @@ processed_dir: data/processed
 dask_dashboard: ":39143"
 trait_mapping: "reference/trait_mapping.json"
 trait_stat_mapping: "reference/trait_stat_mapping.json"
+try_version: 5
 
 pylos:
   "1km":
@@ -22,12 +23,12 @@ pylos:
       n_workers: 80
       n_partitions: 80
     build_gbif_maps:
-      n_workers: 50
+      n_workers: 20
       threads_per_worker: 5
     build_splot_maps:
       npartitions: 60
       dask:
-        n_workers: 40
+        n_workers: 20
         memory_limit: 40GB
     featurize_train:
       n_chunks: 6
@@ -59,7 +60,7 @@ pylos:
         avg_dist_batch_size: 5000
         predict_partitions: null
     build_final_product:
-      n_workers: 3
+      n_workers: 5
       threads_per_worker: 1
   "001":
     harmonize_eo_data:
@@ -106,6 +107,52 @@ pylos:
         predict_partitions: null
     build_final_product:
       n_workers: 3
+      threads_per_worker: 1
+  "22km":
+    harmonize_eo_data:
+      n_workers: 20
+    match_gbif_pfts:
+      n_workers: 80
+      n_partitions: 80
+    build_gbif_maps:
+      n_workers: 50
+      threads_per_worker: 5
+    build_splot_maps:
+      npartitions: 60
+      dask:
+        n_workers: 60
+        memory_limit: 40GB
+    featurize_train:
+      n_chunks: 1
+      n_workers: 60
+      memory_limit: null
+      threads_per_worker: 5
+    build_predict:
+      n_chunks: 1
+      n_workers: null
+      memory_limit: 100GB
+      impute_chunks: 1
+    calc_spatial_autocorr:
+      n_workers: 60
+      n_workers_variogram: 5
+      n_chunks: 4
+    skcv_splits:
+      n_workers: 60
+    aoa:
+      device_ids: [0, 1]
+      predict_sample: 1
+      splot:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+    build_final_product:
+      n_workers: 5
       threads_per_worker: 1
   "02":
     harmonize_eo_data:
@@ -299,13 +346,14 @@ geos:
       n_workers: 60
       n_partitions: 80
     build_gbif_maps:
-      n_workers: 80
+      n_workers: 60 # 80 was throwing too many files open error...
       threads_per_worker: 5
       memory_limit: 15GB
     build_splot_maps:
-      npartitions: 60
+      npartitions: 60  
       dask:
-        n_workers: 80
+        n_workers: 40
+        threads_per_worker: 5
         memory_limit: 40GB
     featurize_train:
       n_chunks: 10
@@ -322,12 +370,13 @@ geos:
       n_workers_variogram: 20  # For WGS84 coords only
       n_chunks: 16 # x direction only
     skcv_splits:
-      n_workers: 90
+      n_workers: 50
       threads_per_worker: 1
     aoa:
       device_ids: [0, 1, 2, 3]
       predict_sample: 0.5
       splot:
+        chunked_dist: false
         train_sample: 1
         avg_dist_batch_size: 10000
         predict_partitions: null
@@ -384,6 +433,56 @@ geos:
     build_final_product:
       n_workers: 5
       threads_per_worker: 1
+  "22km":
+    harmonize_eo_data:
+      n_workers: 20
+    match_gbif_pfts:
+      n_workers: 60
+      n_partitions: 80
+    build_gbif_maps:
+      n_partitions: null
+      n_workers: 40 # 80 was throwing too many files open error...
+      threads_per_worker: 4
+      memory_limit: 40GB
+    build_splot_maps:
+      npartitions: 40
+      dask:
+        n_workers: 40
+        threads_per_worker: 4
+        memory_limit: 40GB
+    featurize_train:
+      n_chunks: 10
+      n_workers: 8
+      memory_limit: 150GB
+      threads_per_worker: 1
+    build_predict:
+      n_chunks: 3
+      n_workers: 80
+      memory_limit: 400GB
+      impute_chunks: 1
+    calc_spatial_autocorr:
+      n_workers: 3
+      n_workers_variogram: 20  # For WGS84 coords only
+      n_chunks: 16 # x direction only
+    skcv_splits:
+      n_workers: 50
+      threads_per_worker: 1
+    aoa:
+      device_ids: [1, 2, 3]
+      predict_sample: 1
+      splot:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        chunked_dist: true
+        train_sample: 1
+        avg_dist_batch_size: 5000
+        predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
   "02":
     harmonize_eo_data:
       n_workers: 48
@@ -424,6 +523,56 @@ geos:
       splot_gbif:
         chunked_dist: false
         train_sample: 0.5
+        avg_dist_batch_size: 5000
+        predict_partitions: null
+    build_final_product:
+      n_workers: 5
+      threads_per_worker: 1
+  "55km":
+    harmonize_eo_data:
+      n_workers: 20
+    match_gbif_pfts:
+      n_workers: 60
+      n_partitions: 80
+    build_gbif_maps:
+      n_partitions: null
+      n_workers: 40 # 80 was throwing too many files open error...
+      threads_per_worker: 4
+      memory_limit: 40GB
+    build_splot_maps:
+      npartitions: 40
+      dask:
+        n_workers: 40
+        threads_per_worker: 4
+        memory_limit: 40GB
+    featurize_train:
+      n_chunks: 10
+      n_workers: 8
+      memory_limit: 150GB
+      threads_per_worker: 1
+    build_predict:
+      n_chunks: 3
+      n_workers: 80
+      memory_limit: 400GB
+      impute_chunks: 1
+    calc_spatial_autocorr:
+      n_workers: 3
+      n_workers_variogram: 20  # For WGS84 coords only
+      n_chunks: 16 # x direction only
+    skcv_splits:
+      n_workers: 50
+      threads_per_worker: 1
+    aoa:
+      device_ids: [1, 2, 3]
+      predict_sample: 1
+      splot:
+        chunked_dist: false
+        train_sample: 1
+        avg_dist_batch_size: 10000
+        predict_partitions: null
+      splot_gbif:
+        chunked_dist: true
+        train_sample: 1
         avg_dist_batch_size: 5000
         predict_partitions: null
     build_final_product:
@@ -675,6 +824,27 @@ trydb:
     quantile_range: [0.005, 0.995]
     filtered: mean_gf_bt_sp_filt.parquet
 
+biomes: # Used for model analysis by biome
+  reclassification:
+    1: 1  # Tropical/Subtropical Forests
+    2: 1
+    3: 1
+    4: 2  # Temperate/Boreal Forests
+    5: 2
+    6: 2
+    7: 3  # Grasslands and Savannas
+    8: 3
+    12: 4 # Mediterranean
+    13: 5  # Deserts
+    9: 6  # Wetlands
+    14: 6  
+    98: 6
+    10: 7  # Alpine/Polar
+    11: 7
+    99: 7
+  raw_path: wwf_terr_biomes/wwf_terr_biomes.tif # Relative to raw_dir
+  interim_path: biomes/biomes.tif # Relative to interim_dir
+  
 calc_spatial_autocorr:
   # Use existing spatial autocorrelation data from this model_res. To recompute, set to false.
   use_existing: "1km"
@@ -684,6 +854,7 @@ train:
   Y:
     fn: Y.parquet
   missing_val_thresh: 0.4 # Drop features with more than this fraction of missing values
+  trait_sets: ["splot", "gbif", "splot_gbif"]
   spatial_autocorr: spatial_autocorr.parquet
   cv_splits:
     range_stat: "median"
@@ -729,10 +900,10 @@ aoa:
 predict:
   dir: predict
   geos:
-    n_workers: 14
-    batches: 28
+    n_workers: 1
+    batches: 8
   pylos:
-    n_workers: 4
+    n_workers: 1
     batches: 24
 
 cov:

@@ -1,1 +1,7 @@
-/**/*.parquet
+# Ignore .parquet files in subdirectories
+**/*.parquet
+
+# Do not ignore .parquet files in the base directory
+!/*.parquet
+
+all_biome_results.bak.parquet

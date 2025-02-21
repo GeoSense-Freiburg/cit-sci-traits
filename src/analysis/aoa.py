@@ -25,7 +25,7 @@ from src.utils.dataset_utils import (
     get_y_fn,
 )
 from src.utils.df_utils import rasterize_points
-from src.utils.raster_utils import xr_to_raster
+from src.utils.raster_utils import pack_xr, xr_to_raster_rasterio
 from src.utils.training_utils import assign_splits, filter_trait_set, set_yx_index
 from src.utils.trait_utils import get_active_traits
 
@@ -339,7 +339,7 @@ def calc_di_predict(
 
     distances["di"] = distances["distance"] / mean_distance
     distances["aoa"] = distances["di"] > di_threshold
-    return distances.to_pandas()
+    return distances.drop(columns=["distance"]).to_pandas()
 
 
 def calc_aoa(
@@ -426,7 +426,7 @@ def calc_aoa(
 
     log.info("Writing %s...", out_path)
     aoa_r = rasterize_points(predict_di, res=cfg.target_resolution, crs=cfg.crs)
-    xr_to_raster(aoa_r, out_path)
+    xr_to_raster_rasterio(pack_xr(aoa_r, signed=True, cast_only=[1]), out_path)
 
     log.info("Cleaning up...")
     train_fn.unlink()

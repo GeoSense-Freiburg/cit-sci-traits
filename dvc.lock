@@ -1,5 +1,23 @@
 schema: '2.0'
 stages:
+  standardize_other_products:
+    cmd: python src/data/standardize_other_products.py
+    deps:
+    - path: data/raw/other-trait-maps
+      hash: md5
+      md5: 848dac77f0897cf7e58f41a196fe1d68.dir
+      size: 32055985074
+      nfiles: 1510
+    - path: src/data/standardize_other_products.py
+      hash: md5
+      md5: 2e4c967cc9dda5883850576253521e00
+      size: 4665
+    outs:
+    - path: data/interim/other_trait_maps
+      hash: md5
+      md5: 4ce80d8ff95ecdcbad3f7738ed93d461.dir
+      size: 1183362520
+      nfiles: 63
   get_TRY_mean_traits:
     cmd: python src/data/build_try_traits.py
     deps:
