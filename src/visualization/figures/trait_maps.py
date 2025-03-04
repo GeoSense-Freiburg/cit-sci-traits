@@ -2,7 +2,6 @@ from pathlib import Path
 
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import seaborn as sns
 import xarray as xr
@@ -10,12 +9,7 @@ from rasterio.enums import Resampling
 
 from src.conf.conf import get_config
 from src.conf.environment import log
-from src.utils.dataset_utils import (
-    get_aoa_dir,
-    get_cov_dir,
-    get_final_fns,
-    get_predict_dir,
-)
+from src.utils.dataset_utils import get_predict_dir
 from src.utils.plotting_utils import set_font
 from src.utils.raster_utils import open_raster
 from src.utils.trait_utils import get_trait_number_from_id, load_trait_mapping
@@ -68,8 +62,6 @@ def load_aois() -> tuple[list[Path], tuple[list[xr.DataArray], list[xr.DataArray
             if d.is_dir() and get_trait_number_from_id(d.stem) == trait_num:
                 fns.append(list((d / "splot_gbif").glob("*.tif"))[0])
 
-    coarsen = 4
-
     log.info("Loading and reprojecting prediction maps...")
     reproj = [
         open_raster(r)
@@ -82,17 +74,11 @@ def load_aois() -> tuple[list[Path], tuple[list[xr.DataArray], list[xr.DataArray
 
     log.info("Loading and cropping AOIs...")
     aois_afr = [
-        r.sel(x=slice(*aoi_top_bbox[:2]), y=slice(*aoi_top_bbox[2:]))
-        # .coarsen(x=coarsen, y=coarsen)
-        # .mean()
-        for r in reproj
+        r.sel(x=slice(*aoi_top_bbox[:2]), y=slice(*aoi_top_bbox[2:])) for r in reproj
     ]
     log.info("...")
     aois_amr = [
-        r.sel(x=slice(*aoi_bot_bbox[:2]), y=slice(*aoi_bot_bbox[2:]))
-        # .coarsen(x=coarsen, y=coarsen)
-        # .mean()
-        for r in reproj
+        r.sel(x=slice(*aoi_bot_bbox[:2]), y=slice(*aoi_bot_bbox[2:])) for r in reproj
     ]
 
     return fns, (aois_afr, aois_amr)
@@ -103,7 +89,7 @@ def main():
     fns, (aois_top, aois_bot) = load_aois()
     build_plot(aois_top, aois_bot, fns)
     if SAVE:
-        plt.savefig("results/figures/trait-maps_test.png", dpi=300, bbox_inches="tight")
+        plt.savefig("results/figures/trait-maps.png", dpi=300, bbox_inches="tight")
 
 
 def build_plot(
@@ -127,7 +113,6 @@ def build_plot(
     for i, (aoi, ax, fn) in enumerate(zip(aois_top + aois_bot, axes.ravel(), fns * 2)):
         min_val = aoi.quantile(0.02).values
         max_val = aoi.quantile(0.98).values
-        add_colorbar = i >= ncols
         mapping_entry = mapping[get_trait_number_from_id(fn.stem)]
 
         left, *_, right = aoi.x
@@ -169,7 +154,7 @@ def build_plot(
             cbar_y = bbox.y0 + padding_y
 
             # Add a new axes for the colorbar
-            cbar_ax = fig.add_axes([cbar_x, cbar_y, cbar_width, cbar_height])
+            cbar_ax = fig.add_axes((cbar_x, cbar_y, cbar_width, cbar_height))
 
             # Add the colorbar
             cb = fig.colorbar(cax, cax=cbar_ax, orientation="vertical", extend="both")

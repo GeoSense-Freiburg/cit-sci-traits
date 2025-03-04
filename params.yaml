@@ -760,21 +760,21 @@ datasets:
       - 146 # Leaf carbon/nitrogen (C/N) ratio
       - 163 # Leaf fresh mass
       - 169 # Stem conduit density (vessels and tracheids)
-      - 223 # Species genotype: chromosome number
-      - 224 # Species genotype: chromosome cDNA content
+      # - 223 # Species genotype: chromosome number
+      # - 224 # Species genotype: chromosome cDNA content
       - 237 # Dispersal unit length
       - 281 # Stem conduit diameter (vessels, tracheids)
       - 282 # Wood vessel element length; stem conduit (vessel and tracheids) element length
       - 289 # Wood fiber lengths
       - 297 # Wood rays per millimetre (wood ray density)
-      - 351 # Seed number per dispersal unit
+      # - 351 # Seed number per dispersal unit
       - 614 # Fine root length per fine root dry mass (specific fine root length, SRL)
       - 1080 # Root length per root dry mass (specific root length, SRL)
       - 3106 # Plant height vegetative
-      - 3107 # Plant height generative
-      - 3112 # Leaf area (in case of compound leaves: leaf, undefined if petiole in- or excluded)
+      # - 3107 # Plant height generative
+      # - 3112 # Leaf area (in case of compound leaves: leaf, undefined if petiole in- or excluded)
       - 3113 # Leaf area (in case of compound leaves: leaflet, undefined if petiole is in- or excluded)
-      - 3114 # Leaf area (in case of compound leaves undefined if leaf or leaflet, undefined if petiole is in- or e
+      # - 3114 # Leaf area (in case of compound leaves undefined if leaf or leaflet, undefined if petiole is in- or e
       - 3117 # Leaf area per leaf dry mass (specific leaf area, SLA or 1/LMA): undefined if petiole is in- or exclu
       - 3120 # Leaf water content per leaf dry mass (not saturated)
 

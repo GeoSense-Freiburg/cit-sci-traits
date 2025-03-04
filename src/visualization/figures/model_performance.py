@@ -9,6 +9,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 
+from src.conf.conf import get_config
 from src.conf.environment import log
 from src.utils.dataset_utils import get_biome_mapping
 from src.utils.plotting_utils import add_human_readables, set_font
@@ -16,6 +17,7 @@ from src.visualization.model_assessment import plot_splot_correlations
 
 TRAIT_SET_ORDER = ["SCI", "COMB", "CIT"]
 tricolor_palette = sns.color_palette(["#b0b257", "#66a9aa", "#b95fa1"])
+CFG = get_config()
 
 
 def cli() -> argparse.Namespace:
@@ -33,12 +35,15 @@ def cli() -> argparse.Namespace:
 def main(args: argparse.Namespace | None = None) -> None:
     set_font("FreeSans")
 
+    log.info("Compiling results...")
     all_res, biome_res = compile_results()
 
+    log.info("Building figure...")
     with sns.plotting_context("paper", 1.5):
         build_figure(all_res, biome_res)
 
     if args is not None:
+        log.info("Saving figure...")
         plt.savefig(args.out_path, dpi=300, bbox_inches="tight")
 
     plt.show()
@@ -56,17 +61,24 @@ def compile_results() -> tuple[pd.DataFrame, pd.DataFrame]:
         "median_absolute_error",
     ]
 
+    # Only keep traits listed in params
+    keep_traits = [f"X{t}" for t in CFG.datasets.Y.traits]  # noqa: F841
+
     all_results = (
         pd.read_parquet("results/all_results.parquet")
+        .assign(base_trait_id=lambda df: df.trait_id.str.split("_").str[0])
+        .query("base_trait_id in @keep_traits")
         .pipe(add_human_readables)
-        .drop(columns=drop_cols_both + drop_calls_all_res)
+        .drop(columns=drop_cols_both + drop_calls_all_res + ["base_trait_id"])
         .query("transform == 'power'")
     )
     biome_results = (
         pd.read_parquet("results/all_biome_results.parquet")
+        .assign(base_trait_id=lambda df: df.trait_id.str.split("_").str[0])
+        .query("base_trait_id in @keep_traits")
         .pipe(add_human_readables)
         .pipe(add_biome_names)
-        .drop(columns=drop_cols_both)
+        .drop(columns=drop_cols_both + ["base_trait_id"])
         .query("transform == 'power'")
     )
 
@@ -170,7 +182,11 @@ def nrmse_by_biome(df: pd.DataFrame, ax: Axes) -> Axes:
 
 def r_by_resolution(df: pd.DataFrame, ax: Axes, trait_set: str) -> Axes:
     return plot_splot_correlations(
-        [ax], df, "Shrub_Tree_Grass", [trait_set], trait_set_ids_col="trait_set_abbr"
+        df,
+        "Shrub_Tree_Grass",
+        [trait_set],
+        trait_set_ids_col="trait_set_abbr",
+        axes=[ax],
     )[0]
 
 
