@@ -24,6 +24,95 @@ from src.utils.dataset_utils import (
 )
 
 
+def cli() -> argparse.Namespace:
+    """Simple CLI"""
+    parser = argparse.ArgumentParser(
+        description="Update model performance and feature importance data for all trait models."
+    )
+    parser.add_argument(
+        "-m", "--model-perf", action="store_true", help="Update model performance data."
+    )
+    parser.add_argument(
+        "-f",
+        "--feature-importance",
+        action="store_true",
+        help="Update feature importance data.",
+    )
+    parser.add_argument(
+        "-c", "--cv-obs-pred", action="store_true", help="Copy CV obs. vs pred. data."
+    )
+    parser.add_argument(
+        "-o", "--overwrite", action="store_true", help="Overwrite data."
+    )
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode.")
+    return parser.parse_args()
+
+
+def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> None:
+    """
+    Main function to aggregate and update model performance and feature importance data
+    for all models across traits and trait sets.
+
+    Probably went a little overboard with the abstraction/composition here.
+    """
+    if args.model_perf:
+        log.info("Updating model performance...")
+        map_to_trait_dfs(
+            update_model_perf,
+            get_all_model_perf_df(debug=args.debug),
+            cfg,
+            get_all_model_perf_fn(cfg, debug=args.debug),
+        )
+
+    if args.feature_importance:
+        log.info("Updating feature importance...")
+        map_to_trait_dfs(
+            update_fi,
+            get_all_fi_df(debug=args.debug),
+            cfg,
+            get_all_fi_fn(cfg, debug=args.debug),
+        )
+
+    if args.cv_obs_pred:
+        log.info("Copying CV Obs. vs Pred....")
+        consume(
+            iterator=map(partial(copy_cv_obs_pred, config=cfg), get_all_trait_models()),
+            use_multiprocessing=True,
+        )
+
+    log.info("Done!")
+
+
+def map_to_trait_dfs(
+    fx: Callable, df: pd.DataFrame, cfg: ConfigBox, out: Path | None = None
+) -> pd.DataFrame:
+    """
+    Applies a given function to all trait model paths and concatenates the results into a
+    single DataFrame.
+
+    Parameters:
+    fx (Callable): The function to apply to each trait model.
+    df (pd.DataFrame): The input DataFrame to be processed.
+    cfg (ConfigBox): Configuration settings required by the function.
+    out (Path | None, optional): The file path to save the resulting DataFrame as a
+        parquet file. Defaults to None.
+
+    Returns:
+    pd.DataFrame: The concatenated DataFrame after applying the function to all trait
+        models.
+    """
+    df = pd.concat(
+        list(map(partial(fx, df=df, config=cfg), get_all_trait_models())),
+        ignore_index=True,
+    ).drop_duplicates()
+
+    if out is not None:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        df.to_parquet(out)
+
+    return df
+
+
 def get_all_model_perf_df(debug: bool = False) -> pd.DataFrame:
     """Get the model performance results DataFrame. If none exists yet, create it."""
     results = get_all_model_perf(debug=debug)
@@ -167,8 +256,16 @@ def update_fi(model_dir: Path, df: pd.DataFrame, config: ConfigBox) -> pd.DataFr
                 "match": "cm_mean",
             },
             "modis": {"startswith": True, "match": "sur_refl"},
-            "vodca": {"startswith": True, "match": "vodca"},
+            # Have to place this grouped importance before the indiv. vodca feats
+            # because otherwise all feats would get assigned "vodca_full"
+            "vodca_full": {"startswith": True, "match": "vodca"},
+            "vodca": {"startswith": True, "match": "vodca_"},
             "worldclim": {"startswith": True, "match": "wc2.1"},
+            # also match dataset grouped feature imps
+            "canopy_height_full": {"startswith": True, "match": "canopy_height"},
+            "soilgrids_full": {"startswith": True, "match": "soilgrids"},
+            "modis_full": {"startswith": True, "match": "modis"},
+            "worldclim_full": {"startswith": True, "match": "worldclim"},
         }
 
         for ds, v in feat_ds_map.items():
@@ -197,38 +294,19 @@ def update_fi(model_dir: Path, df: pd.DataFrame, config: ConfigBox) -> pd.DataFr
     )[df.columns]
 
     return pd.concat([df, trait_fi], ignore_index=True).drop_duplicates(
-        subset=["run_id"]
+        subset=[
+            "pft",
+            "resolution",
+            "trait_id",
+            "trait_set",
+            "automl",
+            "model_arch",
+            "run_id",
+            "feature",
+            "agg",
+        ],
+        keep="last",
     )
-
-
-def map_to_trait_dfs(
-    fx: Callable, df: pd.DataFrame, cfg: ConfigBox, out: Path | None = None
-) -> pd.DataFrame:
-    """
-    Applies a given function to all trait model paths and concatenates the results into a
-    single DataFrame.
-
-    Parameters:
-    fx (Callable): The function to apply to each trait model.
-    df (pd.DataFrame): The input DataFrame to be processed.
-    cfg (ConfigBox): Configuration settings required by the function.
-    out (Path | None, optional): The file path to save the resulting DataFrame as a
-        parquet file. Defaults to None.
-
-    Returns:
-    pd.DataFrame: The concatenated DataFrame after applying the function to all trait
-        models.
-    """
-    df = pd.concat(
-        list(map(partial(fx, df=df, config=cfg), get_all_trait_models())),
-        ignore_index=True,
-    ).drop_duplicates()
-
-    if out is not None:
-        out.parent.mkdir(parents=True, exist_ok=True)
-        df.to_parquet(out)
-
-    return df
 
 
 def copy_cv_obs_pred(
@@ -278,65 +356,6 @@ def consume(iterator: Iterable, use_multiprocessing: bool = False) -> None:
             pool.map(identity, iterator)
     else:
         collections.deque(iterator, maxlen=0)
-
-
-def cli() -> argparse.Namespace:
-    """Simple CLI"""
-    parser = argparse.ArgumentParser(
-        description="Update model performance and feature importance data for all trait models."
-    )
-    parser.add_argument(
-        "-m", "--model-perf", action="store_true", help="Update model performance data."
-    )
-    parser.add_argument(
-        "-f",
-        "--feature-importance",
-        action="store_true",
-        help="Update feature importance data.",
-    )
-    parser.add_argument(
-        "-c", "--cv-obs-pred", action="store_true", help="Copy CV obs. vs pred. data."
-    )
-    parser.add_argument(
-        "-o", "--overwrite", action="store_true", help="Overwrite data."
-    )
-    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode.")
-    return parser.parse_args()
-
-
-def main(args: argparse.Namespace = cli(), cfg: ConfigBox = get_config()) -> None:
-    """
-    Main function to aggregate and update model performance and feature importance data
-    for all models across traits and trait sets.
-
-    Probably went a little overboard with the abstraction/composition here.
-    """
-    if args.model_perf:
-        log.info("Updating model performance...")
-        map_to_trait_dfs(
-            update_model_perf,
-            get_all_model_perf_df(debug=args.debug),
-            cfg,
-            get_all_model_perf_fn(cfg, debug=args.debug),
-        )
-
-    if args.feature_importance:
-        log.info("Updating feature importance...")
-        map_to_trait_dfs(
-            update_fi,
-            get_all_fi_df(debug=args.debug),
-            cfg,
-            get_all_fi_fn(cfg, debug=args.debug),
-        )
-
-    if args.cv_obs_pred:
-        log.info("Copying CV Obs. vs Pred....")
-        consume(
-            iterator=map(partial(copy_cv_obs_pred, config=cfg), get_all_trait_models()),
-            use_multiprocessing=True,
-        )
-
-    log.info("Done!")
 
 
 if __name__ == "__main__":
