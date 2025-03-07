@@ -4,6 +4,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from cartopy.mpl.geoaxes import GeoAxes
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -121,7 +122,56 @@ def build_figure(all_res: pd.DataFrame, biome_res: pd.DataFrame) -> Figure:
         trait_set="COMB",
     )
 
+    letter_size = 10
+    x_offset_left_col = -0.02
+    y_offset_left_col = 1.10
+
+    x_offset_right_col = -0.02
+    y_offset_right_col = 1.03
+    add_subplot_letter(
+        ax=axes[0][0],
+        letter_size=letter_size,
+        x=x_offset_left_col,
+        y=y_offset_left_col,
+        letter="a",
+    )
+    add_subplot_letter(
+        ax=axes[0][1],
+        letter_size=letter_size,
+        x=x_offset_left_col,
+        y=y_offset_left_col - 0.03,
+        letter="b",
+    )
+    add_subplot_letter(
+        ax=axes[0][2],
+        letter_size=letter_size,
+        x=x_offset_left_col,
+        y=y_offset_left_col - 0.05,
+        letter="c",
+    )
+    add_subplot_letter(
+        ax=axes[1],
+        letter_size=letter_size,
+        x=x_offset_right_col,
+        y=y_offset_right_col,
+        letter="d",
+    )
+
     return fig
+
+
+def add_subplot_letter(
+    ax: Axes | GeoAxes, letter_size: int, x: float, y: float, letter: str
+):
+    ax.text(
+        x,
+        y,
+        letter,
+        transform=ax.transAxes,
+        fontsize=letter_size,
+        verticalalignment="top",
+        fontweight="bold",
+    )
 
 
 def scaffold_figure(dpi: int = 100) -> tuple[Figure, tuple[list[Axes], Axes]]:
@@ -176,7 +226,7 @@ def nrmse_by_biome(df: pd.DataFrame, ax: Axes) -> Axes:
         metric_col="norm_root_mean_squared_error",
         metric_label="$nRMSE$",
         order=TRAIT_SET_ORDER,
-        max_x=0.42,
+        max_x=0.38,
     )
 
 
