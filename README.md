@@ -17,49 +17,61 @@ Plant functional traits are predicted as community-weighted means based on a syn
 
 ## Project organization
     ├── LICENSE
-    ├── README.md                    <- The top-level README for developers using this
-    │                                   project.
+    ├── README.md                    <- The top-level README for developers using this project
     ├── data
-    │   ├── external                 <- Data from third party sources.
-    │   ├── interim                  <- Intermediate data that has been transformed.
-    │   ├── processed                <- The final, canonical data sets for modeling.
-    │   └── raw                      <- The original, immutable data dump.
+    │   ├── external                 <- Data from third party sources
+    │   ├── features                 <- Features for modeling
+    │   │   └── Shrub_Tree_Grass     <- PFT-specific features at different resolutions
+    │   ├── interim                  <- Intermediate data that has been transformed
+    │   │   ├── biomes               <- Biome data
+    │   │   ├── eo_data              <- Earth Observation data
+    │   │   ├── gbif                 <- GBIF processed data
+    │   │   ├── other_trait_maps     <- Other published trait maps for comparison
+    │   │   └── splot                <- sPlot processed data
+    │   ├── processed                <- The final, canonical data sets for modeling
+    │   │   └── Shrub_Tree_Grass     <- PFT-specific processed data at different resolutions
+    │   └── raw                      <- The original, immutable data dump
     │
-    ├── notebooks                    <- Jupyter notebooks. Naming convention is a number
-    │                                   (for ordering), the creator's initials, and a
-    │                                   short `-` delimited description, e.g.
-    │                                   `1-0_jqp_initial-data-exploration`.
+    ├── models                       <- Trained and serialized models
+    │   └── Shrub_Tree_Grass         <- PFT-specific models at different resolutions
     │
-    ├── references                   <- Data dictionaries, manuals, and all other
-    │                                   explanatory materials.
+    ├── notebooks                    <- Jupyter notebooks organized by analysis stage
+    │   ├── 0-0_earth_observation_data  <- Earth observation data exploration
+    │   ├── 0-1_global_trait_data    <- Trait data exploration and preparation
+    │   ├── 1-0_featurize_train      <- Feature engineering and model training
+    │   ├── 2-0_analysis_prep        <- Analysis preparation
+    │   ├── 2-1_model_analysis       <- Model analysis notebooks
+    │   └── misc                     <- Miscellaneous notebooks
     │
-    ├── reports                      <- Generated analysis as HTML, PDF, LaTeX, etc.
-    │   └── figures                  <- Generated graphics and figures to be used in reporting
+    ├── reference                    <- Data dictionaries, manuals, and explanatory materials
     │
-    ├── setup.py                     <- makes project pip installable (pip install -e .)
-    │                                   so src can be imported
-    ├── src                          <- Source code for use in this project.
+    ├── results                      <- Generated analysis results
+    │   └── figures                  <- Generated graphics and figures
+    │
+    ├── src                          <- Source code for use in this project
     │   ├── __init__.py              <- Makes src a Python module
-    │   │
+    │   ├── analysis                 <- Analysis code
+    │   ├── conf                     <- Configuration management
     │   ├── data                     <- Scripts to download or generate data
-    │   │
-    │   ├── features                 <- Scripts to turn raw or interim data into features for modeling
-    │   │
-    │   └── visualization            <- Scripts to create exploratory and results oriented visualizations
-    │       └── visualize.py
+    │   ├── features                 <- Scripts to turn raw data into features
+    │   ├── io                       <- Input/Output utilities
+    │   ├── models                   <- Model training and evaluation
+    │   ├── utils                    <- Utility functions
+    │   └── visualization            <- Data visualization scripts
+    │
     ├── tests                        <- Unit tests for use with `pytest`
     │
-    ├── pyproject.toml               <- Human-readable project dependencies managed with
-    │                                   Poetry
+    ├── tmp                          <- Temporary files directory
+    │
+    ├── pyproject.toml               <- Human-readable project dependencies managed with Poetry
     ├── poetry.lock                  <- File used by Poetry to install dependencies
-    ├── conda-linux-64.lock          <- File used by conda-lock to install dependencies for 64-bit Linux systems
+    ├── conda-linux-64.lock          <- File used by conda-lock for 64-bit Linux systems
     ├── environment.yml              <- File used by conda-lock to specify dependencies
     ├── dvc.yml                      <- DVC pipeline definitions
-    ├── params.yml                   <- DVC parameter definitions. **IMPORTANT: this project**
-    │                                   **also uses this file as a config file (see src.conf.parse_params)**
-    ├── dvc.lock                     <- DVC file which tracks changes to data tracked by DVC
+    ├── params.yml                   <- DVC parameter definitions and project configuration
+    ├── dvc.lock                     <- DVC file tracking changes to data
+    ├── pyrightconfig.json           <- Python type checker configuration
     └── .pre-commit-config.yaml      <- pre-commit Git hooks
-
 
 
 ## How to reproduce
