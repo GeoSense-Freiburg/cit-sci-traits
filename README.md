@@ -8,7 +8,7 @@ This project generates global, high-resolution plant trait maps based on crowdso
 Plant functional traits are predicted as community-weighted means based on a synthesis of crowdsourced biodiversity data (GBIF species observations, sPlot vegetation surveys, and in situ trait measurements from the TRY trait database) modeled as a function of Earth observation data, including surface reflectance, climatic variables, soil properties, canopy height, and vegetation optical depth.
 
 * [**Online data viewer**](https://global-traits.projects.earthengine.app/view/global-traits)
-* [**Download the data**](https://zenodo.org/records/14646322)
+* [**Data download**](https://zenodo.org/records/14646322)
 * [**Project page**](https://geosense-freiburg.github.io/global-traits/)
 
 ![Project methdology](./results/figures/methodology.png)
@@ -155,6 +155,5 @@ sPlot vegetation data was obtained with express permission from the [sPlot conso
 
 More information on the PANOPS project is available at:
 
-https://uni-freiburg.de/enr-geosense/research/panops/
-https://gepris-extern.dfg.de/gepris/projekt/504978936?language=en
-Project Organization
+* https://uni-freiburg.de/enr-geosense/research/panops/
+* https://gepris-extern.dfg.de/gepris/projekt/504978936?language=en
