@@ -57,3 +57,88 @@ stages:
       md5: 2168f356be5b96afb1549bb3bec41a15
       size: 20662411264
       isexec: true
+get_TRY_mean_traits:
+    cmd: python src/data/build_try_traits.py
+    deps:
+    - path: data/raw/TRY_6_gapfilled_for_distribution/TRY6_gapfilled_for_distribution.zip
+      hash: md5
+      md5: f2cc4a7dd419bed117f42e62780b16e8
+      size: 307941318
+    - path: src/data/build_try_traits.py
+      hash: md5
+      md5: c918e38e1c0d49fbac88a6308042cdc2
+      size: 5918
+    params:
+      params.yaml:
+        trydb:
+          raw:
+            dir: TRY_6_gapfilled_for_distribution
+            zip: TRY6_gapfilled_for_distribution.zip
+            zipfile_csv: TRY6_gapfilled_for_distribution/TRY6_gapfilled_filtered_2.csv.zip
+            pfts: try_pft_v2.parquet
+          interim:
+            dir: try
+            quantile_range:
+            transform: power
+            already_norm:
+            filtered: traits.parquet
+            transformer_fn: power_transformer.pkl
+    outs:
+    - path: data/interim/try/power_transformer.pkl
+      hash: md5
+      md5: d21efd0d564ee1dc6fdc499c12c06bc3
+      size: 2163
+    - path: data/interim/try/traits.parquet
+      hash: md5
+      md5: e72bbe287c0bcc22a16e6989703d0c24
+      size: 10537510
+  match_gbif_pfts:
+    cmd: python src/data/match_gbif_pfts.py
+    deps:
+    - path: data/raw/all_tracheophyta_non-cult_2024-04-10
+      hash: md5
+      md5: ada860692d425bd047bd09fd4531fdbf.dir
+      size: 30005038638
+      nfiles: 1584
+    - path: data/raw/try_pft_v2.parquet
+      hash: md5
+      md5: d49a4b1611eebbd529c9e9aba6aa5f69
+      size: 2232209
+    - path: src/data/match_gbif_pfts.py
+      hash: md5
+      md5: 6eb77a3b1d810e69a28df4ddcb0b5450
+      size: 2541
+    params:
+      params.yaml:
+        datasets.Y.gbif: all_tracheophyta_non-cult_2024-04-10
+        gbif.interim.dir: gbif
+        gbif.interim.matched: gbif_pfts.parquet
+        gbif.raw.dir: all_tracheophyta_non-cult_2024-04-10
+    outs:
+    - path: data/interim/gbif/gbif_pfts.parquet
+      hash: md5
+      md5: 3588c721bb421ef1f67c9a9c00b72c49.dir
+      size: 4026649735
+      nfiles: 159
+  extract_splot:
+    cmd: python src/data/extract_splot.py
+    deps:
+    - path: data/raw/splot4-0
+      hash: md5
+      md5: 99990a51d13fe4485f72dd03590d44a6.dir
+      size: 521575464
+      nfiles: 3
+    - path: src/data/extract_splot.py
+      hash: md5
+      md5: 2a89310e584294f1661965d542a50d18
+      size: 3108
+    params:
+      params.yaml:
+        datasets.Y.splot: splot4-0
+        splot.interim.dir: splot
+    outs:
+    - path: data/interim/splot/extracted
+      hash: md5
+      md5: 79e5388fb25a0c2fa5af8eb08c26498e.dir
+      size: 508142149
+      nfiles: 3
