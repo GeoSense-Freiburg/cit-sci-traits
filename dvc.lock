@@ -57,7 +57,7 @@ stages:
       md5: 2168f356be5b96afb1549bb3bec41a15
       size: 20662411264
       isexec: true
-get_TRY_mean_traits:
+  get_TRY_mean_traits:
     cmd: python src/data/build_try_traits.py
     deps:
     - path: data/raw/TRY_6_gapfilled_for_distribution/TRY6_gapfilled_for_distribution.zip
